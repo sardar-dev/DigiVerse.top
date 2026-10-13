@@ -83,6 +83,7 @@ export default function Admin() {
       category: "",
       featured: false,
       low_stock_threshold: "",
+      auto_delivery: false,
     };
   }
 
@@ -111,6 +112,11 @@ export default function Admin() {
       featured: Boolean(manualForm.featured),
       low_stock_threshold:
         manualForm.low_stock_threshold === "" ? null : Number(manualForm.low_stock_threshold),
+      // Only sent when on (or when editing a product that has it), so
+      // saving ordinary products works before migration_012 is run.
+      ...(manualForm.auto_delivery || manualForm._hadAuto
+        ? { auto_delivery: Boolean(manualForm.auto_delivery) }
+        : {}),
     };
     const res = await fetch("/api/admin/manual-products", {
       method: "POST",
@@ -119,9 +125,16 @@ export default function Admin() {
     });
     const data = await res.json();
     if (data.success) {
-      setManualMessage(manualForm.id !== null ? "Updated." : "Created.");
-      setManualForm(emptyManualForm());
+      const isNew = manualForm.id === null;
       loadManualProducts();
+      if (isNew && manualForm.auto_delivery && data.product) {
+        // Straight into edit mode so the delivery boxes can be added.
+        setManualMessage("Created. Now add the delivery boxes below.");
+        editManualProduct(data.product);
+      } else {
+        setManualMessage(isNew ? "Created." : "Updated.");
+        setManualForm(emptyManualForm());
+      }
     } else {
       setManualMessage(`Failed: ${data.error}`);
     }
@@ -144,6 +157,8 @@ export default function Admin() {
       category: p.category || "",
       featured: Boolean(p.featured),
       low_stock_threshold: p.low_stock_threshold ?? "",
+      auto_delivery: Boolean(p.auto_delivery),
+      _hadAuto: Boolean(p.auto_delivery),
     });
   }
 
@@ -417,6 +432,7 @@ export default function Admin() {
           archiveManualProduct={archiveManualProduct}
           resetManualForm={() => setManualForm(emptyManualForm())}
           bulkUpdateManualProducts={bulkUpdateManualProducts}
+          reloadManualProducts={loadManualProducts}
         />
       )}
 

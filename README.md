@@ -515,3 +515,7 @@ Admin → **Coupons**: create percentage or fixed-amount codes for one product o
 - **Exact amounts:** wallet deposits and direct product payments now ask for the amount + `0.000X` (X = random 1-9), e.g. $0.80 -> `0.8006`. Matching is exact (only float rounding is tolerated), because neighbouring amounts differ by 0.0001.
 - **Warranty:** synced from DigiTrust alongside the description and shown in the buy popup. Run `supabase/migration_011_warranty_feedback.sql` (the storefront keeps working if you haven't yet).
 - **Feedback:** footer link "Give us feedback to improve" opens a popup (email + message). Stored in `feedback` (hashed-IP limit of 5/hour, honeypot, 2000-char cap) and shown in Admin -> Feedback with mark read / delete.
+
+## Auto delivery for manual products
+
+In Admin -> Manual Products tick **Auto delivery**, create the product, then add **delivery boxes** (Box 1, Box 2, ... — separate several with a `---` line). When a customer's payment is confirmed (USDT or wallet) they instantly receive their own unique box(es); stock = unsold boxes. Unsold boxes can be edited/deleted; sold ones stay as read-only history showing the order number. Boxes live in `product_stock_items` (RLS on, no policies: service role only) and are handed out by `claim_stock_items`, which is atomic, all-or-nothing and retry-safe. Run `supabase/migration_012_auto_delivery_boxes.sql` once.

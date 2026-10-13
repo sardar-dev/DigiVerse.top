@@ -40,6 +40,7 @@ export default async function handler(req, res) {
       delivery, // estimated delivery time text, e.g. "Within 1-6 hours"
       selected, // active/inactive
       activation_field, // null | 'email' | 'username' — what the customer must provide for activation
+      auto_delivery, // true = customers get stored text "boxes" instantly after payment
       sell_price_delta_percent, // bulk-only: e.g. 5 for +5%
     } = req.body || {};
 
@@ -106,7 +107,9 @@ export default async function handler(req, res) {
       if (!Number.isFinite(cost) || cost < 0) {
         return res.status(400).json({ success: false, error: "invalid_cost_price" });
       }
-      const stock = Number(available_stock);
+      // Auto-delivery products start with 0 stock; stock is then
+      // always the number of unsold boxes.
+      const stock = auto_delivery === true ? 0 : Number(available_stock);
       if (!Number.isInteger(stock) || stock < 0) {
         return res.status(400).json({ success: false, error: "invalid_stock" });
       }
@@ -128,7 +131,9 @@ export default async function handler(req, res) {
           real_stock: stock,
           available_stock: stock,
           requires_email: Boolean(requires_email) || normalizedActivation === "email",
-          delivery: delivery || "Within 24 hours",
+          delivery: delivery || (auto_delivery === true ? "Instant" : "Within 24 hours"),
+          // Only sent when on, so normal products work before migration_012.
+          ...(auto_delivery === true ? { auto_delivery: true } : {}),
           selected: Boolean(selected),
           activation_field: normalizedActivation,
           short_description: short_description || null,
@@ -150,7 +155,7 @@ export default async function handler(req, res) {
     // ── Update ──
     const { data: existing, error: existingErr } = await supabaseAdmin
       .from("products")
-      .select("id")
+      .select("*")
       .eq("id", id)
       .eq("provider", "manual")
       .maybeSingle();
@@ -177,7 +182,13 @@ export default async function handler(req, res) {
       }
       patch.cost_price = cost;
     }
-    if (available_stock !== undefined) {
+    const wasAuto = existing.auto_delivery === true;
+    const nowAuto = typeof auto_delivery === "boolean" ? auto_delivery : wasAuto;
+    if (typeof auto_delivery === "boolean" && auto_delivery !== wasAuto) {
+      patch.auto_delivery = auto_delivery;
+    }
+    // While auto-delivery is on, stock is computed from the boxes.
+    if (available_stock !== undefined && !nowAuto) {
       const stock = Number(available_stock);
       if (!Number.isInteger(stock) || stock < 0) {
         return res.status(400).json({ success: false, error: "invalid_stock" });
@@ -212,6 +223,10 @@ export default async function handler(req, res) {
       .single();
 
     if (updateErr) return res.status(500).json({ success: false, error: updateErr.message });
+    if (nowAuto && !wasAuto) {
+      // Just switched on: stock becomes the count of existing boxes.
+      await supabaseAdmin.rpc("sync_auto_stock", { p_product_id: id });
+    }
     return res.status(200).json({ success: true, product: updated });
   }
 

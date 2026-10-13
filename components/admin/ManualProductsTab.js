@@ -4,6 +4,7 @@ import { PrimaryButton, SecondaryButton, LinkButton } from "../ui/Button";
 import SectionHeading from "../ui/SectionHeading";
 import DataTable from "./DataTable";
 import BulkActionBar from "./BulkActionBar";
+import StockBoxesManager from "./StockBoxesManager";
 
 export default function ManualProductsTab({
   manualForm,
@@ -15,6 +16,7 @@ export default function ManualProductsTab({
   archiveManualProduct,
   resetManualForm,
   bulkUpdateManualProducts,
+  reloadManualProducts,
 }) {
   const [selected, setSelected] = useState(() => new Set());
 
@@ -78,13 +80,46 @@ export default function ManualProductsTab({
             />
             <FormInput
               label="Stock"
-              value={manualForm.available_stock}
+              value={manualForm.auto_delivery ? "" : manualForm.available_stock}
               onChange={(e) => setManualForm({ ...manualForm, available_stock: e.target.value })}
               type="number"
               step="1"
               className="font-mono"
+              disabled={manualForm.auto_delivery}
+              placeholder={manualForm.auto_delivery ? "Counted from boxes" : undefined}
             />
           </div>
+
+          <label className="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={Boolean(manualForm.auto_delivery)}
+              onChange={(e) => setManualForm({ ...manualForm, auto_delivery: e.target.checked })}
+              className="mt-0.5 h-4 w-4 accent-brand"
+            />
+            <span>
+              <strong>Auto delivery</strong> — send stored text to the customer instantly after
+              payment
+              <span className="block text-xs text-muted">
+                You add "boxes" of content (e.g. account details). Each buyer gets their own unique
+                box, and stock is the number of unsold boxes.
+              </span>
+            </span>
+          </label>
+
+          {manualForm.auto_delivery && manualForm.id !== null && manualForm._hadAuto && (
+            <StockBoxesManager productId={manualForm.id} onChanged={reloadManualProducts} />
+          )}
+          {manualForm.auto_delivery && manualForm.id === null && (
+            <p className="text-xs text-muted">
+              Create the product first — you'll then be able to add its delivery boxes right here.
+            </p>
+          )}
+          {manualForm.auto_delivery && manualForm.id !== null && !manualForm._hadAuto && (
+            <p className="text-xs text-warning">
+              Save changes to switch auto delivery on, then add boxes here.
+            </p>
+          )}
           <FormInput
             label="Estimated delivery"
             value={manualForm.delivery}
@@ -221,7 +256,14 @@ export default function ManualProductsTab({
                   {p.title}
                   {p.featured && <span className="ml-1.5" title="Featured">⭐</span>}
                 </td>
-                <td className="py-3 px-4 font-mono text-muted">{p.available_stock}</td>
+                <td className="py-3 px-4 font-mono text-muted">
+                  {p.available_stock}
+                  {p.auto_delivery && (
+                    <span className="ml-1.5 rounded-full bg-success-soft px-2 py-0.5 font-sans text-[10px] font-medium text-success">
+                      auto
+                    </span>
+                  )}
+                </td>
                 <td className="py-3 px-4 font-mono text-ink">${Number(p.sell_price).toFixed(2)}</td>
                 <td className="py-3 px-4 font-mono text-muted">${Number(p.cost_price).toFixed(2)}</td>
                 <td className="py-3 px-4 text-muted">{p.activation_field || "—"}</td>

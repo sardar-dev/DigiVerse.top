@@ -120,7 +120,7 @@ export default function Orders() {
 
                 {o.status === "delivered" && o.items?.length > 0 && (
                   <pre className="mt-3 whitespace-pre-wrap break-all rounded-lg border border-success/20 bg-success-soft p-3 font-mono text-xs text-ink">
-                    {o.items.join("\n")}
+                    {o.items.join("\n\n")}
                   </pre>
                 )}
               </li>

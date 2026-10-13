@@ -322,6 +322,8 @@ function BuyModal({ product, onClose }) {
   const [couponError, setCouponError] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
 
+  const isManualDelivery = product.provider === "manual" && !product.auto_delivery;
+
   const activationLabel =
     product.activation_field === "email"
       ? "Your email (for activation)"
@@ -426,7 +428,7 @@ function BuyModal({ product, onClose }) {
 
       {step === "form" && (
         <div className="space-y-4">
-          {product.provider === "manual" && (
+          {isManualDelivery && (
             <Alert variant="warning">
               This product is delivered manually. Estimated delivery:{" "}
               <strong>{product.delivery || "see details"}</strong>. You'll find it in{" "}
@@ -480,7 +482,7 @@ function BuyModal({ product, onClose }) {
             {activationLabel && (
               <Row label={activationLabel.replace(" (for activation)", "")} value={activationInfo} />
             )}
-            {product.provider === "manual" && (
+            {isManualDelivery && (
               <Row label="Delivery" value={`Manual — ${product.delivery || "see details"}`} />
             )}
             {coupon && (
@@ -568,7 +570,7 @@ function BuyModal({ product, onClose }) {
           <p className="font-mono text-xs text-muted">Order #{order?.order_number}</p>
           <p className="text-ink">Delivered. Save these now:</p>
           <pre className="whitespace-pre-wrap break-all rounded-lg border border-border bg-brand-soft p-3 font-mono text-xs text-ink">
-            {(items || []).join("\n")}
+            {(items || []).join("\n\n")}
           </pre>
           <PrimaryButton onClick={onClose} className="w-full">
             Done
