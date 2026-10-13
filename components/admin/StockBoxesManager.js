@@ -13,9 +13,8 @@ const ERRORS = {
 
 // Box 1, Box 2, ... for one auto-delivery product. Each paying customer
 // gets their own unsold box. Sold boxes stay as read-only history.
-export default function StockBoxesManager({ productId, onChanged }) {
+export default function StockBoxesManager({ productId, onChanged, version }) {
   const [items, setItems] = useState(null);
-  const [text, setText] = useState("");
   const [editing, setEditing] = useState(null); // { id, content }
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -30,7 +29,7 @@ export default function StockBoxesManager({ productId, onChanged }) {
     setItems(null);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId]);
+  }, [productId, version]);
 
   async function call(method, body, okText) {
     setBusy(true);
@@ -52,15 +51,6 @@ export default function StockBoxesManager({ productId, onChanged }) {
     return false;
   }
 
-  async function add() {
-    const ok = await call(
-      "POST",
-      { product_id: productId, content: text },
-      (d) => `Added ${d.added} box${d.added === 1 ? "" : "es"}.`
-    );
-    if (ok) setText("");
-  }
-
   async function saveEdit() {
     const ok = await call("PATCH", { id: editing.id, content: editing.content }, () => "Saved.");
     if (ok) setEditing(null);
@@ -77,32 +67,17 @@ export default function StockBoxesManager({ productId, onChanged }) {
   return (
     <div className="space-y-4 rounded-xl border border-brand/30 bg-brand-soft/40 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-ink">Delivery boxes</h3>
+        <h3 className="text-sm font-semibold text-ink">Existing boxes</h3>
         <span className="text-xs text-muted">
           {available} available · {sold} sold
         </span>
-      </div>
-
-      <div className="space-y-2">
-        <FormTextarea
-          label="Add box content"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={4}
-          placeholder={"email: user@example.com\npassword: ••••••"}
-          className="font-mono text-xs"
-          hint="This exact text is sent to the customer after payment. To add several boxes at once, put a line with only --- between them."
-        />
-        <PrimaryButton onClick={add} disabled={busy || !text.trim()}>
-          {busy ? "Saving…" : "Add box(es)"}
-        </PrimaryButton>
       </div>
 
       <Alert variant={message.type === "success" ? "success" : "error"}>{message.text}</Alert>
 
       {items === null && <p className="text-sm text-muted">Loading boxes…</p>}
       {items && items.length === 0 && (
-        <p className="text-sm text-muted">No boxes yet — add the first one above.</p>
+        <p className="text-sm text-muted">No boxes yet — paste your first stock into the box above and save.</p>
       )}
 
       <ul className="space-y-2">

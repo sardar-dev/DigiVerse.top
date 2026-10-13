@@ -1,17 +1,9 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
+import { splitBoxes, MAX_BOX_LENGTH, MAX_BOXES_PER_SAVE } from "../../../lib/stockBoxes";
 
-const MAX_CONTENT = 5000;
-const MAX_BATCH = 200;
-
-// Splits pasted text into boxes: a line containing only --- separates
-// one box from the next. One box with no separator = one box.
-function splitBoxes(text) {
-  return String(text || "")
-    .split(/^\s*---+\s*$/m)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+const MAX_CONTENT = MAX_BOX_LENGTH;
+const MAX_BATCH = MAX_BOXES_PER_SAVE;
 
 async function resync(productId) {
   await supabaseAdmin.rpc("sync_auto_stock", { p_product_id: productId });
@@ -37,9 +29,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    const { product_id, content } = req.body || {};
+    const { product_id, content, split } = req.body || {};
     const productId = Number(product_id);
-    const boxes = splitBoxes(content);
+    const boxes = splitBoxes(content, split);
     if (!Number.isFinite(productId) || boxes.length === 0) {
       return res.status(400).json({ success: false, error: "content_required" });
     }

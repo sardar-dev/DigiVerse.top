@@ -519,3 +519,5 @@ Admin → **Coupons**: create percentage or fixed-amount codes for one product o
 ## Auto delivery for manual products
 
 In Admin -> Manual Products tick **Auto delivery**, create the product, then add **delivery boxes** (Box 1, Box 2, ... — separate several with a `---` line). When a customer's payment is confirmed (USDT or wallet) they instantly receive their own unique box(es); stock = unsold boxes. Unsold boxes can be edited/deleted; sold ones stay as read-only history showing the order number. Boxes live in `product_stock_items` (RLS on, no policies: service role only) and are handed out by `claim_stock_items`, which is atomic, all-or-nothing and retry-safe. Run `supabase/migration_012_auto_delivery_boxes.sql` once.
+
+**Adding stock is one step:** with Auto delivery ticked, paste stock into "Add stock (delivery boxes)" in the product form and click Create/Save. Choose "Split boxes with a --- line" (multi-line boxes) or "One box per line" (one account per line). A live counter shows how many boxes will be added; existing boxes are listed below for edit/delete.

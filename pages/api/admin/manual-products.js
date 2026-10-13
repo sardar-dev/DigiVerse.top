@@ -1,5 +1,18 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
+import { splitBoxes, MAX_BOX_LENGTH, MAX_BOXES_PER_SAVE } from "../../../lib/stockBoxes";
+
+// Inserts delivery boxes for an auto-delivery product and recounts its
+// stock. Returns how many were added.
+async function addBoxes(productId, boxes) {
+  if (boxes.length === 0) return 0;
+  const { error } = await supabaseAdmin
+    .from("product_stock_items")
+    .insert(boxes.map((content) => ({ product_id: productId, content })));
+  if (error) throw new Error(error.message);
+  await supabaseAdmin.rpc("sync_auto_stock", { p_product_id: productId });
+  return boxes.length;
+}
 
 // Manual products never call DigiTrust for anything (getProduct,
 // purchase, stock/price sync) — they're entirely admin-managed rows
@@ -41,6 +54,8 @@ export default async function handler(req, res) {
       selected, // active/inactive
       activation_field, // null | 'email' | 'username' — what the customer must provide for activation
       auto_delivery, // true = customers get stored text "boxes" instantly after payment
+      new_boxes, // pasted box text to add in the same save (auto-delivery products)
+      box_split, // "separator" (--- lines) | "line" (one box per line)
       sell_price_delta_percent, // bulk-only: e.g. 5 for +5%
     } = req.body || {};
 
@@ -80,6 +95,14 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, updated: rows.length });
       }
       return res.status(400).json({ success: false, error: "no_bulk_action_specified" });
+    }
+
+    const boxesToAdd = splitBoxes(new_boxes, box_split === "line" ? "line" : "separator");
+    if (boxesToAdd.length > MAX_BOXES_PER_SAVE) {
+      return res.status(400).json({ success: false, error: "too_many_boxes" });
+    }
+    if (boxesToAdd.some((b) => b.length > MAX_BOX_LENGTH)) {
+      return res.status(400).json({ success: false, error: "box_too_long" });
     }
 
     const validActivation =
@@ -149,7 +172,19 @@ export default async function handler(req, res) {
         .single();
 
       if (insertErr) return res.status(500).json({ success: false, error: insertErr.message });
-      return res.status(200).json({ success: true, product: inserted });
+
+      let addedBoxes = 0;
+      if (auto_delivery === true) {
+        try {
+          addedBoxes = await addBoxes(inserted.id, boxesToAdd);
+        } catch (e) {
+          return res.status(500).json({
+            success: false,
+            error: `product_created_but_boxes_failed: ${e.message}`,
+          });
+        }
+      }
+      return res.status(200).json({ success: true, product: inserted, added_boxes: addedBoxes });
     }
 
     // ── Update ──
@@ -223,11 +258,19 @@ export default async function handler(req, res) {
       .single();
 
     if (updateErr) return res.status(500).json({ success: false, error: updateErr.message });
-    if (nowAuto && !wasAuto) {
-      // Just switched on: stock becomes the count of existing boxes.
-      await supabaseAdmin.rpc("sync_auto_stock", { p_product_id: id });
+    let addedBoxes = 0;
+    if (nowAuto) {
+      try {
+        addedBoxes = await addBoxes(id, boxesToAdd);
+        // Switched on without new boxes: stock = count of existing boxes.
+        if (!wasAuto && addedBoxes === 0) {
+          await supabaseAdmin.rpc("sync_auto_stock", { p_product_id: id });
+        }
+      } catch (e) {
+        return res.status(500).json({ success: false, error: `boxes_failed: ${e.message}` });
+      }
     }
-    return res.status(200).json({ success: true, product: updated });
+    return res.status(200).json({ success: true, product: updated, added_boxes: addedBoxes });
   }
 
   if (req.method === "DELETE") {

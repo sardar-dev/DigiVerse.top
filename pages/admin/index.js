@@ -41,6 +41,7 @@ export default function Admin() {
   const [manualProducts, setManualProducts] = useState([]);
   const [manualForm, setManualForm] = useState(emptyManualForm());
   const [manualMessage, setManualMessage] = useState("");
+  const [boxesVersion, setBoxesVersion] = useState(0); // bumps to refresh the boxes list
 
   // Manual delivery modal (replaces the old prompt())
   const [deliverOrder, setDeliverOrder] = useState(null);
@@ -84,6 +85,8 @@ export default function Admin() {
       featured: false,
       low_stock_threshold: "",
       auto_delivery: false,
+      new_boxes: "",
+      box_split: "separator",
     };
   }
 
@@ -115,7 +118,11 @@ export default function Admin() {
       // Only sent when on (or when editing a product that has it), so
       // saving ordinary products works before migration_012 is run.
       ...(manualForm.auto_delivery || manualForm._hadAuto
-        ? { auto_delivery: Boolean(manualForm.auto_delivery) }
+        ? {
+            auto_delivery: Boolean(manualForm.auto_delivery),
+            new_boxes: manualForm.new_boxes,
+            box_split: manualForm.box_split,
+          }
         : {}),
     };
     const res = await fetch("/api/admin/manual-products", {
@@ -127,9 +134,12 @@ export default function Admin() {
     if (data.success) {
       const isNew = manualForm.id === null;
       loadManualProducts();
-      if (isNew && manualForm.auto_delivery && data.product) {
-        // Straight into edit mode so the delivery boxes can be added.
-        setManualMessage("Created. Now add the delivery boxes below.");
+      const added = data.added_boxes || 0;
+      const boxNote = added ? ` Added ${added} box${added === 1 ? "" : "es"}.` : "";
+      if (manualForm.auto_delivery && data.product) {
+        // Stay in edit mode so more stock can be pasted in straight away.
+        setManualMessage((isNew ? "Created." : "Saved.") + boxNote);
+        setBoxesVersion((v) => v + 1);
         editManualProduct(data.product);
       } else {
         setManualMessage(isNew ? "Created." : "Updated.");
@@ -159,6 +169,8 @@ export default function Admin() {
       low_stock_threshold: p.low_stock_threshold ?? "",
       auto_delivery: Boolean(p.auto_delivery),
       _hadAuto: Boolean(p.auto_delivery),
+      new_boxes: "",
+      box_split: "separator",
     });
   }
 
@@ -433,6 +445,7 @@ export default function Admin() {
           resetManualForm={() => setManualForm(emptyManualForm())}
           bulkUpdateManualProducts={bulkUpdateManualProducts}
           reloadManualProducts={loadManualProducts}
+          boxesVersion={boxesVersion}
         />
       )}
 

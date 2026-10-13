@@ -5,6 +5,7 @@ import SectionHeading from "../ui/SectionHeading";
 import DataTable from "./DataTable";
 import BulkActionBar from "./BulkActionBar";
 import StockBoxesManager from "./StockBoxesManager";
+import { splitBoxes } from "../../lib/stockBoxes";
 
 export default function ManualProductsTab({
   manualForm,
@@ -17,6 +18,7 @@ export default function ManualProductsTab({
   resetManualForm,
   bulkUpdateManualProducts,
   reloadManualProducts,
+  boxesVersion,
 }) {
   const [selected, setSelected] = useState(() => new Set());
 
@@ -107,19 +109,49 @@ export default function ManualProductsTab({
             </span>
           </label>
 
-          {manualForm.auto_delivery && manualForm.id !== null && manualForm._hadAuto && (
-            <StockBoxesManager productId={manualForm.id} onChanged={reloadManualProducts} />
+          {manualForm.auto_delivery && (
+            <div className="space-y-3 rounded-xl border border-brand/30 bg-brand-soft/40 p-4">
+              <FormTextarea
+                label="Add stock (delivery boxes)"
+                value={manualForm.new_boxes}
+                onChange={(e) => setManualForm({ ...manualForm, new_boxes: e.target.value })}
+                rows={6}
+                placeholder={
+                  manualForm.box_split === "line"
+                    ? "user1@mail.com:pass1\nuser2@mail.com:pass2\nuser3@mail.com:pass3"
+                    : "email: user1@mail.com\npassword: pass1\n---\nemail: user2@mail.com\npassword: pass2"
+                }
+                className="font-mono text-xs"
+                hint={
+                  manualForm.box_split === "line"
+                    ? "Each line becomes one box. Each customer receives one line."
+                    : "This exact text is sent to a customer after payment. For several boxes, put a line with only --- between them."
+                }
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <FormSelect
+                  value={manualForm.box_split}
+                  onChange={(e) => setManualForm({ ...manualForm, box_split: e.target.value })}
+                  aria-label="How to split pasted stock into boxes"
+                >
+                  <option value="separator">Split boxes with a --- line</option>
+                  <option value="line">One box per line</option>
+                </FormSelect>
+                <span className="text-sm font-medium text-brand">
+                  {splitBoxes(manualForm.new_boxes, manualForm.box_split).length} new box(es) ready —
+                  saved when you click {manualForm.id !== null ? "Save changes" : "Create product"}
+                </span>
+              </div>
+              {manualForm.id !== null && manualForm._hadAuto && (
+                <StockBoxesManager
+                  productId={manualForm.id}
+                  onChanged={reloadManualProducts}
+                  version={boxesVersion}
+                />
+              )}
+            </div>
           )}
-          {manualForm.auto_delivery && manualForm.id === null && (
-            <p className="text-xs text-muted">
-              Create the product first — you'll then be able to add its delivery boxes right here.
-            </p>
-          )}
-          {manualForm.auto_delivery && manualForm.id !== null && !manualForm._hadAuto && (
-            <p className="text-xs text-warning">
-              Save changes to switch auto delivery on, then add boxes here.
-            </p>
-          )}
+
           <FormInput
             label="Estimated delivery"
             value={manualForm.delivery}
