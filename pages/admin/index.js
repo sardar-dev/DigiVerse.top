@@ -224,7 +224,9 @@ export default function Admin() {
     const data = await res.json();
     setSyncing(false);
     if (data.success) {
-      setSyncMessage(`Synced ${data.synced} products.`);
+      setSyncMessage(
+        `Synced ${data.synced} products (${data.withDescription ?? 0} with descriptions from DigiTrust).`
+      );
       loadProducts();
       loadDashboard();
     } else {

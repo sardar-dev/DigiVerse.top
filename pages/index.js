@@ -383,7 +383,9 @@ function BuyModal({ product, onClose }) {
       )}
 
       {product.description && step === "form" && (
-        <p className="mb-4 text-sm text-muted">{product.description}</p>
+        <p className="mb-4 max-h-40 overflow-y-auto whitespace-pre-line text-sm text-muted">
+          {product.description}
+        </p>
       )}
 
       {step === "form" && (
