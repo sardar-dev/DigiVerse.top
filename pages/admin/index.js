@@ -5,6 +5,7 @@ import DashboardTab from "../../components/admin/DashboardTab";
 import ProductsTab from "../../components/admin/ProductsTab";
 import ManualProductsTab from "../../components/admin/ManualProductsTab";
 import OrdersTab from "../../components/admin/OrdersTab";
+import FeedbackTab from "../../components/admin/FeedbackTab";
 import CouponsTab from "../../components/admin/CouponsTab";
 import StatsTab from "../../components/admin/StatsTab";
 import DebugTab from "../../components/admin/DebugTab";
@@ -226,7 +227,7 @@ export default function Admin() {
     setSyncing(false);
     if (data.success) {
       setSyncMessage(
-        `Synced ${data.synced} products (${data.withDescription ?? 0} with descriptions from DigiTrust).`
+        `Synced ${data.synced} products (${data.withDescription ?? 0} with descriptions, ${data.withWarranty ?? 0} with warranty from DigiTrust).`
       );
       loadProducts();
       loadDashboard();
@@ -386,6 +387,8 @@ export default function Admin() {
       )}
 
       {tab === "stats" && <StatsTab />}
+
+      {tab === "feedback" && <FeedbackTab />}
 
       {tab === "coupons" && (
         <CouponsTab products={[...products, ...manualProducts]} />

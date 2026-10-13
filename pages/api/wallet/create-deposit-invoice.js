@@ -2,7 +2,6 @@ import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 const INVOICE_TTL_MINUTES = 30;
-const MAX_COLLISION_RETRIES = 10;
 
 // Creates a unique-amount deposit invoice: the customer asks for a
 // round dollar amount (e.g. $10), and we hand back a specific amount
@@ -44,15 +43,14 @@ export default async function handler(req, res) {
 
   const expiresAt = new Date(Date.now() + INVOICE_TTL_MINUTES * 60 * 1000).toISOString();
 
-  for (let attempt = 0; attempt < MAX_COLLISION_RETRIES; attempt++) {
-    // Fingerprint format: <base>.00XX, where XX is a random 2-digit
-    // number from 10-90. E.g. base 1 -> 1.0067, base 0.3 -> 0.3037.
-    // The leading zero keeps the fingerprint visually distinct from a
-    // "normal" amount (nobody sends .00XX by coincidence), while still
-    // giving ~81 possible values to avoid collisions.
-    const fingerprint = Math.floor(Math.random() * 81) + 10; // 10-90
-    const offset = fingerprint / 10000; // 0.0010 - 0.0090
-    const uniqueAmount = Math.round((base + offset) * 10000) / 10000;
+  // Fingerprint format: <base>.00 + one random digit 1-9 appended after
+  // the cents, e.g. 0.80 -> 0.8001 ... 0.8009, 5 -> 5.0003. Every digit
+  // is tried (in random order) until one isn't held by another pending
+  // invoice for the same base amount.
+  const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
+
+  for (const digit of digits) {
+    const uniqueAmount = Math.round((base + digit / 10000) * 10000) / 10000;
 
     const { data, error } = await supabaseAdmin
       .from("wallet_deposit_invoices")
@@ -79,9 +77,7 @@ export default async function handler(req, res) {
     }
 
     // 23505 = unique_violation on the active-amount index — someone
-    // else currently holds this exact figure. Extremely unlikely with
-    // ~9999 possible offsets, but retry with a fresh random offset
-    // rather than erroring the customer out.
+    // else currently holds this exact figure, so try the next digit.
     if (error.code !== "23505") {
       return res.status(500).json({ success: false, error: error.message });
     }

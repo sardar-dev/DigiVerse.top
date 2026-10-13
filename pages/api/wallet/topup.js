@@ -17,7 +17,9 @@ import { claimTxHash, confirmTxHash, releaseTxHash } from "../../../lib/claimTxH
 // attacker's own transaction can only ever match an invoice the
 // attacker themselves created, so claiming someone else's transfer
 // no longer buys them anything.
-const AMOUNT_TOLERANCE = 0.0005; // guards against on-chain float rounding only
+// Invoices differ by as little as 0.0001, so the match must be exact —
+// this only absorbs float rounding, never a neighboring invoice.
+const AMOUNT_TOLERANCE = 0.00002;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {

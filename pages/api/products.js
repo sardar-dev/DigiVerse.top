@@ -1,4 +1,5 @@
-import { supabaseAdmin } from "../../lib/supabaseAdmin";
+import { fetchStorefrontProducts } from "../../lib/storefrontProducts";
+
 
 // Storefront reads from our local Supabase cache, never live from
 // DigiTrust on every page view — that keeps us well under DigiTrust's
@@ -9,15 +10,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: "method_not_allowed" });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("products")
-    .select(
-      "id, title, description, short_description, image_url, category, featured, low_stock_threshold, sell_price, available_stock, requires_email, delivery, provider, activation_field, updated_at"
-    )
-    .eq("selected", true)
-    .gt("available_stock", 0)
-    .order("featured", { ascending: false })
-    .order("title", { ascending: true });
+  const { data, error } = await fetchStorefrontProducts();
 
   if (error) {
     return res.status(500).json({ success: false, error: error.message });

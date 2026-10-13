@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
-import { supabaseAdmin } from "../lib/supabaseAdmin";
+import { fetchStorefrontProducts } from "../lib/storefrontProducts";
 import PaymentPanel from "../components/PaymentPanel";
 import SEO from "../components/SEO";
 import SiteHeader from "../components/layout/SiteHeader";
@@ -20,16 +20,7 @@ import { SITE_NAME, SITE_TAGLINE } from "../lib/siteConfig";
 // actual product list immediately, not an empty page that fills in
 // after a client-side fetch.
 export async function getServerSideProps({ query }) {
-  const { data } = await supabaseAdmin
-    .from("products")
-    .select(
-      "id, title, description, short_description, image_url, category, featured, low_stock_threshold, sell_price, available_stock, requires_email, delivery, provider, activation_field, updated_at"
-    )
-    .eq("selected", true)
-    .gt("available_stock", 0)
-    .order("featured", { ascending: false })
-    .order("title", { ascending: true });
-
+  const { data } = await fetchStorefrontProducts();
   const list = data || [];
   // Shared product links (?product=<id>) get a product-specific link
   // preview (title/blurb/image) in WhatsApp/Telegram etc. Taken from the
@@ -422,6 +413,15 @@ function BuyModal({ product, onClose }) {
         <p className="mb-4 max-h-40 overflow-y-auto whitespace-pre-line text-sm text-muted">
           {product.description}
         </p>
+      )}
+
+      {product.warranty && step === "form" && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-success/20 bg-success-soft px-3.5 py-2.5 text-sm text-success">
+          <span aria-hidden="true">🛡️</span>
+          <span>
+            <strong>Warranty:</strong> {product.warranty}
+          </span>
+        </div>
       )}
 
       {step === "form" && (

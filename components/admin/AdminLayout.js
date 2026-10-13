@@ -7,6 +7,7 @@ const TABS = [
   { id: "manual", label: "Manual Products" },
   { id: "orders", label: "Orders" },
   { id: "coupons", label: "Coupons" },
+  { id: "feedback", label: "Feedback" },
   { id: "debug", label: "Debug payment" },
   { id: "settings", label: "Settings" },
 ];
