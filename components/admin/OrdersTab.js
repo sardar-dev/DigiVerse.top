@@ -57,7 +57,14 @@ export default function OrdersTab({
             <tr key={o.id} className="border-b border-border align-top last:border-0">
               <td className="py-3 px-4 font-mono text-ink">{o.order_number}</td>
               <td className="py-3 px-4 text-ink">{o.products?.title}</td>
-              <td className="py-3 px-4 font-mono text-ink">${Number(o.total).toFixed(2)}</td>
+              <td className="py-3 px-4 font-mono text-ink">
+                ${Number(o.total).toFixed(2)}
+                {o.coupon_code && (
+                  <div className="text-xs text-success">
+                    🎟️ {o.coupon_code} (−${Number(o.discount_amount).toFixed(2)})
+                  </div>
+                )}
+              </td>
               <td className="py-3 px-4 text-muted">{o.paid_with || "onchain"}</td>
               <td className="py-3 px-4">
                 <StatusBadge status={o.status} />

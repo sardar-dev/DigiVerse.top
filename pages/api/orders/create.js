@@ -1,6 +1,7 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getProduct, applyStockBuffer } from "../../../lib/digitrust";
+import { checkCoupon, orderFitsCouponLimits } from "../../../lib/coupons";
 
 // Step 1 of checkout: customer picks a product + quantity. We
 // re-check LIVE stock on DigiTrust (not just our cache) before we
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: "login_required" });
   }
 
-  const { product_id, quantity = 1, email, activation_info } = req.body || {};
+  const { product_id, quantity = 1, email, activation_info, coupon_code } = req.body || {};
   if (!product_id || quantity < 1) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
@@ -73,7 +74,26 @@ export default async function handler(req, res) {
   }
 
   const unitPrice = Number(localProduct.sell_price);
-  const base = Number((unitPrice * quantity).toFixed(2));
+  const fullBase = Number((unitPrice * quantity).toFixed(2));
+
+  // Optional coupon — fully re-validated here on the server; the
+  // popup's preview is never trusted.
+  let coupon = null;
+  let discount = 0;
+  if (coupon_code && String(coupon_code).trim()) {
+    const result = await checkCoupon({
+      code: coupon_code,
+      userId: session.user.id,
+      productId: product_id,
+      base: fullBase,
+    });
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.reason, min_order: result.min_order });
+    }
+    coupon = result.coupon;
+    discount = result.discount;
+  }
+  const base = Number((fullBase - discount).toFixed(2));
 
   // Same unique-fingerprint trick used for wallet top-up invoices:
   // the customer is asked to send base + a random 0.0010-0.0090 tail
@@ -99,12 +119,27 @@ export default async function handler(req, res) {
       status: "pending_payment",
       payout_wallet: process.env.PAYOUT_WALLET_ADDRESS,
       expected_amount: total,
+      // Only sent when a coupon is used, so normal orders keep working
+      // even before migration_010 has been run.
+      ...(coupon
+        ? { coupon_id: coupon.id, coupon_code: coupon.code, discount_amount: discount }
+        : {}),
     })
     .select()
     .single();
 
   if (orderErr) {
     return res.status(500).json({ success: false, error: orderErr.message });
+  }
+
+  // Two customers can race for the last use of a limited coupon; the
+  // later order is rejected here (and cancelled so it holds no use).
+  if (coupon && !(await orderFitsCouponLimits(coupon, order.id, session.user.id))) {
+    await supabaseAdmin
+      .from("orders")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("id", order.id);
+    return res.status(409).json({ success: false, error: "coupon_used_up" });
   }
 
   return res.status(200).json({ success: true, order });

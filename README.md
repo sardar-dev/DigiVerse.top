@@ -505,3 +505,7 @@ pages/admin/index.js                         (Manual Products tab, Deliver butto
 - **Branded link previews:** static `public/og-image.png`, app icons and `manifest.webmanifest` (served by the Vercel CDN, no function cost). A shared `/?product=<id>` link now previews with that product's title, blurb, price and image (uses the already-fetched product list, no extra query).
 - **Mobile polish:** buy popup is a bottom sheet on phones, 44px minimum tap targets, 16px inputs (stops iOS zoom-on-focus), safe-area spacing for the WhatsApp button.
 - **Admin → Statistics tab:** users (total/7d/30d/buyers), orders by status and payment method, revenue (all/7d/30d), 14-day activity, products and best sellers, wallet totals, newest users. Loads only when the tab is opened or Refreshed (head-only COUNT queries + one capped orders query). No new env vars or migrations.
+
+## Coupon codes
+
+Admin → **Coupons**: create percentage or fixed-amount codes for one product or all products, with optional total-use limit, per-customer limit, minimum order and expiry; enable/disable/delete anytime. Customers enter the code in the buy popup; the server re-validates it when the order is created and stores `coupon_code` / `discount_amount` on the order. Usage is derived from orders (cancelled/failed orders and unpaid orders older than 1 hour don't count). Orders never drop below $0.10. Run `supabase/migration_010_coupons.sql` once. No new env vars; no cron or Realtime.

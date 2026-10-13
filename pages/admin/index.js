@@ -5,6 +5,7 @@ import DashboardTab from "../../components/admin/DashboardTab";
 import ProductsTab from "../../components/admin/ProductsTab";
 import ManualProductsTab from "../../components/admin/ManualProductsTab";
 import OrdersTab from "../../components/admin/OrdersTab";
+import CouponsTab from "../../components/admin/CouponsTab";
 import StatsTab from "../../components/admin/StatsTab";
 import DebugTab from "../../components/admin/DebugTab";
 import SettingsTab from "../../components/admin/SettingsTab";
@@ -385,6 +386,10 @@ export default function Admin() {
       )}
 
       {tab === "stats" && <StatsTab />}
+
+      {tab === "coupons" && (
+        <CouponsTab products={[...products, ...manualProducts]} />
+      )}
 
       {tab === "products" && (
         <ProductsTab

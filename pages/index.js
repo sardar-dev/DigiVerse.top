@@ -326,6 +326,10 @@ function BuyModal({ product, onClose }) {
   const [items, setItems] = useState(null);
   const [manual, setManual] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState(null); // { code, discount, final } once applied
+  const [couponError, setCouponError] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
 
   const activationLabel =
     product.activation_field === "email"
@@ -347,6 +351,35 @@ function BuyModal({ product, onClose }) {
     setStep("summary");
   }
 
+  async function applyCoupon() {
+    setCouponError("");
+    if (!couponInput.trim()) return;
+    setCouponBusy(true);
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput, product_id: product.id, quantity }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCoupon(data);
+      } else {
+        setCoupon(null);
+        setCouponError(describeError(data.error, undefined, data.min_order));
+      }
+    } catch {
+      setCouponError("Couldn't check that code — try again.");
+    }
+    setCouponBusy(false);
+  }
+
+  function removeCoupon() {
+    setCoupon(null);
+    setCouponInput("");
+    setCouponError("");
+  }
+
   async function confirmOrder() {
     setError("");
     setCreating(true);
@@ -358,12 +391,14 @@ function BuyModal({ product, onClose }) {
         quantity,
         email,
         activation_info: activationInfo,
+        coupon_code: coupon ? coupon.code : undefined,
       }),
     });
     const data = await res.json();
     setCreating(false);
     if (!data.success) {
-      setError(describeError(data.error, data.available));
+      setError(describeError(data.error, data.available, data.min_order));
+      setCoupon(null);
       setStep("form");
       return;
     }
@@ -371,7 +406,8 @@ function BuyModal({ product, onClose }) {
     setStep("order");
   }
 
-  const total = (Number(product.sell_price) * quantity).toFixed(2);
+  const subtotal = Number(product.sell_price) * quantity;
+  const total = (coupon ? coupon.final : subtotal).toFixed(2);
   const stepLabels = { form: "1. Details", summary: "2. Review", order: "3. Payment", done: "4. Done" };
 
   return (
@@ -403,7 +439,11 @@ function BuyModal({ product, onClose }) {
             min={1}
             max={product.available_stock}
             value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
+            onChange={(e) => {
+              setQuantity(Number(e.target.value));
+              // Discount depends on the order value — re-apply after a change.
+              setCoupon(null);
+            }}
           />
           {product.requires_email && (
             <FormInput
@@ -443,10 +483,45 @@ function BuyModal({ product, onClose }) {
             {product.provider === "manual" && (
               <Row label="Delivery" value={`Manual — ${product.delivery || "see details"}`} />
             )}
+            {coupon && (
+              <>
+                <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} mono />
+                <div className="flex justify-between px-3.5 py-3 text-success">
+                  <span>Coupon {coupon.code}</span>
+                  <span className="font-mono">−${Number(coupon.discount).toFixed(2)}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between px-3.5 py-3 text-base font-semibold text-ink">
               <span>Total</span>
               <span>${total}</span>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            {coupon ? (
+              <div className="flex items-center justify-between rounded-lg border border-success/30 bg-success-soft px-3.5 py-2.5 text-success">
+                <span>🎟️ {coupon.code} applied</span>
+                <button type="button" onClick={removeCoupon} className="text-xs font-medium underline">
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <FormInput
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  placeholder="Coupon code"
+                  aria-label="Coupon code"
+                  className="font-mono"
+                  autoComplete="off"
+                />
+                <SecondaryButton onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()}>
+                  {couponBusy ? "…" : "Apply"}
+                </SecondaryButton>
+              </div>
+            )}
+            <Alert variant="error">{couponError}</Alert>
           </div>
           <Alert variant="error">{error}</Alert>
           <div className="flex gap-3">
@@ -513,7 +588,7 @@ function Row({ label, value, mono }) {
   );
 }
 
-function describeError(code, available) {
+function describeError(code, available, minOrder) {
   switch (code) {
     case "not_enough_stock":
       return `Only ${available} left — lower the quantity and try again.`;
@@ -521,6 +596,20 @@ function describeError(code, available) {
       return "This product needs an email address for delivery.";
     case "activation_info_required":
       return "Please enter the info needed to activate your subscription.";
+    case "invalid_coupon":
+      return "That coupon code isn't valid.";
+    case "coupon_inactive":
+      return "That coupon is no longer active.";
+    case "coupon_expired":
+      return "That coupon has expired.";
+    case "coupon_wrong_product":
+      return "That coupon doesn't apply to this product.";
+    case "coupon_min_order":
+      return `This coupon needs an order of at least $${Number(minOrder || 0).toFixed(2)}.`;
+    case "coupon_used_up":
+      return "That coupon has reached its usage limit.";
+    case "coupon_already_used":
+      return "You've already used this coupon.";
     default:
       return code ? code.replaceAll("_", " ") : "";
   }
