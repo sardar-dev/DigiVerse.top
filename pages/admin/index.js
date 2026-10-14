@@ -5,6 +5,7 @@ import DashboardTab from "../../components/admin/DashboardTab";
 import ProductsTab from "../../components/admin/ProductsTab";
 import ManualProductsTab from "../../components/admin/ManualProductsTab";
 import OrdersTab from "../../components/admin/OrdersTab";
+import DepositsTab from "../../components/admin/DepositsTab";
 import FeedbackTab from "../../components/admin/FeedbackTab";
 import CouponsTab from "../../components/admin/CouponsTab";
 import StatsTab from "../../components/admin/StatsTab";
@@ -414,6 +415,8 @@ export default function Admin() {
       )}
 
       {tab === "stats" && <StatsTab />}
+
+      {tab === "deposits" && <DepositsTab />}
 
       {tab === "feedback" && <FeedbackTab />}
 
