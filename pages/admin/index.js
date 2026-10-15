@@ -365,6 +365,8 @@ export default function Admin() {
     return orders.filter(
       (o) =>
         (o.products?.title || "").toLowerCase().includes(q) ||
+        (o.user_email || "").toLowerCase().includes(q) ||
+        (o.email || "").toLowerCase().includes(q) ||
         (o.tx_hash || "").toLowerCase().includes(q) ||
         String(o.order_number || "").includes(q) ||
         o.status.toLowerCase().includes(q)

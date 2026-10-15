@@ -12,7 +12,20 @@ export default async function handler(req, res) {
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) return res.status(500).json({ success: false, error: error.message });
-    return res.status(200).json({ success: true, orders: data });
+
+    // Which account placed each order (orders link to auth users, not
+    // profiles, so look the emails up in one extra query).
+    const userIds = [...new Set((data || []).map((o) => o.user_id))];
+    const emails = new Map();
+    if (userIds.length) {
+      const { data: profiles } = await supabaseAdmin
+        .from("profiles")
+        .select("id, email")
+        .in("id", userIds);
+      for (const p of profiles || []) emails.set(p.id, p.email);
+    }
+    const orders = (data || []).map((o) => ({ ...o, user_email: emails.get(o.user_id) || null }));
+    return res.status(200).json({ success: true, orders });
   }
 
   if (req.method === "POST") {

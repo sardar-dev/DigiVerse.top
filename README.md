@@ -524,4 +524,4 @@ In Admin -> Manual Products tick **Auto delivery**, create the product, then add
 
 ## Admin -> Deposits
 
-Recent wallet deposits: credited top-ups (credited amount, exact on-chain amount, BscScan tx link) plus generated-but-unpaid invoices (pending/expired), with filters and 24h totals. Loads only when opened or refreshed; no migration needed.
+Everything that moved money in: wallet top-ups (credited + unpaid/expired invoices), direct on-chain order payments (with tx link, plus orders awaiting payment in the last 24h) and admin credits/debits, with type and status filters and 24h totals. Orders tab now shows the customer account email (searchable). No migration needed.

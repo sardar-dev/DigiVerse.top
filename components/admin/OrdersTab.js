@@ -20,7 +20,7 @@ export default function OrdersTab({
       <FormInput
         value={orderSearch}
         onChange={(e) => setOrderSearch(e.target.value)}
-        placeholder="Search by order #, product, status, or tx hash…"
+        placeholder="Search by order #, customer email, product, status, or tx hash…"
         className="mb-4 w-full"
         aria-label="Search orders"
       />
@@ -39,10 +39,11 @@ export default function OrdersTab({
         </div>
       )}
 
-      <DataTable minWidth="min-w-[760px]">
+      <DataTable minWidth="min-w-[900px]">
         <thead>
           <tr className="text-left text-muted border-b border-border">
             <th className="py-3 px-4">Order #</th>
+            <th className="py-3 px-4">Customer</th>
             <th className="py-3 px-4">Product</th>
             <th className="py-3 px-4">Total</th>
             <th className="py-3 px-4">Paid with</th>
@@ -56,6 +57,12 @@ export default function OrdersTab({
           {visibleOrders.map((o) => (
             <tr key={o.id} className="border-b border-border align-top last:border-0">
               <td className="py-3 px-4 font-mono text-ink">{o.order_number}</td>
+              <td className="py-3 px-4 max-w-[180px] break-all text-ink">
+                {o.user_email || <span className="text-muted">unknown</span>}
+                {o.email && o.email !== o.user_email && (
+                  <div className="text-xs text-muted">delivery: {o.email}</div>
+                )}
+              </td>
               <td className="py-3 px-4 text-ink">{o.products?.title}</td>
               <td className="py-3 px-4 font-mono text-ink">
                 ${Number(o.total).toFixed(2)}
