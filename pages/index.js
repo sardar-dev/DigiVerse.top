@@ -141,56 +141,129 @@ export default function Storefront({ initialProducts, sharedMeta }) {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="border-b border-border bg-surface">
-          <PageContainer className="grid gap-8 py-14 sm:py-16 md:grid-cols-2 md:items-center">
+        <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-brand-soft via-surface to-surface">
+          <div
+            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand/10 blur-3xl"
+            aria-hidden="true"
+          />
+          <PageContainer className="relative grid gap-10 py-12 sm:py-16 md:grid-cols-[1.1fr_0.9fr] md:items-center">
             <div>
-              <h1 className="text-3xl font-semibold leading-tight text-ink sm:text-4xl">
-                Digital products, without the wait.
+              <span className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-surface px-3 py-1 text-xs font-medium text-brand shadow-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+                {products.length > 0
+                  ? `${products.length} product${products.length === 1 ? "" : "s"} in stock now`
+                  : "Digital products store"}
+              </span>
+              <h1 className="mt-4 text-3xl font-bold leading-tight text-ink sm:text-5xl">
+                Premium digital accounts,{" "}
+                <span className="text-brand">delivered instantly.</span>
               </h1>
-              <p className="mt-4 max-w-md text-base text-muted">
-                Buy verified digital products and accounts, paid for with your
-                wallet balance or USDT on BEP20. Automatic items deliver the
-                moment payment confirms; manual items follow shortly after.
+              <p className="mt-4 max-w-lg text-base text-muted sm:text-lg">
+                Subscriptions and verified accounts at fair prices. Pay with USDT (BEP20) or your
+                wallet balance and get your login details the moment payment confirms.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-7 flex flex-wrap gap-3">
                 <a href="#catalog">
-                  <PrimaryButton>Browse products</PrimaryButton>
+                  <PrimaryButton className="px-6">Browse products</PrimaryButton>
                 </a>
                 <a href="#how-it-works">
-                  <SecondaryButton>How it works</SecondaryButton>
+                  <SecondaryButton className="px-6">How it works</SecondaryButton>
                 </a>
               </div>
+              <ul className="mt-8 grid max-w-lg grid-cols-1 gap-3 text-sm text-ink sm:grid-cols-3">
+                {[
+                  { icon: "⚡", title: "Instant delivery", text: "Automatic items arrive right after payment" },
+                  { icon: "🔒", title: "Secure USDT payment", text: "On-chain BEP20, verified automatically" },
+                  { icon: "💬", title: "Real support", text: "Questions? We are here to help" },
+                ].map((f) => (
+                  <li key={f.title} className="flex items-start gap-2.5">
+                    <span
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-base"
+                      aria-hidden="true"
+                    >
+                      {f.icon}
+                    </span>
+                    <span>
+                      <span className="block font-semibold">{f.title}</span>
+                      <span className="block text-xs text-muted">{f.text}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className="hidden md:block" aria-hidden="true">
-              <svg viewBox="0 0 400 300" className="w-full max-w-sm mx-auto">
-                <rect x="40" y="40" width="320" height="220" rx="16" fill="#EDF2FB" />
-                <rect x="64" y="72" width="140" height="16" rx="8" fill="#3169F5" />
-                <rect x="64" y="104" width="220" height="10" rx="5" fill="#DFE5F0" />
-                <rect x="64" y="124" width="180" height="10" rx="5" fill="#DFE5F0" />
-                <rect x="64" y="160" width="272" height="64" rx="12" fill="#FFFFFF" stroke="#DFE5F0" />
-                <circle cx="96" cy="192" r="16" fill="#73A0FF" />
-                <rect x="124" y="184" width="100" height="8" rx="4" fill="#DFE5F0" />
-                <rect x="124" y="198" width="60" height="8" rx="4" fill="#DFE5F0" />
-                <rect x="276" y="178" width="48" height="28" rx="8" fill="#3169F5" />
-              </svg>
+
+            {/* Live preview of real in-stock products */}
+            <div className="hidden md:block">
+              <div className="mx-auto max-w-sm space-y-3 [transform:perspective(1000px)_rotateY(-6deg)_rotateX(2deg)]">
+                {products.slice(0, 3).map((p, i) => (
+                  <a
+                    key={p.id}
+                    href="#catalog"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-[0_12px_24px_-10px_rgba(23,33,58,0.25)] transition-transform hover:-translate-y-0.5"
+                    style={{ marginLeft: `${i * 14}px` }}
+                  >
+                    {p.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.image_url}
+                        alt=""
+                        className="h-11 w-11 flex-shrink-0 rounded-lg border border-border object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-base font-semibold text-brand">
+                        {(p.title || "?").trim().charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-ink">{p.title}</span>
+                      <span className="block text-xs text-success">
+                        {p.provider === "manual" && !p.auto_delivery
+                          ? "Manual delivery"
+                          : "Instant delivery"}
+                      </span>
+                    </span>
+                    <span className="text-sm font-semibold text-ink">
+                      ${Number(p.sell_price).toFixed(2)}
+                    </span>
+                  </a>
+                ))}
+                {products.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-muted">
+                    New stock is added regularly — check back soon.
+                  </div>
+                )}
+              </div>
             </div>
           </PageContainer>
         </section>
 
-        {/* Trust indicators */}
-        <section id="how-it-works" className="border-b border-border">
-          <PageContainer className="grid grid-cols-2 gap-4 py-8 sm:grid-cols-4">
-            {[
-              { label: "Verified stock", icon: "✓" },
-              { label: "Secure BEP20 payment", icon: "🔒" },
-              { label: "Fast delivery", icon: "⚡" },
-              { label: "Customer support", icon: "💬" },
-            ].map((t) => (
-              <div key={t.label} className="flex items-center gap-2 text-sm text-muted">
-                <span aria-hidden="true">{t.icon}</span>
-                <span>{t.label}</span>
-              </div>
-            ))}
+        {/* How it works */}
+        <section id="how-it-works" className="border-b border-border bg-surface">
+          <PageContainer className="py-10">
+            <h2 className="text-center text-xl font-semibold text-ink sm:text-2xl">
+              How it works
+            </h2>
+            <p className="mx-auto mt-1 max-w-md text-center text-sm text-muted">
+              From click to login details in three simple steps.
+            </p>
+            <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+              {[
+                { n: 1, title: "Choose a product", text: "Browse the catalog and pick what you need. Prices are shown upfront." },
+                { n: 2, title: "Pay with USDT or wallet", text: "Send the exact USDT (BEP20) amount, or pay instantly from your wallet balance." },
+                { n: 3, title: "Receive instantly", text: "Your details appear right away and stay saved under My Orders." },
+              ].map((step) => (
+                <li
+                  key={step.n}
+                  className="rounded-xl border border-border bg-bg p-5 text-center shadow-card"
+                >
+                  <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
+                    {step.n}
+                  </span>
+                  <h3 className="mt-3 text-base font-semibold text-ink">{step.title}</h3>
+                  <p className="mt-1 text-sm text-muted">{step.text}</p>
+                </li>
+              ))}
+            </ol>
           </PageContainer>
         </section>
 
