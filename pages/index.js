@@ -204,7 +204,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                   >
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <img loading="lazy" decoding="async"
                         src={p.image_url}
                         alt=""
                         className="h-11 w-11 flex-shrink-0 rounded-lg border border-border object-cover"

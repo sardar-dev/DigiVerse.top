@@ -75,7 +75,7 @@ export default function ProductsTab({
             <th className="py-3 px-4">Product</th>
             <th className="py-3 px-4">Real stock</th>
             <th className="py-3 px-4">Shown as</th>
-            <th className="py-3 px-4">DigiTrust price</th>
+            <th className="py-3 px-4">Supplier cost</th>
             <th className="py-3 px-4">Your price</th>
             <th className="py-3 px-4">Show on site</th>
             <th className="py-3 px-4">Details</th>
@@ -101,10 +101,18 @@ export default function ProductsTab({
                 <td className="py-3 px-4 text-ink">
                   {p.title}
                   {p.featured && <span className="ml-1.5" title="Featured">⭐</span>}
+                  {p.supplier_status === "price_too_high" && (
+                    <div className="mt-0.5 text-xs text-danger">Hidden: every in-stock supplier costs more than your price</div>
+                  )}
                 </td>
                 <td className="py-3 px-4 font-mono text-muted">{p.real_stock}</td>
                 <td className="py-3 px-4 font-mono text-ink">{p.available_stock}</td>
-                <td className="py-3 px-4 font-mono text-muted">${Number(p.cost_price).toFixed(2)}</td>
+                <td className="py-3 px-4 font-mono text-muted">
+                  ${Number(p.cost_price).toFixed(2)}
+                  {p.active_supplier && (
+                    <div className="font-sans text-xs">{p.active_supplier === "xpro" ? "XPro" : "DigiTrust"}</div>
+                  )}
+                </td>
                 <td className="py-3 px-4">
                   <input
                     type="number"

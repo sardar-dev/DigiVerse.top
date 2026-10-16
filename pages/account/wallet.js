@@ -61,16 +61,19 @@ export default function Wallet() {
       supabase
         .from("wallet_topups")
         .select("id, amount, created_at")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(50),
       supabase
         .from("wallet_adjustments")
         .select("id, amount, reason, created_at")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(50),
       supabase
         .from("orders")
         .select("id, total, created_at, products(title)")
         .eq("paid_with", "wallet_balance")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(50),
     ]);
 
     const entries = [

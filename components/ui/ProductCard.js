@@ -26,7 +26,7 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         {showImage ? (
-          <img
+          <img loading="lazy" decoding="async"
             src={product.image_url}
             alt=""
             className="h-10 w-10 rounded-lg border border-border object-cover"

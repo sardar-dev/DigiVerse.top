@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { getBalance } from "../../../lib/digitrust";
+import * as xpro from "../../../lib/suppliers/xpro";
 
 const LOW_BALANCE_THRESHOLD = Number(process.env.LOW_BALANCE_THRESHOLD || 5);
 
@@ -15,6 +16,17 @@ export default async function handler(req, res) {
     digitrustBalance = b.balance ?? b.wallet_balance ?? b;
   } catch (e) {
     digitrustBalanceError = e.message;
+  }
+
+  let xproInfo = null;
+  if (xpro.configured()) {
+    xproInfo = { balance: null, error: null, low: false };
+    try {
+      xproInfo.balance = (await xpro.getBalance()).balance;
+      xproInfo.low = xproInfo.balance !== null && xproInfo.balance < LOW_BALANCE_THRESHOLD;
+    } catch (e) {
+      xproInfo.error = e.message;
+    }
   }
 
   const { data: meta } = await supabaseAdmin
@@ -47,6 +59,7 @@ export default async function handler(req, res) {
       low: digitrustBalance !== null && digitrustBalance < LOW_BALANCE_THRESHOLD,
       threshold: LOW_BALANCE_THRESHOLD,
     },
+    xpro: xproInfo,
     lastSync: meta?.value || null,
     sales: {
       ordersDelivered: (delivered || []).length,

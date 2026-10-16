@@ -8,6 +8,7 @@ import OrdersTab from "../../components/admin/OrdersTab";
 import DepositsTab from "../../components/admin/DepositsTab";
 import FeedbackTab from "../../components/admin/FeedbackTab";
 import CouponsTab from "../../components/admin/CouponsTab";
+import SuppliersTab from "../../components/admin/SuppliersTab";
 import StatsTab from "../../components/admin/StatsTab";
 import DebugTab from "../../components/admin/DebugTab";
 import SettingsTab from "../../components/admin/SettingsTab";
@@ -255,7 +256,15 @@ export default function Admin() {
     setSyncing(false);
     if (data.success) {
       setSyncMessage(
-        `Synced ${data.synced} products (${data.withDescription ?? 0} with descriptions, ${data.withWarranty ?? 0} with warranty from DigiTrust).`
+        `Synced ${data.synced} supplier products — ${data.updated ?? data.synced} updated${
+          data.newProducts ? `, ${data.newProducts} new` : ""
+        }.` +
+          (data.suppliers
+            ? " " +
+              Object.entries(data.suppliers)
+                .map(([k, v]) => (v.ok ? `${k}: ${v.count} ✓` : `${k}: FAILED (${v.error})`))
+                .join(" · ")
+            : "")
       );
       loadProducts();
       loadDashboard();
@@ -290,6 +299,21 @@ export default function Admin() {
     const res = await fetch("/api/admin/digitrust-orders");
     const data = await res.json();
     if (data.success) setDigitrustOrders(data.orders);
+  }
+
+  async function retrySupplierOrder(order) {
+    const res = await fetch("/api/admin/suppliers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "retry_order", order_id: order.id }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.duplicate ? "Order was already placed at the supplier — delivery recovered." : "Delivered.");
+    } else {
+      alert(`Retry result: ${data.message || data.error}`);
+    }
+    loadOrders();
   }
 
   async function loadProducts() {
@@ -454,6 +478,8 @@ export default function Admin() {
         />
       )}
 
+      {tab === "suppliers" && <SuppliersTab onChanged={loadProducts} />}
+
       {tab === "orders" && (
         <OrdersTab
           orderSearch={orderSearch}
@@ -466,6 +492,7 @@ export default function Admin() {
           onDeliverManual={(order) => setDeliverOrder(order)}
           onCheckDigitrust={loadDigitrustOrders}
           onReconcileDelivered={(order) => setReconcileOrder(order)}
+          onRetrySupplier={retrySupplierOrder}
         />
       )}
 

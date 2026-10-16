@@ -5,6 +5,7 @@ const TABS = [
   { id: "stats", label: "Statistics" },
   { id: "products", label: "Products" },
   { id: "manual", label: "Manual Products" },
+  { id: "suppliers", label: "Suppliers" },
   { id: "orders", label: "Orders" },
   { id: "deposits", label: "Deposits" },
   { id: "coupons", label: "Coupons" },
@@ -24,7 +25,7 @@ export default function AdminLayout({ tab, onTabChange, dashboard, pendingManual
             {dashboard && (
               <div
                 className={`flex flex-wrap gap-4 rounded-lg px-3 py-1.5 text-xs font-medium ${
-                  dashboard.digitrust.low ? "bg-danger-soft text-danger" : "bg-brand-soft text-brand"
+                  dashboard.digitrust.low || dashboard.xpro?.low ? "bg-danger-soft text-danger" : "bg-brand-soft text-brand"
                 }`}
               >
                 <span>
@@ -34,6 +35,15 @@ export default function AdminLayout({ tab, onTabChange, dashboard, pendingManual
                     : `$${Number(dashboard.digitrust.balance).toFixed(2)}`}
                   {dashboard.digitrust.low && " — LOW, top up soon"}
                 </span>
+                {dashboard.xpro && (
+                  <span>
+                    XPro balance:{" "}
+                    {dashboard.xpro.error || dashboard.xpro.balance === null
+                      ? "unavailable"
+                      : `$${Number(dashboard.xpro.balance).toFixed(2)}`}
+                    {dashboard.xpro.low && " — LOW, top up soon"}
+                  </span>
+                )}
                 <span>
                   Last sync:{" "}
                   {dashboard.lastSync ? new Date(dashboard.lastSync).toLocaleString() : "never"}

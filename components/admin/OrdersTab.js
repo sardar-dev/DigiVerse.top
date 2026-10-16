@@ -14,6 +14,7 @@ export default function OrdersTab({
   onDeliverManual,
   onCheckDigitrust,
   onReconcileDelivered,
+  onRetrySupplier,
 }) {
   return (
     <>
@@ -63,7 +64,10 @@ export default function OrdersTab({
                   <div className="text-xs text-muted">delivery: {o.email}</div>
                 )}
               </td>
-              <td className="py-3 px-4 text-ink">{o.products?.title}</td>
+              <td className="py-3 px-4 text-ink">
+                {o.products?.title}
+                {o.supplier && <div className="text-xs text-muted">via {o.supplier === "xpro" ? "XPro" : "DigiTrust"}</div>}
+              </td>
               <td className="py-3 px-4 font-mono text-ink">
                 ${Number(o.total).toFixed(2)}
                 {o.coupon_code && (
@@ -96,7 +100,11 @@ export default function OrdersTab({
                 )}
                 {o.status === "needs_reconciliation" && (
                   <>
-                    <LinkButton onClick={onCheckDigitrust}>Check DigiTrust</LinkButton>
+                    {o.supplier === "xpro" ? (
+                      <LinkButton onClick={() => onRetrySupplier(o)}>Retry (safe)</LinkButton>
+                    ) : (
+                      <LinkButton onClick={onCheckDigitrust}>Check DigiTrust</LinkButton>
+                    )}
                     <LinkButton onClick={() => onReconcileDelivered(o)}>Mark delivered</LinkButton>
                     <LinkButton onClick={() => setOrderStatus(o.id, "failed")} className="text-danger">
                       Mark failed

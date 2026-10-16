@@ -1,6 +1,7 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { getProduct, applyStockBuffer } from "../../../lib/digitrust";
+import { getSupplier, resolveSource, applyBuffer } from "../../../lib/suppliers";
+import { refreshSourceFromLive } from "../../../lib/syncProducts";
 import { checkCoupon, orderFitsCouponLimits } from "../../../lib/coupons";
 
 // Step 1 of checkout: customer picks a product + quantity. We
@@ -58,8 +59,26 @@ export default async function handler(req, res) {
     availableNow = localProduct.available_stock;
   } else {
     try {
-      const { product } = await getProduct(product_id);
-      availableNow = applyStockBuffer(product).available_stock;
+      const src = await resolveSource(localProduct);
+      const supplier = src && getSupplier(src.supplier);
+      if (!supplier || (localProduct.requires_email && !supplier.supportsEmail)) {
+        return res.status(409).json({ success: false, error: "not_enough_stock", available: 0 });
+      }
+      const live = await supplier.api.getProduct(src.supplierProductId);
+      availableNow = applyBuffer(live.stock);
+      // Margin guard: if the supplier's live price jumped above our sell
+      // price since the last sync (and the admin hasn't approved this
+      // source), don't sell it at a loss — treat it as unavailable.
+      if (!src.approved && Number(live.cost) > Number(localProduct.sell_price) + 1e-9) {
+        availableNow = 0;
+      }
+      if (availableNow < quantity) {
+        // Stored data was stale — fix it now so the product hides/switches
+        // immediately (best effort; never blocks the response).
+        try {
+          await refreshSourceFromLive(localProduct.id, src.supplier, live);
+        } catch {}
+      }
     } catch (e) {
       return res.status(502).json({ success: false, error: "stock_check_failed" });
     }

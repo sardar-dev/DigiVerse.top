@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
+import { recomputeProduct } from "../../../lib/syncProducts";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
@@ -59,6 +60,9 @@ export default async function handler(req, res) {
             .update({ sell_price: u.sell_price, updated_at: new Date().toISOString() })
             .eq("id", u.id);
           if (error) return res.status(500).json({ success: false, error: error.message });
+          try {
+            await recomputeProduct(u.id);
+          } catch {}
         }
         return res.status(200).json({ success: true, updated: updates.length });
       }
@@ -83,6 +87,13 @@ export default async function handler(req, res) {
 
     const { error } = await supabaseAdmin.from("products").update(patch).eq("id", id);
     if (error) return res.status(500).json({ success: false, error: error.message });
+    // A new sell price can make a pricier supplier eligible (or not), so
+    // re-decide the active source right away, from stored data only.
+    if (patch.sell_price !== undefined) {
+      try {
+        await recomputeProduct(id);
+      } catch {}
+    }
     return res.status(200).json({ success: true });
   }
 

@@ -30,7 +30,8 @@ export default function Orders() {
     const { data } = await supabase
       .from("orders")
       .select("*, products(title, provider, delivery)")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(100);
     setOrders(data || []);
   }
 

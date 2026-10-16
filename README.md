@@ -525,3 +525,21 @@ In Admin -> Manual Products tick **Auto delivery**, create the product, then add
 ## Admin -> Deposits
 
 Everything that moved money in: wallet top-ups (credited + unpaid/expired invoices), direct on-chain order payments (with tx link, plus orders awaiting payment in the last 24h) and admin credits/debits, with type and status filters and 24h totals. Orders tab now shows the customer account email (searchable). No migration needed.
+
+## Multiple suppliers (DigiTrust + XPro)
+
+Run `supabase/migration_013_multi_supplier.sql` once in the Supabase SQL editor, then add these Vercel env vars:
+
+| Variable | Value |
+|---|---|
+| `XPRO_API_BASE` | `http://paid2.daki.cc:4153/api/partner/v1` |
+| `XPRO_API_KEY` | your `sk_live_…` key from the XPro bot (API → Create Key) |
+
+Rules:
+- Customer price is always your `sell_price`; it never drops when a cheaper supplier appears.
+- A product is live when some supplier has stock **and** its cost is ≤ your sell price (or you approved that supplier). The cheapest eligible one is used.
+- No stock anywhere → hidden. Stock only at a pricier supplier → hidden until you approve it or raise your price.
+- Orders are fulfilled only by the active supplier; there is no automatic fallback to another one.
+- Admin → Suppliers: link XPro-only products to a DigiTrust twin, approve a pricier source, check supplier balances.
+- XPro cannot take a customer email, so products that require one are served by DigiTrust only.
+- Stale data self-heals: a failed live stock/price check at checkout updates the product immediately. For faster auto-hide, point a free external scheduler (e.g. cron-job.org) at `/api/admin/sync?secret=CRON_SECRET` every 10–15 minutes.
