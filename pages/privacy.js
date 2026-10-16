@@ -13,7 +13,7 @@ export default function Privacy() {
         description={`Privacy Policy for ${SITE_NAME} — what data we collect and how it's used.`}
         path="/privacy"
       />
-      <SiteHeader session={null} />
+      <SiteHeader />
 
       <main className="flex-1">
         <PageContainer className="space-y-6 py-10" width="max-w-2xl">

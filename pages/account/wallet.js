@@ -9,6 +9,8 @@ import Alert from "../../components/ui/Alert";
 import { FormInput } from "../../components/ui/FormInput";
 import { PrimaryButton, SecondaryButton, LinkButton } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/States";
+import CopyButton, { StepBadge } from "../../components/ui/CopyButton";
+import Link from "next/link";
 
 export default function Wallet() {
   const [session, setSession] = useState(null);
@@ -23,7 +25,6 @@ export default function Wallet() {
   const [txHash, setTxHash] = useState("");
   const [status, setStatus] = useState("idle"); // idle | requesting | verifying | done | error
   const [message, setMessage] = useState("");
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     load();
@@ -124,26 +125,6 @@ export default function Wallet() {
     setStatus("idle");
   }
 
-  async function copyAmount() {
-    try {
-      await navigator.clipboard.writeText(String(invoice.amount));
-      setCopied("amount");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard API unavailable — amount is still visible as text.
-    }
-  }
-
-  async function copyAddress() {
-    try {
-      await navigator.clipboard.writeText(invoice.payout_wallet);
-      setCopied("address");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard API unavailable — address is still visible as text.
-    }
-  }
-
   async function submitTopup() {
     setStatus("verifying");
     setMessage("");
@@ -174,23 +155,49 @@ export default function Wallet() {
       <SiteHeader session={session} balance={balance} onSignOut={() => supabase.auth.signOut()} />
 
       <main className="flex-1">
-        <PageContainer className="space-y-8 py-10" width="max-w-3xl">
-          <div className="rounded-xl border border-border bg-surface p-6 shadow-card">
-            <div className="text-sm text-muted">Wallet balance</div>
-            <div className="mt-1 text-3xl font-semibold text-ink">
-              {balance === null ? "…" : `$${balance.toFixed(2)}`}
+        <PageContainer className="space-y-6 py-8 sm:py-10" width="max-w-3xl">
+          {/* Balance hero */}
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand-dark p-6 text-white shadow-card-hover sm:p-8">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-16 right-16 h-40 w-40 rounded-full bg-white/5" />
+            <div className="relative">
+              <div className="text-sm font-medium text-white/80">Wallet balance</div>
+              <div className="mt-1 text-4xl font-semibold tracking-tight sm:text-5xl">
+                {balance === null ? "…" : `$${balance.toFixed(2)}`}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/85">
+                <span className="rounded-full bg-white/15 px-2.5 py-1">USDT · BEP20</span>
+                <span className="rounded-full bg-white/15 px-2.5 py-1">Pay for any product instantly</span>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-xl border border-border bg-surface p-6 shadow-card">
-            <h2 className="text-lg font-semibold text-ink">Top up</h2>
+          {/* Top up */}
+          <section className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
+            <h2 className="text-lg font-semibold text-ink">Add funds</h2>
 
             {!invoice && (
               <>
                 <p className="mt-1 text-sm text-muted">
-                  Choose how much you'd like to add. We'll give you an exact amount to send — this
-                  keeps your deposit safely matched to you and only you.
+                  Choose an amount. We'll give you an exact figure to send, so your deposit is
+                  matched to you automatically.
                 </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {[5, 10, 25, 50].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setRequestAmount(String(v))}
+                      className={`min-h-10 rounded-full border px-4 text-sm font-medium transition-colors ${
+                        Number(requestAmount) === v
+                          ? "border-brand bg-brand-soft text-brand"
+                          : "border-border bg-surface text-ink hover:bg-brand-soft"
+                      }`}
+                    >
+                      ${v}
+                    </button>
+                  ))}
+                </div>
                 <div className="mt-4 max-w-sm space-y-3">
                   <FormInput
                     label="Amount to add (USD)"
@@ -215,72 +222,81 @@ export default function Wallet() {
             )}
 
             {invoice && (
-              <div className="mt-4 space-y-4">
+              <div className="mt-4 space-y-5">
                 <Alert variant="warning">
                   Send only USDT on <strong>BEP20 (BNB Smart Chain)</strong>. Other tokens or
                   networks will be lost.
                 </Alert>
 
-                <div className="rounded-lg border border-border bg-brand-soft p-4">
-                  <div className="text-xs text-muted">Send exactly</div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-mono text-2xl font-semibold text-ink">
-                      ${invoice.amount.toFixed(4)}
-                    </span>
-                    <SecondaryButton onClick={copyAmount} className="px-3 py-1.5 text-xs">
-                      {copied === "amount" ? "Copied!" : "Copy amount"}
-                    </SecondaryButton>
+                {/* Step 1 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <StepBadge n={1} /> Send the exact amount
                   </div>
-                  <p className="mt-1 text-xs text-muted">
-                    Sending any other amount won't be matched automatically — it must be exact.
+                  <div className="rounded-xl border border-border bg-brand-soft p-4">
+                    <div className="text-xs text-muted">Send exactly</div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+                      <span className="font-mono text-3xl font-semibold text-ink">
+                        ${invoice.amount.toFixed(4)}
+                      </span>
+                      <CopyButton value={String(invoice.amount)} label="Copy amount" />
+                    </div>
+                    <p className="mt-2 text-xs text-muted">
+                      Any other amount can't be matched automatically — it must be exact.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-4 rounded-xl border border-border p-4 sm:flex-row sm:items-start">
+                    {qrDataUrl && (
+                      <img
+                        src={qrDataUrl}
+                        alt="QR code for the payout wallet address"
+                        className="h-32 w-32 flex-shrink-0 rounded-lg border border-border"
+                      />
+                    )}
+                    <div className="w-full flex-1 space-y-2">
+                      <div className="text-xs text-muted">To this address (BEP20)</div>
+                      <p className="break-all rounded-lg bg-bg p-3 font-mono text-xs text-ink">
+                        {invoice.payout_wallet}
+                      </p>
+                      <CopyButton value={invoice.payout_wallet} label="Copy address" />
+                    </div>
+                  </div>
+
+                  <p
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
+                      expired ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning"
+                    }`}
+                  >
+                    {expired
+                      ? "This amount has expired — request a new one."
+                      : `⏱ Expires in ${formatCountdown(secondsLeft ?? 0)}`}
                   </p>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  {qrDataUrl && (
-                    <img
-                      src={qrDataUrl}
-                      alt="QR code for the payout wallet address"
-                      className="h-24 w-24 flex-shrink-0 rounded-lg border border-border"
-                    />
-                  )}
-                  <div className="flex-1 space-y-2">
-                    <p className="break-all rounded-lg border border-border bg-surface p-3 font-mono text-xs text-ink">
-                      {invoice.payout_wallet}
-                    </p>
-                    <SecondaryButton onClick={copyAddress} className="px-3 py-1.5 text-xs">
-                      {copied === "address" ? "Copied!" : "Copy address"}
-                    </SecondaryButton>
-                  </div>
-                </div>
-
-                <p className="text-xs text-muted">
-                  {expired ? (
-                    <span className="font-medium text-danger">
-                      This deposit amount has expired — request a new one below.
-                    </span>
-                  ) : (
-                    <>Expires in {formatCountdown(secondsLeft)}.</>
-                  )}
-                </p>
-
+                {/* Step 2 */}
                 {!expired && (
-                  <div className="space-y-3 max-w-md">
-                    <FormInput
-                      label="Transaction hash"
-                      value={txHash}
-                      onChange={(e) => setTxHash(e.target.value)}
-                      placeholder="0x…"
-                      className="font-mono text-xs"
-                    />
-                    <Alert variant={status === "error" ? "error" : "success"}>{message}</Alert>
-                    <PrimaryButton
-                      onClick={submitTopup}
-                      disabled={!txHash || status === "verifying"}
-                      className="w-full"
-                    >
-                      {status === "verifying" ? "Checking…" : "I've sent it — verify payment"}
-                    </PrimaryButton>
+                  <div className="space-y-3 border-t border-border pt-5">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                      <StepBadge n={2} /> Paste your transaction hash
+                    </div>
+                    <div className="max-w-md space-y-3">
+                      <FormInput
+                        label="Transaction hash"
+                        value={txHash}
+                        onChange={(e) => setTxHash(e.target.value)}
+                        placeholder="0x…"
+                        className="font-mono text-xs"
+                      />
+                      <Alert variant={status === "error" ? "error" : "success"}>{message}</Alert>
+                      <PrimaryButton
+                        onClick={submitTopup}
+                        disabled={!txHash || status === "verifying"}
+                        className="w-full"
+                      >
+                        {status === "verifying" ? "Checking…" : "I've sent it — verify payment"}
+                      </PrimaryButton>
+                    </div>
                   </div>
                 )}
 
@@ -289,32 +305,54 @@ export default function Wallet() {
                 </LinkButton>
               </div>
             )}
-          </div>
 
-          <div>
-            <h2 className="mb-3 text-lg font-semibold text-ink">History</h2>
-            {ledger.length === 0 && <EmptyState title="Nothing yet" />}
-            <ul className="divide-y divide-border rounded-xl border border-border bg-surface shadow-card">
-              {ledger.map((entry) => (
-                <li key={entry.id} className="flex justify-between gap-3 px-5 py-3 text-sm">
-                  <div>
-                    <div className="text-ink">{entry.label}</div>
-                    <div className="text-xs text-muted">
-                      {new Date(entry.date).toLocaleString()}
-                    </div>
-                  </div>
-                  <span
-                    className={`font-mono font-medium ${
-                      entry.amount < 0 ? "text-danger" : "text-success"
-                    }`}
-                  >
-                    {entry.amount >= 0 ? "+" : ""}
-                    {entry.amount.toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+            {!invoice && status === "done" && message && (
+              <div className="mt-4">
+                <Alert variant="success">{message}</Alert>
+              </div>
+            )}
+          </section>
+
+          {/* History */}
+          <section>
+            <div className="mb-3 flex items-end justify-between">
+              <h2 className="text-lg font-semibold text-ink">History</h2>
+              <Link href="/account/orders" className="text-sm font-medium text-brand hover:underline">
+                View orders →
+              </Link>
+            </div>
+            {ledger.length === 0 && (
+              <EmptyState title="No transactions yet" description="Top-ups and wallet purchases will show up here." />
+            )}
+            {ledger.length > 0 && (
+              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
+                {ledger.map((entry) => {
+                  const debit = entry.amount < 0;
+                  return (
+                    <li key={entry.id} className="flex items-center gap-3 px-4 py-3.5 text-sm sm:px-5">
+                      <span
+                        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-base ${
+                          debit ? "bg-danger-soft text-danger" : "bg-success-soft text-success"
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {debit ? "↑" : "↓"}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-ink">{entry.label}</div>
+                        <div className="text-xs text-muted">
+                          {new Date(entry.date).toLocaleString()}
+                        </div>
+                      </div>
+                      <span className={`font-mono font-semibold ${debit ? "text-danger" : "text-success"}`}>
+                        {debit ? "−" : "+"}${Math.abs(entry.amount).toFixed(2)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </PageContainer>
       </main>
 

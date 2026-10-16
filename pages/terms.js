@@ -13,7 +13,7 @@ export default function Terms() {
         description={`Terms of Service for ${SITE_NAME} — digital products, USDT (BEP20) payments, delivery and refunds.`}
         path="/terms"
       />
-      <SiteHeader session={null} />
+      <SiteHeader />
 
       <main className="flex-1">
         <PageContainer className="space-y-6 py-10" width="max-w-2xl">
