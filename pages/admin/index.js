@@ -262,7 +262,7 @@ export default function Admin() {
           (data.suppliers
             ? " " +
               Object.entries(data.suppliers)
-                .map(([k, v]) => (v.ok ? `${k}: ${v.count} ✓` : `${k}: FAILED (${v.error})`))
+                .map(([k, v]) => (v.ok ? `${k}: ${v.count} ✓${v.hint ? ` (${v.hint})` : ""}` : `${k}: FAILED (${v.error})`))
                 .join(" · ")
             : "")
       );

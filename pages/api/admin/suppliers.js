@@ -38,7 +38,8 @@ export default async function handler(req, res) {
           try {
             const h = await s.api.health();
             const b = await s.api.getBalance();
-            return { id: s.id, label: s.label, configured: true, ok: h.ok, balance: b.balance };
+            const catalog = s.api.probeCatalog ? await s.api.probeCatalog().catch((e) => ({ error: e.message })) : null;
+            return { id: s.id, label: s.label, configured: true, ok: h.ok, balance: b.balance, catalog };
           } catch (e) {
             return { id: s.id, label: s.label, configured: true, ok: false, error: e.message };
           }

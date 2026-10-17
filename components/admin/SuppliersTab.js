@@ -109,6 +109,13 @@ export default function SuppliersTab({ onChanged }) {
                   Wallet balance: <span className="font-mono text-ink">{s.balance === null ? "unknown" : money(s.balance)}</span>
                 </p>
               )}
+              {s.catalog && !s.catalog.error && (
+                <p className="mt-1 text-xs text-muted">
+                  Catalog: {s.catalog.total ?? s.catalog.sample.length} product(s)
+                  {s.catalog.sample.length === 0 && ` — empty (response keys: ${s.catalog.keys.join(", ")})`}
+                </p>
+              )}
+              {s.catalog?.error && <p className="mt-1 break-all text-xs text-danger">Catalog: {s.catalog.error}</p>}
               {s.error && <p className="mt-2 break-all text-xs text-danger">{s.error}</p>}
             </div>
           ))}
