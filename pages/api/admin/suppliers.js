@@ -7,24 +7,6 @@ import { SUPPLIERS, enabledSuppliers } from "../../../lib/suppliers";
 // Everything the admin "Suppliers" tab needs. Read on demand only (when
 // the tab opens / Refresh is pressed) — never polled.
 
-const tokens = (t) =>
-  new Set(
-    String(t || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .split(" ")
-      .filter((w) => w.length > 1)
-  );
-
-function similarity(a, b) {
-  const A = tokens(a);
-  const B = tokens(b);
-  if (!A.size || !B.size) return 0;
-  let hit = 0;
-  for (const w of A) if (B.has(w)) hit++;
-  return hit / (A.size + B.size - hit);
-}
-
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
   if (!session) return;
@@ -71,19 +53,11 @@ export default async function handler(req, res) {
       srcByProduct.get(s.product_id).push(s);
     }
 
-    // Unlinked supplier-only products ("stubs") with suggested twins.
+    // Unlinked supplier-only products ("stubs") + every DigiTrust product
+    // they could be matched to. Scoring/search happens in the browser.
     const stubs = products.filter((p) => p.provider !== "digitrust");
-    const targets = products.filter((p) => p.provider === "digitrust" && !p.requires_email);
-    const unlinked = stubs.map((p) => {
-      const src = (srcByProduct.get(p.id) || [])[0] || null;
-      const suggestions = targets
-        .filter((t) => !(srcByProduct.get(t.id) || []).some((s) => s.supplier === p.provider))
-        .map((t) => ({ id: t.id, title: t.title, score: similarity(p.title, t.title) }))
-        .filter((t) => t.score >= 0.35)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
-      return { product: p, source: src, suggestions };
-    });
+    const targets = products.filter((p) => p.provider === "digitrust");
+    const unlinked = stubs.map((p) => ({ product: p, source: (srcByProduct.get(p.id) || [])[0] || null }));
 
     // Products that have (or need) a supplier decision.
     const multi = products
@@ -106,7 +80,17 @@ export default async function handler(req, res) {
       unlinked,
       multi,
       needsPrice,
-      linkTargets: targets.map((t) => ({ id: t.id, title: t.title })).sort((a, b) => a.title.localeCompare(b.title)),
+      linkTargets: targets
+        .map((t) => ({
+          id: t.id,
+          title: t.title,
+          sell_price: t.sell_price,
+          available_stock: t.available_stock,
+          requires_email: t.requires_email,
+          supplier_status: t.supplier_status,
+          sources: (srcByProduct.get(t.id) || []).map((s) => ({ supplier: s.supplier, cost: s.cost, stock: s.stock })),
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title)),
     });
   }
 

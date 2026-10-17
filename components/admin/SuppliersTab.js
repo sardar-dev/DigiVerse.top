@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../ui/SectionHeading";
 import { SecondaryButton, LinkButton } from "../ui/Button";
 import { ErrorState, LoadingState } from "../ui/States";
-import DataTable from "./DataTable";
 
 const LABEL = { digitrust: "DigiTrust", xpro: "XPro" };
 const money = (n) => `$${Number(n).toFixed(2)}`;
@@ -21,7 +20,6 @@ export default function SuppliersTab({ onChanged }) {
   const [check, setCheck] = useState(null);
   const [checking, setChecking] = useState(false);
   const [msg, setMsg] = useState("");
-  const [pick, setPick] = useState({}); // stub id -> chosen target id
 
   async function load() {
     setLoading(true);
@@ -138,92 +136,15 @@ export default function SuppliersTab({ onChanged }) {
         )}
       </section>
 
-      {/* Unlinked supplier-only products */}
+      {/* Match products across suppliers */}
       <section>
-        <h3 className="mb-1 text-sm font-semibold text-ink">New supplier products (not linked yet)</h3>
-        <p className="mb-2 text-xs text-muted">
-          These exist only at a secondary supplier. Link one to the matching store product to give it a second source, or leave it
-          and sell it on its own from the Products tab. Check the match carefully before linking — customers get whatever the
-          supplier delivers.
+        <h3 className="mb-1 text-sm font-semibold text-ink">Match products (same product at two suppliers)</h3>
+        <p className="mb-3 text-xs text-muted">
+          Pick one DigiTrust product and one XPro product, then link them. They become ONE product on your store; customers
+          always pay your price, and the cheaper supplier is used automatically. Check the match carefully — customers get
+          whatever the supplier delivers.
         </p>
-        {data.unlinked.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-            No unlinked products.
-          </p>
-        ) : (
-          <DataTable minWidth="min-w-[820px]">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="px-4 py-3">Supplier product</th>
-                <th className="px-4 py-3">Cost</th>
-                <th className="px-4 py-3">Stock</th>
-                <th className="px-4 py-3">Link to</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.unlinked.map(({ product, source, suggestions }) => (
-                <tr key={product.id} className="border-b border-border align-top last:border-0">
-                  <td className="px-4 py-3 text-ink">
-                    {product.title}
-                    <div className="text-xs text-muted">{LABEL[product.provider] || product.provider}</div>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-muted">{source ? money(source.cost) : "—"}</td>
-                  <td className="px-4 py-3 font-mono text-muted">{source ? source.stock : "—"}</td>
-                  <td className="px-4 py-3">
-                    <div className="space-y-2">
-                      {suggestions.map((s) => (
-                        <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-soft px-3 py-1.5">
-                          <span className="text-xs text-ink">
-                            {s.title} <span className="text-muted">({Math.round(s.score * 100)}% match)</span>
-                          </span>
-                          <LinkButton
-                            className="text-xs"
-                            onClick={() =>
-                              window.confirm(`Link "${product.title}" to "${s.title}"?`) &&
-                              act(
-                                { action: "link", stub_product_id: product.id, target_product_id: s.id },
-                                "Linked. The cheapest eligible source is now used."
-                              )
-                            }
-                          >
-                            Link
-                          </LinkButton>
-                        </div>
-                      ))}
-                      <div className="flex gap-2">
-                        <select
-                          value={pick[product.id] || ""}
-                          onChange={(e) => setPick((p) => ({ ...p, [product.id]: e.target.value }))}
-                          className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-xs"
-                          aria-label="Choose a product to link to"
-                        >
-                          <option value="">Pick another product…</option>
-                          {data.linkTargets.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.title}
-                            </option>
-                          ))}
-                        </select>
-                        <SecondaryButton
-                          className="px-3 py-1.5 text-xs"
-                          disabled={!pick[product.id]}
-                          onClick={() =>
-                            act(
-                              { action: "link", stub_product_id: product.id, target_product_id: Number(pick[product.id]) },
-                              "Linked. The cheapest eligible source is now used."
-                            )
-                          }
-                        >
-                          Link
-                        </SecondaryButton>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </DataTable>
-        )}
+        <ProductMatcher unlinked={data.unlinked} targets={data.linkTargets} act={act} />
       </section>
 
       {/* Multi-source products */}
@@ -325,5 +246,245 @@ function ProductSources({ entry, act }) {
         </table>
       </div>
     </div>
+  );
+}
+
+const tokenSet = (t) =>
+  new Set(
+    String(t || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(" ")
+      .filter((w) => w.length > 1)
+  );
+
+function similarity(a, b) {
+  const A = tokenSet(a);
+  const B = tokenSet(b);
+  if (!A.size || !B.size) return 0;
+  let hit = 0;
+  for (const w of A) if (B.has(w)) hit++;
+  return hit / (A.size + B.size - hit);
+}
+
+const includesText = (q, text) => !q.trim() || String(text).toLowerCase().includes(q.trim().toLowerCase());
+
+function ProductMatcher({ unlinked, targets, act }) {
+  const [xSel, setXSel] = useState(null); // XPro (supplier-only) product id
+  const [dSel, setDSel] = useState(null); // DigiTrust product id
+  const [xq, setXq] = useState("");
+  const [dq, setDq] = useState("");
+
+  const xItem = unlinked.find((u) => u.product.id === xSel) || null;
+  const dItem = targets.find((t) => t.id === dSel) || null;
+
+  const canLink = (u, t) =>
+    !t.sources.some((s) => s.supplier === u.product.provider) &&
+    !(t.requires_email && u.product.provider === "xpro");
+
+  // Best guesses, shown as one-click suggestions.
+  const suggestions = useMemo(() => {
+    const out = [];
+    for (const u of unlinked) {
+      let best = null;
+      for (const t of targets) {
+        if (!canLink(u, t)) continue;
+        const score = similarity(u.product.title, t.title);
+        if (!best || score > best.score) best = { u, t, score };
+      }
+      if (best && best.score >= 0.5) out.push(best);
+    }
+    return out.sort((a, b) => b.score - a.score).slice(0, 8);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlinked, targets]);
+
+  const xList = unlinked.filter((u) => includesText(xq, u.product.title));
+  const dList = targets
+    .filter((t) => includesText(dq, t.title))
+    .map((t) => ({ t, score: xItem ? similarity(xItem.product.title, t.title) : 0 }))
+    .sort((a, b) => b.score - a.score || a.t.title.localeCompare(b.t.title));
+
+  async function link(u, t) {
+    await act(
+      { action: "link", stub_product_id: u.product.id, target_product_id: t.id },
+      "Linked. These are now one product; the cheaper eligible supplier is used."
+    );
+    setXSel(null);
+    setDSel(null);
+  }
+
+  if (unlinked.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted">
+        No unlinked XPro products. Run Sync (Products tab) to fetch XPro products, then come back here.
+      </p>
+    );
+  }
+
+  const dtCost = dItem?.sources.find((s) => s.supplier === "digitrust")?.cost;
+  const xCost = xItem?.source?.cost;
+  const cheaper = dtCost !== undefined && xCost !== undefined ? (Number(xCost) < Number(dtCost) ? "XPro" : Number(xCost) > Number(dtCost) ? "DigiTrust" : "Same") : null;
+
+  return (
+    <div className="space-y-4">
+      {suggestions.length > 0 && (
+        <div className="rounded-xl border border-border bg-brand-soft p-3">
+          <div className="mb-2 text-xs font-semibold text-ink">Likely matches</div>
+          <div className="space-y-1.5">
+            {suggestions.map(({ u, t, score }) => (
+              <div key={u.product.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface px-3 py-2 text-xs">
+                <span className="min-w-0 flex-1 text-ink">
+                  <b>{LABEL[u.product.provider] || u.product.provider}:</b> {u.product.title}
+                  <span className="mx-1 text-muted">↔</span>
+                  <b>DigiTrust:</b> {t.title}{" "}
+                  <span className="text-muted">({Math.round(score * 100)}% match)</span>
+                </span>
+                <LinkButton
+                  onClick={() =>
+                    window.confirm(`Link "${u.product.title}" with "${t.title}" as the same product?`) && link(u, t)
+                  }
+                >
+                  Link
+                </LinkButton>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <MatchColumn
+          title={`XPro products (${xList.length})`}
+          query={xq}
+          setQuery={setXq}
+          empty="No XPro products match."
+        >
+          {xList.map((u) => (
+            <MatchRow
+              key={u.product.id}
+              active={xSel === u.product.id}
+              onClick={() => setXSel(xSel === u.product.id ? null : u.product.id)}
+              title={u.product.title}
+              meta={`Cost ${u.source ? money(u.source.cost) : "—"} · stock ${u.source ? u.source.stock : "—"}`}
+            />
+          ))}
+        </MatchColumn>
+
+        <MatchColumn
+          title={`DigiTrust products (${dList.length})`}
+          query={dq}
+          setQuery={setDq}
+          empty="No DigiTrust products match."
+        >
+          {dList.map(({ t, score }) => {
+            const blocked = xItem && !canLink(xItem, t);
+            const dt = t.sources.find((s) => s.supplier === "digitrust");
+            return (
+              <MatchRow
+                key={t.id}
+                active={dSel === t.id}
+                disabled={Boolean(blocked)}
+                onClick={() => setDSel(dSel === t.id ? null : t.id)}
+                title={t.title}
+                meta={
+                  blocked
+                    ? t.requires_email
+                      ? "Needs customer email — XPro can't deliver this"
+                      : "Already linked to this supplier"
+                    : `Cost ${dt ? money(dt.cost) : "—"} · your price ${money(t.sell_price)} · stock ${t.available_stock}${
+                        t.sources.length > 1 ? " · has 2 sources" : ""
+                      }`
+                }
+                badge={xItem && score >= 0.3 ? `${Math.round(score * 100)}%` : null}
+              />
+            );
+          })}
+        </MatchColumn>
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-card">
+        {xItem && dItem ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <div className="text-xs text-muted">XPro</div>
+                <div className="text-ink">{xItem.product.title}</div>
+                <div className="font-mono text-xs text-muted">cost {money(xCost ?? 0)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted">DigiTrust (kept as the store product)</div>
+                <div className="text-ink">{dItem.title}</div>
+                <div className="font-mono text-xs text-muted">
+                  cost {dtCost !== undefined ? money(dtCost) : "—"} · your price {money(dItem.sell_price)}
+                </div>
+              </div>
+            </div>
+            {cheaper && (
+              <p className="text-xs text-muted">
+                Cheaper right now: <b className="text-ink">{cheaper}</b>. Customers pay{" "}
+                <b className="text-ink">{money(dItem.sell_price)}</b> either way.
+                {Number(xCost) > Number(dItem.sell_price) &&
+                  " XPro costs more than your price, so it stays hidden unless you approve it."}
+              </p>
+            )}
+            <SecondaryButton
+              onClick={() =>
+                window.confirm(`Link "${xItem.product.title}" with "${dItem.title}" as the same product?`) && link(xItem, dItem)
+              }
+            >
+              Link as the same product
+            </SecondaryButton>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">
+            {!xItem && !dItem
+              ? "Step 1: pick an XPro product on the left. Step 2: pick the same product on the right."
+              : !xItem
+              ? "Now pick the XPro product on the left."
+              : "Now pick the matching DigiTrust product on the right (best matches are listed first)."}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MatchColumn({ title, query, setQuery, empty, children }) {
+  const rows = Array.isArray(children) ? children : [children];
+  return (
+    <div className="rounded-xl border border-border bg-surface shadow-card">
+      <div className="space-y-2 border-b border-border p-3">
+        <div className="text-sm font-semibold text-ink">{title}</div>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search…"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+        />
+      </div>
+      <div className="max-h-80 overflow-y-auto p-2">
+        {rows.length === 0 ? <p className="px-2 py-6 text-center text-sm text-muted">{empty}</p> : <div className="space-y-1">{rows}</div>}
+      </div>
+    </div>
+  );
+}
+
+function MatchRow({ active, disabled, onClick, title, meta, badge }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`block w-full rounded-lg border px-3 py-2 text-left transition-colors ${
+        active ? "border-brand bg-brand-soft" : "border-transparent hover:bg-bg"
+      } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-sm text-ink">{title}</span>
+        {badge && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs text-brand">{badge}</span>}
+      </div>
+      <div className="text-xs text-muted">{meta}</div>
+    </button>
   );
 }
