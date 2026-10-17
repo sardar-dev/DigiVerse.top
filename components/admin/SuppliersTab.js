@@ -113,6 +113,14 @@ export default function SuppliersTab({ onChanged }) {
                   {s.catalog.sample.length === 0 && ` — empty (response keys: ${s.catalog.keys.join(", ")})`}
                 </p>
               )}
+              {s.catalog?.single && (
+                <p className="mt-1 break-all text-xs text-muted">
+                  Live check of product #{s.catalog.single.id}:{" "}
+                  {s.catalog.single.error
+                    ? s.catalog.single.error
+                    : `stock ${s.catalog.single.stock}, cost ${money(s.catalog.single.cost)} — raw: ${s.catalog.single.raw}`}
+                </p>
+              )}
               {s.catalog?.error && <p className="mt-1 break-all text-xs text-danger">Catalog: {s.catalog.error}</p>}
               {s.error && <p className="mt-2 break-all text-xs text-danger">{s.error}</p>}
             </div>

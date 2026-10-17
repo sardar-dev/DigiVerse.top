@@ -62,7 +62,8 @@ export default async function handler(req, res) {
       const src = await resolveSource(localProduct);
       const supplier = src && getSupplier(src.supplier);
       if (!supplier || (localProduct.requires_email && !supplier.supportsEmail)) {
-        return res.status(409).json({ success: false, error: "not_enough_stock", available: 0 });
+        console.warn("[orders/create] no usable supplier source", { product_id, active: localProduct.active_supplier });
+        return res.status(409).json({ success: false, error: "supplier_unavailable" });
       }
       const live = await supplier.api.getProduct(src.supplierProductId);
       availableNow = applyBuffer(live.stock);
@@ -70,9 +71,25 @@ export default async function handler(req, res) {
       // price since the last sync (and the admin hasn't approved this
       // source), don't sell it at a loss — treat it as unavailable.
       if (!src.approved && Number(live.cost) > Number(localProduct.sell_price) + 1e-9) {
-        availableNow = 0;
+        console.warn("[orders/create] supplier price above sell price", {
+          product_id,
+          supplier: supplier.id,
+          cost: live.cost,
+          sell: localProduct.sell_price,
+        });
+        try {
+          await refreshSourceFromLive(localProduct.id, src.supplier, live);
+        } catch {}
+        return res.status(409).json({ success: false, error: "supplier_unavailable" });
       }
       if (availableNow < quantity) {
+        console.warn("[orders/create] not enough supplier stock", {
+          product_id,
+          supplier: supplier.id,
+          liveStock: live.stock,
+          buffer: live.stock - availableNow,
+          quantity,
+        });
         // Stored data was stale — fix it now so the product hides/switches
         // immediately (best effort; never blocks the response).
         try {

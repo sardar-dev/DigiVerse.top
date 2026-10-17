@@ -666,7 +666,11 @@ function Row({ label, value, mono }) {
 function describeError(code, available, minOrder) {
   switch (code) {
     case "not_enough_stock":
-      return `Only ${available} left — lower the quantity and try again.`;
+      return Number(available) > 0
+        ? `Only ${available} left — lower the quantity and try again.`
+        : "Sorry, this product just sold out. Please check back soon.";
+    case "supplier_unavailable":
+      return "This product is temporarily unavailable. Please try again later.";
     case "email_required":
       return "This product needs an email address for delivery.";
     case "activation_info_required":
