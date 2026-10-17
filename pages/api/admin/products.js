@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { recomputeProduct } from "../../../lib/syncProducts";
+import { cleanTitle } from "../../../lib/cleanText";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
     // Single-product update: { id, selected?, sell_price?, image_url?,
     // category?, featured?, low_stock_threshold?, short_description? }
     // Bulk update: { ids: [...], selected?, sell_price_delta_percent? }
-    const { id, ids, selected, sell_price, image_url, category, featured, low_stock_threshold, short_description, sell_price_delta_percent } =
+    const { id, ids, title, selected, sell_price, image_url, category, featured, low_stock_threshold, short_description, sell_price_delta_percent } =
       req.body || {};
 
     if (Array.isArray(ids) && ids.length > 0) {
@@ -85,7 +86,28 @@ export default async function handler(req, res) {
     }
     if (short_description !== undefined) patch.short_description = short_description || null;
 
-    const { error } = await supabaseAdmin.from("products").update(patch).eq("id", id);
+    // Title: any product (manual or supplier) can be renamed. A custom
+    // title is "locked" so the next sync never overwrites it. An empty
+    // title unlocks it again (the supplier's title returns on next sync).
+    let titleLockFields = {};
+    if (typeof title === "string") {
+      const clean = cleanTitle(title).slice(0, 200);
+      if (clean) {
+        patch.title = clean;
+        titleLockFields = { title_locked: true };
+      } else {
+        titleLockFields = { title_locked: false };
+      }
+    }
+
+    let { error } = await supabaseAdmin
+      .from("products")
+      .update({ ...patch, ...titleLockFields })
+      .eq("id", id);
+    if (error && /title_locked/i.test(error.message)) {
+      // migration 014 not run yet: still save the new title itself.
+      ({ error } = await supabaseAdmin.from("products").update(patch).eq("id", id));
+    }
     if (error) return res.status(500).json({ success: false, error: error.message });
     // A new sell price can make a pricier supplier eligible (or not), so
     // re-decide the active source right away, from stored data only.

@@ -8,6 +8,7 @@ import { PrimaryButton, SecondaryButton } from "../ui/Button";
 // the DigiTrust Products tab and embedded directly in the Manual
 // Products form.
 export default function ProductMerchandisingFields({ product, onSave, onCancel }) {
+  const [title, setTitle] = useState(product.title || "");
   const [imageUrl, setImageUrl] = useState(product.image_url || "");
   const [category, setCategory] = useState(product.category || "");
   const [featured, setFeatured] = useState(Boolean(product.featured));
@@ -18,6 +19,7 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
 
   function save() {
     onSave({
+      ...(title.trim() !== (product.title || "") ? { title: title.trim() } : {}),
       image_url: imageUrl.trim(),
       category: category.trim(),
       featured,
@@ -28,6 +30,17 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
+      <FormInput
+        label="Product title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        maxLength={200}
+        hint={
+          product.title_locked
+            ? "Custom title — syncs won't overwrite it. Clear the box and save to go back to the supplier's title."
+            : "Edit to rename this product. Your title is kept even when the supplier syncs."
+        }
+      />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormInput
           label="Image/logo URL"

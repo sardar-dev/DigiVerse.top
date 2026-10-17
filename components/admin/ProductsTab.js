@@ -101,6 +101,7 @@ export default function ProductsTab({
                 <td className="py-3 px-4 text-ink">
                   {p.title}
                   {p.featured && <span className="ml-1.5" title="Featured">⭐</span>}
+                  {p.title_locked && <span className="ml-1.5 text-xs text-muted" title="Custom title (kept on sync)">✎</span>}
                   {p.supplier_status === "price_too_high" && (
                     <div className="mt-0.5 text-xs text-danger">Hidden: every in-stock supplier costs more than your price</div>
                   )}
