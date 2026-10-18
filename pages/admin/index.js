@@ -34,6 +34,7 @@ export default function Admin() {
   const [adjAmount, setAdjAmount] = useState("");
   const [adjReason, setAdjReason] = useState("");
   const [adjMessage, setAdjMessage] = useState("");
+  const [adjResult, setAdjResult] = useState(null);
 
   // DigiTrust reconciliation
   const [digitrustOrders, setDigitrustOrders] = useState(null);
@@ -275,6 +276,7 @@ export default function Admin() {
 
   async function submitAdjustment() {
     setAdjMessage("");
+    setAdjResult(null);
     const res = await fetch("/api/admin/wallet-adjust", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -286,7 +288,8 @@ export default function Admin() {
     });
     const data = await res.json();
     if (data.success) {
-      setAdjMessage(`Done — new balance $${Number(data.balance).toFixed(2)}.`);
+      setAdjMessage("");
+      setAdjResult({ email: adjEmail, amount: Number(adjAmount), balance: Number(data.balance) });
       setAdjEmail("");
       setAdjAmount("");
       setAdjReason("");
@@ -436,6 +439,7 @@ export default function Admin() {
           adjReason={adjReason}
           setAdjReason={setAdjReason}
           adjMessage={adjMessage}
+          adjResult={adjResult}
           submitAdjustment={submitAdjustment}
         />
       )}

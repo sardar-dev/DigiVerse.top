@@ -55,8 +55,10 @@ export default async function handler(req, res) {
   // truth (the real atomic decrement happens later, at payment
   // confirmation, via decrement_manual_stock).
   let availableNow;
+  let unitCost = null; // what this product costs us right now (stored on the order)
   if (localProduct.provider === "manual") {
     availableNow = localProduct.available_stock;
+    unitCost = Number(localProduct.cost_price);
   } else {
     try {
       const src = await resolveSource(localProduct);
@@ -67,6 +69,7 @@ export default async function handler(req, res) {
       }
       const live = await supplier.api.getProduct(src.supplierProductId);
       availableNow = applyBuffer(live.stock);
+      unitCost = Number(live.cost);
       // Margin guard: if the supplier's live price jumped above our sell
       // price since the last sync (and the admin hasn't approved this
       // source), don't sell it at a loss — treat it as unavailable.
@@ -142,9 +145,7 @@ export default async function handler(req, res) {
   const fingerprint = Math.floor(Math.random() * 9) + 1; // 1-9
   const total = Number((base + fingerprint / 10000).toFixed(4)); // e.g. 5 -> 5.0004
 
-  const { data: order, error: orderErr } = await supabaseAdmin
-    .from("orders")
-    .insert({
+  const orderRow = {
       user_id: session.user.id,
       product_id,
       quantity,
@@ -160,9 +161,18 @@ export default async function handler(req, res) {
       ...(coupon
         ? { coupon_id: coupon.id, coupon_code: coupon.code, discount_amount: discount }
         : {}),
-    })
+  };
+  // unit_cost = cost at the time of sale (migration 015). Falls back to a
+  // plain insert if that column doesn't exist yet.
+  const costField = Number.isFinite(unitCost) ? { unit_cost: unitCost } : {};
+  let { data: order, error: orderErr } = await supabaseAdmin
+    .from("orders")
+    .insert({ ...orderRow, ...costField })
     .select()
     .single();
+  if (orderErr && /unit_cost/i.test(orderErr.message)) {
+    ({ data: order, error: orderErr } = await supabaseAdmin.from("orders").insert(orderRow).select().single());
+  }
 
   if (orderErr) {
     return res.status(500).json({ success: false, error: orderErr.message });

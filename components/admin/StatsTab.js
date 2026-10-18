@@ -3,6 +3,7 @@ import StatCard from "./StatCard";
 import DataTable from "./DataTable";
 import SectionHeading from "../ui/SectionHeading";
 import { SecondaryButton } from "../ui/Button";
+import BalanceMessage from "./BalanceMessage";
 import { ErrorState, LoadingState } from "../ui/States";
 
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
@@ -192,27 +193,96 @@ export default function StatsTab() {
 
       <div>
         <h3 className="mb-3 text-sm font-semibold text-ink">Newest users</h3>
-        <DataTable>
+        <DataTable minWidth="min-w-[720px]">
           <thead className="border-b border-border text-left text-xs text-muted">
             <tr>
               <th className="px-4 py-2.5">Email</th>
               <th className="px-4 py-2.5 text-right">Balance</th>
+              <th className="px-4 py-2.5">Add / deduct funds</th>
               <th className="px-4 py-2.5 text-right">Joined</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {users.recent.map((u) => (
-              <tr key={u.email + u.created_at}>
-                <td className="px-4 py-2.5 text-ink">{u.email}</td>
-                <td className="px-4 py-2.5 text-right font-mono">{money(u.balance)}</td>
-                <td className="px-4 py-2.5 text-right text-muted">
-                  {new Date(u.created_at).toLocaleDateString()}
-                </td>
-              </tr>
+              <UserRow key={u.email + u.created_at} user={u} />
             ))}
           </tbody>
         </DataTable>
       </div>
     </div>
+  );
+}
+
+// One "newest user" row with an inline balance editor. Updates its own
+// balance from the API response, so no full stats reload is needed.
+function UserRow({ user }) {
+  const [balance, setBalance] = useState(Number(user.balance));
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+
+  async function apply() {
+    const value = Number(amount);
+    if (!value) return;
+    setBusy(true);
+    setError("");
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/wallet-adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          amount: value,
+          reason: value > 0 ? "Manual top-up by admin" : "Manual adjustment by admin",
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "failed");
+      setBalance(Number(data.balance));
+      setResult({ email: user.email, amount: value, balance: Number(data.balance) });
+      setAmount("");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <tr>
+        <td className="px-4 py-2.5 text-ink">{user.email}</td>
+        <td className="px-4 py-2.5 text-right font-mono">{money(balance)}</td>
+        <td className="px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="+5 or -2"
+              aria-label={`Amount to add for ${user.email}`}
+              className="w-28 rounded-md border border-border px-2 py-1.5 font-mono text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30 sm:text-sm"
+            />
+            <SecondaryButton onClick={apply} disabled={busy || !Number(amount)} className="px-3 py-1.5 text-xs">
+              {busy ? "…" : "Apply"}
+            </SecondaryButton>
+          </div>
+          {error && <div className="mt-1 text-xs text-danger">Failed: {error}</div>}
+        </td>
+        <td className="px-4 py-2.5 text-right text-muted">{new Date(user.created_at).toLocaleDateString()}</td>
+      </tr>
+      {result && (
+        <tr>
+          <td colSpan={4} className="bg-bg px-4 py-3">
+            <div className="max-w-md">
+              <BalanceMessage result={result} />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }

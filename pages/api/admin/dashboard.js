@@ -35,20 +35,25 @@ export default async function handler(req, res) {
     .eq("key", "last_sync")
     .maybeSingle();
 
-  // Sales/profit summary. Cost is based on each product's CURRENT
-  // DigiTrust price (we don't store the historical cost at time of
-  // sale), so this is an approximation, not an exact ledger — good
-  // enough for a quick health check.
-  const { data: delivered } = await supabaseAdmin
+  // Sales/profit summary. Cost is what each order's product cost us when it
+  // was sold (orders.unit_cost, migration 015). If that column doesn't exist
+  // yet, fall back to the product's current cost.
+  let { data: delivered, error: deliveredErr } = await supabaseAdmin
     .from("orders")
-    .select("total, quantity, product_id, products(cost_price)")
+    .select("total, quantity, product_id, unit_cost, products(cost_price)")
     .eq("status", "delivered");
+  if (deliveredErr) {
+    ({ data: delivered } = await supabaseAdmin
+      .from("orders")
+      .select("total, quantity, product_id, products(cost_price)")
+      .eq("status", "delivered"));
+  }
 
   let totalSales = 0;
   let totalCost = 0;
   for (const o of delivered || []) {
     totalSales += Number(o.total);
-    totalCost += Number(o.products?.cost_price || 0) * o.quantity;
+    totalCost += Number(o.unit_cost ?? o.products?.cost_price ?? 0) * o.quantity;
   }
 
   return res.status(200).json({

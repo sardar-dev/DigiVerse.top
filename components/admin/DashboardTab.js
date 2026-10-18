@@ -2,6 +2,7 @@ import StatCard from "./StatCard";
 import { FormInput } from "../ui/FormInput";
 import { PrimaryButton } from "../ui/Button";
 import SectionHeading from "../ui/SectionHeading";
+import BalanceMessage from "./BalanceMessage";
 
 export default function DashboardTab({
   dashboard,
@@ -15,6 +16,7 @@ export default function DashboardTab({
   adjReason,
   setAdjReason,
   adjMessage,
+  adjResult,
   submitAdjustment,
 }) {
   return (
@@ -33,12 +35,12 @@ export default function DashboardTab({
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard label="Orders delivered" value={dashboard.sales.ordersDelivered} />
             <StatCard label="Total sales" value={`$${dashboard.sales.totalSales.toFixed(2)}`} />
-            <StatCard label="Est. DigiTrust cost" value={`$${dashboard.sales.totalCost.toFixed(2)}`} />
-            <StatCard label="Est. profit" value={`$${dashboard.sales.profit.toFixed(2)}`} />
+            <StatCard label="Supplier cost" value={`$${dashboard.sales.totalCost.toFixed(2)}`} />
+            <StatCard label="Profit" value={`$${dashboard.sales.profit.toFixed(2)}`} />
           </div>
           <p className="mt-3 text-xs text-muted">
-            Cost is estimated from each product's current DigiTrust price, not the historical
-            price at time of sale.
+            Cost is the supplier price recorded when each order was placed, so it doesn't change
+            when prices change later. Orders from before this was tracked use the price at the time of the update.
           </p>
         </div>
       )}
@@ -72,6 +74,11 @@ export default function DashboardTab({
           </PrimaryButton>
           {adjMessage && <p className="text-sm text-muted">{adjMessage}</p>}
         </div>
+        {adjResult && (
+          <div className="mt-4 max-w-sm">
+            <BalanceMessage result={adjResult} />
+          </div>
+        )}
       </div>
     </div>
   );
