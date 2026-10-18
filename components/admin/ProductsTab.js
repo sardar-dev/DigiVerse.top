@@ -5,6 +5,8 @@ import DataTable from "./DataTable";
 import BulkActionBar from "./BulkActionBar";
 import ProductMerchandisingFields from "./ProductMerchandisingFields";
 
+const SUPPLIER_LABEL = { digitrust: "DigiTrust", xpro: "XPro" };
+
 export default function ProductsTab({
   productSearch,
   setProductSearch,
@@ -101,17 +103,47 @@ export default function ProductsTab({
                 <td className="py-3 px-4 text-ink">
                   {p.title}
                   {p.featured && <span className="ml-1.5" title="Featured">⭐</span>}
+                  {p.sources?.length > 1 && <span className="ml-1.5 rounded-full bg-brand-soft px-2 py-0.5 text-xs text-brand">🔗 {p.sources.length} suppliers</span>}
                   {p.title_locked && <span className="ml-1.5 text-xs text-muted" title="Custom title (kept on sync)">✎</span>}
                   {p.supplier_status === "price_too_high" && (
                     <div className="mt-0.5 text-xs text-danger">Hidden: every in-stock supplier costs more than your price</div>
                   )}
                 </td>
-                <td className="py-3 px-4 font-mono text-muted">{p.real_stock}</td>
+                <td className="py-3 px-4 font-mono text-muted">
+                  {p.sources?.length > 1 ? (
+                    <div className="space-y-0.5">
+                      {p.sources.map((s) => (
+                        <div key={s.supplier} className="whitespace-nowrap">
+                          <span className="font-sans text-xs">{SUPPLIER_LABEL[s.supplier] || s.supplier}</span> {s.stock}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    p.real_stock
+                  )}
+                </td>
                 <td className="py-3 px-4 font-mono text-ink">{p.available_stock}</td>
                 <td className="py-3 px-4 font-mono text-muted">
-                  ${Number(p.cost_price).toFixed(2)}
-                  {p.active_supplier && (
-                    <div className="font-sans text-xs">{p.active_supplier === "xpro" ? "XPro" : "DigiTrust"}</div>
+                  {p.sources?.length > 1 ? (
+                    <div className="space-y-0.5">
+                      {p.sources.map((s) => {
+                        const inUse = p.active_supplier === s.supplier;
+                        return (
+                          <div key={s.supplier} className={`whitespace-nowrap ${inUse ? "font-semibold text-ink" : ""}`}>
+                            <span className="font-sans text-xs">{SUPPLIER_LABEL[s.supplier] || s.supplier}</span> $
+                            {Number(s.cost).toFixed(2)}
+                            {inUse && <span className="ml-1 font-sans text-xs text-brand">in use</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <>
+                      ${Number(p.cost_price).toFixed(2)}
+                      {p.active_supplier && (
+                        <div className="font-sans text-xs">{SUPPLIER_LABEL[p.active_supplier] || p.active_supplier}</div>
+                      )}
+                    </>
                   )}
                 </td>
                 <td className="py-3 px-4">

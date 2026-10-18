@@ -13,6 +13,21 @@ export default async function handler(req, res) {
       .select("*")
       .order("title", { ascending: true });
     if (error) return res.status(500).json({ success: false, error: error.message });
+
+    // Attach each product's per-supplier numbers (one extra query) so the
+    // admin sees BOTH suppliers for linked products, not just the active
+    // one. Skipped quietly if migration 013 hasn't been run.
+    const { data: sources, error: srcErr } = await supabaseAdmin
+      .from("product_sources")
+      .select("product_id, supplier, cost, stock, available_stock, approved");
+    if (!srcErr && sources) {
+      const byProduct = new Map();
+      for (const s of sources) {
+        if (!byProduct.has(s.product_id)) byProduct.set(s.product_id, []);
+        byProduct.get(s.product_id).push(s);
+      }
+      for (const p of data) p.sources = byProduct.get(p.id) || [];
+    }
     return res.status(200).json({ success: true, products: data });
   }
 
