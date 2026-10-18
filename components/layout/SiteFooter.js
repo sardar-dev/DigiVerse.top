@@ -23,6 +23,12 @@ export default function SiteFooter() {
           Give us feedback to improve
         </button>
       </div>
+      <p className="mx-auto max-w-5xl px-4 pb-6 text-xs leading-relaxed text-muted sm:px-6">
+        {SITE_NAME} is an independent reseller of digital products and is not affiliated with, endorsed by or
+        sponsored by any brand mentioned on this site (such as Netflix, Google, OpenAI or Spotify). All product
+        names and trademarks belong to their respective owners. We never ask for the password of any third-party
+        account.
+      </p>
       {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </footer>
   );
