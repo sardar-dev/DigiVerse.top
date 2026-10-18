@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const { data: coupons, error } = await supabaseAdmin
       .from("coupons")
-      .select("*, products(title)")
+      .select("*")
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) return res.status(500).json({ success: false, error: error.message });
@@ -81,21 +81,26 @@ export default async function handler(req, res) {
       expiresAt = d.toISOString();
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("coupons")
-      .insert({
+    const ids = [...new Set((Array.isArray(b.product_ids) ? b.product_ids : []).map(Number))];
+    if (ids.some((n) => !Number.isInteger(n) || n <= 0)) {
+      return res.status(400).json({ success: false, error: "invalid_products" });
+    }
+    const row = {
         code,
         discount_type: type,
         discount_value: value,
-        product_id: b.product_id === "" || b.product_id == null ? null : Number(b.product_id),
+        product_id: null,
+        ...(ids.length ? { product_ids: ids } : {}),
         max_uses: maxUses,
         per_user_limit: perUser,
         min_order: minOrder,
         expires_at: expiresAt,
-      })
-      .select()
-      .single();
+    };
+    const { data, error } = await supabaseAdmin.from("coupons").insert(row).select().single();
     if (error) {
+      if (/product_ids/.test(error.message || "")) {
+        return res.status(500).json({ success: false, error: "run_migration_016" });
+      }
       return res.status(error.code === "23505" ? 409 : 500).json({
         success: false,
         error: error.code === "23505" ? "code_already_exists" : error.message,

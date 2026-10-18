@@ -10,7 +10,7 @@ const EMPTY = {
   code: "",
   discount_type: "percent",
   discount_value: "",
-  product_id: "",
+  product_ids: [],
   max_uses: "",
   per_user_limit: "1",
   min_order: "",
@@ -30,6 +30,7 @@ const ERRORS = {
   invalid_value: "Enter a valid discount (percent must be 1–100).",
   invalid_limit: "Limits must be whole numbers above 0 (minimum order can be 0).",
   invalid_expiry: "That expiry date isn't valid.",
+  run_migration_016: "Run supabase/migration_016 in the Supabase SQL editor first (needed for multi-product coupons).",
 };
 
 export default function CouponsTab({ products }) {
@@ -37,6 +38,7 @@ export default function CouponsTab({ products }) {
   const [form, setForm] = useState(EMPTY);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [busy, setBusy] = useState(false);
+  const [pq, setPq] = useState("");
 
   async function load() {
     const res = await fetch("/api/admin/coupons");
@@ -47,6 +49,22 @@ export default function CouponsTab({ products }) {
   useEffect(() => {
     load();
   }, []);
+
+  const toggleProduct = (id) =>
+    setForm((f) => ({
+      ...f,
+      product_ids: f.product_ids.includes(id)
+        ? f.product_ids.filter((x) => x !== id)
+        : [...f.product_ids, id],
+    }));
+  const titleOf = (id) => products.find((p) => Number(p.id) === Number(id))?.title || `#${id}`;
+  const appliesTo = (c) => {
+    const ids = c.product_ids?.length ? c.product_ids : c.product_id != null ? [c.product_id] : [];
+    return ids.length ? ids.map(titleOf) : null;
+  };
+  const shownProducts = products.filter((p) =>
+    (p.title || "").toLowerCase().includes(pq.trim().toLowerCase())
+  );
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -142,14 +160,56 @@ export default function CouponsTab({ products }) {
             />
           </div>
 
-          <FormSelect label="Applies to" value={form.product_id} onChange={set("product_id")}>
-            <option value="">All products</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </FormSelect>
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-sm font-medium text-ink">Applies to</span>
+              <span className="text-xs text-muted">
+                {form.product_ids.length === 0
+                  ? "All products"
+                  : `${form.product_ids.length} selected`}
+              </span>
+            </div>
+            <input
+              value={pq}
+              onChange={(e) => setPq(e.target.value)}
+              placeholder="Search products…"
+              className="mb-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-ink"
+            />
+            <div className="max-h-52 overflow-y-auto rounded-lg border border-border bg-bg p-1">
+              {shownProducts.map((p) => (
+                <label
+                  key={p.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink hover:bg-brand-soft"
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.product_ids.includes(Number(p.id))}
+                    onChange={() => toggleProduct(Number(p.id))}
+                  />
+                  <span className="min-w-0 break-words">{p.title}</span>
+                </label>
+              ))}
+              {shownProducts.length === 0 && (
+                <div className="px-2 py-2 text-sm text-muted">No products found.</div>
+              )}
+            </div>
+            <div className="mt-1 flex items-center gap-3 text-xs">
+              <button
+                type="button"
+                className="text-brand hover:underline"
+                onClick={() => setForm((f) => ({ ...f, product_ids: shownProducts.map((p) => Number(p.id)) }))}
+              >
+                Select shown
+              </button>
+              <button
+                type="button"
+                className="text-muted hover:underline"
+                onClick={() => setForm((f) => ({ ...f, product_ids: [] }))}
+              >
+                Clear (= all products)
+              </button>
+            </div>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormInput
@@ -232,7 +292,17 @@ export default function CouponsTab({ products }) {
                         <div className="text-xs text-muted">min ${Number(c.min_order).toFixed(2)}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-ink">{c.products?.title || "All products"}</td>
+                    <td className="max-w-[260px] px-4 py-3 text-ink">
+                      {appliesTo(c) ? (
+                        <div className="space-y-0.5">
+                          {appliesTo(c).map((t, i) => (
+                            <div key={i} className="text-xs">• {t}</div>
+                          ))}
+                        </div>
+                      ) : (
+                        "All products"
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-mono text-ink">
                       {c.uses}
                       {c.max_uses !== null ? ` / ${c.max_uses}` : ""}

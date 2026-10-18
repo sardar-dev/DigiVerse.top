@@ -3,6 +3,26 @@ import { LinkButton, SecondaryButton } from "../ui/Button";
 import StatusBadge from "../ui/StatusBadge";
 import DataTable from "./DataTable";
 
+// What the customer actually received (credentials / links / codes).
+function DeliveredItems({ items }) {
+  if (!items || (Array.isArray(items) && items.length === 0)) {
+    return <span className="text-muted">—</span>;
+  }
+  const list = Array.isArray(items) ? items : [items];
+  return (
+    <div className="space-y-1">
+      {list.map((it, i) => (
+        <div
+          key={i}
+          className="max-h-24 overflow-y-auto whitespace-pre-wrap break-all rounded bg-bg px-2 py-1 font-mono text-ink"
+        >
+          {typeof it === "string" ? it : JSON.stringify(it)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function OrdersTab({
   orderSearch,
   setOrderSearch,
@@ -40,16 +60,18 @@ export default function OrdersTab({
         </div>
       )}
 
-      <DataTable minWidth="min-w-[900px]">
+      <DataTable minWidth="min-w-[1200px]">
         <thead>
           <tr className="text-left text-muted border-b border-border">
             <th className="py-3 px-4">Order #</th>
             <th className="py-3 px-4">Customer</th>
             <th className="py-3 px-4">Product</th>
+            <th className="py-3 px-4">Qty × rate</th>
             <th className="py-3 px-4">Total</th>
             <th className="py-3 px-4">Paid with</th>
             <th className="py-3 px-4">Status</th>
             <th className="py-3 px-4">Activation info</th>
+            <th className="py-3 px-4">Delivered to customer</th>
             <th className="py-3 px-4">Tx hash</th>
             <th className="py-3 px-4">Actions</th>
           </tr>
@@ -68,6 +90,9 @@ export default function OrdersTab({
                 {o.products?.title}
                 {o.supplier && <div className="text-xs text-muted">via {o.supplier === "xpro" ? "XPro" : "DigiTrust"}</div>}
               </td>
+              <td className="py-3 px-4 font-mono text-ink whitespace-nowrap">
+                {o.quantity}× ${Number(o.unit_price).toFixed(2)}
+              </td>
               <td className="py-3 px-4 font-mono text-ink">
                 ${Number(o.total).toFixed(2)}
                 {o.coupon_code && (
@@ -82,6 +107,9 @@ export default function OrdersTab({
               </td>
               <td className="py-3 px-4 max-w-[140px] break-all text-muted">
                 {o.activation_info || "—"}
+              </td>
+              <td className="py-3 px-4 max-w-[240px] text-xs">
+                <DeliveredItems items={o.items} />
               </td>
               <td className="py-3 px-4 max-w-[160px] break-all font-mono text-xs text-muted">
                 {o.tx_hash || "—"}

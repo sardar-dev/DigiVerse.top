@@ -4,6 +4,7 @@ import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 import { fetchStorefrontProducts } from "../lib/storefrontProducts";
 import PaymentPanel from "../components/PaymentPanel";
+import RecentOrders from "../components/RecentOrders";
 import SEO from "../components/SEO";
 import SiteHeader from "../components/layout/SiteHeader";
 import SiteFooter from "../components/layout/SiteFooter";
@@ -346,6 +347,8 @@ export default function Storefront({ initialProducts, sharedMeta }) {
             </div>
           </PageContainer>
         </section>
+
+        <RecentOrders />
       </main>
 
       <SiteFooter />
