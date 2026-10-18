@@ -44,6 +44,9 @@ export default function SEO({
       <meta name="twitter:image" content={img} />
       <meta name="theme-color" content="#3169F5" />
 
+      {/* Google Search Console ownership verification */}
+      <meta name="google-site-verification" content="sRurRBK_qxB1q-UqsaETPM22-DJDUgYvwrB04Sngv7g" />
+
       {/* Branded icons (static files in /public) */}
       <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
