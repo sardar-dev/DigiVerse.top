@@ -72,7 +72,7 @@ npm run dev
   - Whenever you change stock/prices on DigiTrust and want the site
     to reflect it sooner, either wait for the next daily sync, or
     trigger it manually any time:
-    `curl -H "x-cron-secret: YOUR_CRON_SECRET" https://yoursite.vercel.app/api/admin/sync`
+    `curl -H "x-cron-secret: YOUR_CRON_SECRET" https://digiverse.top/api/admin/sync`
   - If you later want automatic syncing more than once a day without
     upgrading to Vercel Pro, point a free external scheduler (e.g.
     cron-job.org) at that same URL with an `x-cron-secret` header —
