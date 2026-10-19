@@ -30,15 +30,24 @@ export default function RecentOrders() {
   return (
     <section className="border-t border-border bg-surface" aria-labelledby="recent-orders-title">
       <PageContainer className="py-10">
-        <h2 id="recent-orders-title" className="text-center text-xl font-semibold text-ink sm:text-2xl">
-          Recent orders
-        </h2>
+        <div className="flex items-center justify-center gap-2">
+          <h2 id="recent-orders-title" className="text-xl font-semibold text-ink sm:text-2xl">
+            Recent orders
+          </h2>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-xs font-medium text-success">
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+            </span>
+            Live
+          </span>
+        </div>
         <p className="mx-auto mt-1 max-w-md text-center text-sm text-muted">
           Real purchases from our customers, delivered instantly.
         </p>
-        <ul className="mx-auto mt-6 max-w-2xl divide-y divide-border overflow-hidden rounded-xl border border-border bg-bg shadow-card">
+        <ul className="mx-auto mt-6 max-w-2xl divide-y divide-border overflow-hidden rounded-2xl border border-border bg-bg shadow-card">
           {orders.map((o) => (
-            <li key={o.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+            <li key={o.id} className="flex items-center justify-between gap-3 px-4 py-3.5 text-sm transition-colors hover:bg-brand-soft/60">
               <span className="flex min-w-0 items-center gap-3">
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-success-soft text-success" aria-hidden="true">
                   ✓

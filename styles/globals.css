@@ -9,9 +9,22 @@
   --radius-sm: 8px;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 72px; /* keep anchor targets clear of the sticky header */
+}
+
 body {
   background-color: #F6F8FC;
   color: #17213A;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #3169F5;
+  color: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {
