@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { SITE_NAME, SITE_URL } from "../lib/siteConfig";
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
 
 // One shared component so every page gets consistent, correct SEO
 // tags instead of copy-pasted <Head> blocks drifting out of sync.
@@ -10,16 +10,16 @@ export default function SEO({
   noindex = false,
   image,
 }) {
-  const fullTitle = title ? `${title} — ${SITE_NAME}` : `${SITE_NAME}`;
+  const fullTitle = title
+    ? `${title} — ${SITE_NAME}`
+    : "DigiVerse — Instant Digital Products & Subscriptions";
   const url = `${SITE_URL}${path}`;
   // Share previews need an absolute image URL. Defaults to the static
   // branded card in /public (served by Vercel CDN, no function cost).
   const img = image
     ? /^https?:\/\//.test(image) ? image : `${SITE_URL}${image}`
     : `${SITE_URL}/og-image.png`;
-  const desc =
-    description ||
-    "DigiVerse — buy digital products and accounts instantly online, pay with USDT (BEP20) or wallet balance.";
+  const desc = description || SITE_DESCRIPTION;
 
   return (
     <Head>
