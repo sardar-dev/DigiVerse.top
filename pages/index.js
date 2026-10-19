@@ -131,7 +131,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       {sharedMeta ? (
         <SEO
           title={sharedMeta.title}
-          description={`${sharedMeta.description ? sharedMeta.description + " — " : ""}$${sharedMeta.price.toFixed(2)} on DigiVerse. Instant delivery, pay with USDT (BEP20) or wallet balance.`}
+          description={`${sharedMeta.description ? sharedMeta.description + " — " : ""}$${sharedMeta.price.toFixed(2)} on DigiVerse. Instant delivery and secure checkout.`}
           path={`/?product=${sharedMeta.id}`}
           image={sharedMeta.image || undefined}
         />
