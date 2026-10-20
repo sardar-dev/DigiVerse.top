@@ -1,4 +1,5 @@
 import { syncProducts } from "../../../lib/syncProducts";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 // Called on a schedule (see vercel.json cron, or an external
 // scheduler like cron-job.org on Hobby plans) to refresh our local
@@ -15,7 +16,14 @@ export default async function handler(req, res) {
 
   try {
     const result = await syncProducts();
-    return res.status(200).json({ success: true, ...result });
+    // Housekeeping: drop unpaid orders / expired invoices older than 3h
+    // (migration 017). Best effort — never fails the sync.
+    let purged = null;
+    try {
+      const { data } = await supabaseAdmin.rpc("purge_stale_pending");
+      purged = data || null;
+    } catch {}
+    return res.status(200).json({ success: true, ...result, purged });
   } catch (e) {
     return res.status(502).json({ success: false, error: e.message });
   }
