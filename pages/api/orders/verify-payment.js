@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { verifyUsdtPayment } from "../../../lib/bscscan";
 import { fulfillOrder } from "../../../lib/fulfillOrder";
 import { claimTxHash, confirmTxHash, releaseTxHash } from "../../../lib/claimTxHash";
+import { frozenSeconds, recordWrongHash, isWrongHash, frozenResponse } from "../../../lib/hashLimit";
 
 // Step 2 of checkout: customer submits the tx hash of their USDT
 // (BEP20) transfer. We verify it on-chain, and if it checks out we
@@ -36,6 +37,10 @@ export default async function handler(req, res) {
   }
   const tx_hash = rawTxHash.toLowerCase();
 
+  // Too many wrong hashes recently → short freeze.
+  const frozen = await frozenSeconds(session.user.id);
+  if (frozen > 0) return res.status(429).json(frozenResponse(frozen));
+
   const { data: order, error: orderErr } = await supabaseAdmin
     .from("orders")
     .select("*")
@@ -53,7 +58,12 @@ export default async function handler(req, res) {
   // hash), this fails immediately.
   const claim = await claimTxHash(tx_hash, "order", order.id);
   if (!claim.claimed) {
-    return res.status(409).json({ success: false, error: "tx_already_used" });
+    const lock = await recordWrongHash(session.user.id);
+    return res.status(409).json({
+      success: false,
+      error: lock ? "too_many_attempts" : "tx_already_used",
+      ...(lock ? { retry_after: lock } : {}),
+    });
   }
 
   // Atomically claim the order itself: only succeeds if it's still
@@ -86,7 +96,12 @@ export default async function handler(req, res) {
       .update({ status: "pending_payment", updated_at: new Date().toISOString() })
       .eq("id", order.id);
     await releaseTxHash(tx_hash);
-    return res.status(202).json({ success: false, error: verdict.reason });
+    const lock = isWrongHash(verdict.reason) ? await recordWrongHash(session.user.id) : 0;
+    return res.status(lock ? 429 : 202).json({
+      success: false,
+      error: lock ? "too_many_attempts" : verdict.reason,
+      ...(lock ? { retry_after: lock } : {}),
+    });
   }
 
   // Confirmed — burn the hash permanently and proceed.

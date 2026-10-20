@@ -9,6 +9,7 @@ const TABS = [
   { id: "orders", label: "Orders" },
   { id: "deposits", label: "Deposits" },
   { id: "coupons", label: "Coupons" },
+  { id: "aitext", label: "AI text" },
   { id: "feedback", label: "Feedback" },
   { id: "debug", label: "Debug payment" },
   { id: "settings", label: "Settings" },

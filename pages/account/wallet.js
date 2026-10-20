@@ -383,6 +383,10 @@ function describeInvoiceError(code) {
 
 function describeError(code, data) {
   switch (code) {
+    case "too_many_attempts":
+      return `Too many wrong transaction hashes. Please wait ${
+        Math.max(1, Math.ceil(((data && data.retry_after) || 120) / 60))
+      } minute(s) and double-check the hash before trying again.`;
     case "not_found_yet":
       return "That transaction isn't visible on-chain yet — wait a bit and try again.";
     case "chain_lookup_failed":

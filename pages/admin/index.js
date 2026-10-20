@@ -8,6 +8,7 @@ import OrdersTab from "../../components/admin/OrdersTab";
 import DepositsTab from "../../components/admin/DepositsTab";
 import FeedbackTab from "../../components/admin/FeedbackTab";
 import CouponsTab from "../../components/admin/CouponsTab";
+import AiDescriptionsTab from "../../components/admin/AiDescriptionsTab";
 import SuppliersTab from "../../components/admin/SuppliersTab";
 import StatsTab from "../../components/admin/StatsTab";
 import DebugTab from "../../components/admin/DebugTab";
@@ -450,6 +451,8 @@ export default function Admin() {
       {tab === "deposits" && <DepositsTab />}
 
       {tab === "feedback" && <FeedbackTab />}
+
+      {tab === "aitext" && <AiDescriptionsTab />}
 
       {tab === "coupons" && (
         <CouponsTab products={[...products, ...manualProducts]} />

@@ -2,6 +2,7 @@ import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { verifyUsdtTopup } from "../../../lib/bscscan";
 import { claimTxHash, confirmTxHash, releaseTxHash } from "../../../lib/claimTxHash";
+import { frozenSeconds, recordWrongHash, isWrongHash, frozenResponse } from "../../../lib/hashLimit";
 
 // Customer must first create a deposit invoice (see
 // create-deposit-invoice.js), which assigns a unique exact amount
@@ -44,6 +45,10 @@ export default async function handler(req, res) {
   }
   const tx_hash = rawTxHash.toLowerCase();
 
+  // Too many wrong hashes recently → short freeze.
+  const frozen = await frozenSeconds(session.user.id);
+  if (frozen > 0) return res.status(429).json(frozenResponse(frozen));
+
   // The invoice must belong to this user and still be pending and
   // unexpired. RLS already restricts SELECT to the owner, but we use
   // the service-role client here (consistent with the rest of this
@@ -73,13 +78,23 @@ export default async function handler(req, res) {
   // an order, or raced by a double-click, no matter its letter case.
   const claim = await claimTxHash(tx_hash, "topup", invoice.id);
   if (!claim.claimed) {
-    return res.status(409).json({ success: false, error: "tx_already_used" });
+    const lock = await recordWrongHash(session.user.id);
+    return res.status(409).json({
+      success: false,
+      error: lock ? "too_many_attempts" : "tx_already_used",
+      ...(lock ? { retry_after: lock } : {}),
+    });
   }
 
   const verdict = await verifyUsdtTopup({ txHash: tx_hash });
   if (!verdict.ok) {
     await releaseTxHash(tx_hash);
-    return res.status(202).json({ success: false, error: verdict.reason });
+    const lock = isWrongHash(verdict.reason) ? await recordWrongHash(session.user.id) : 0;
+    return res.status(lock ? 429 : 202).json({
+      success: false,
+      error: lock ? "too_many_attempts" : verdict.reason,
+      ...(lock ? { retry_after: lock } : {}),
+    });
   }
 
   // The core fix: the on-chain amount must match THIS invoice's
@@ -89,6 +104,10 @@ export default async function handler(req, res) {
   // match for this invoice and credits nothing.
   if (Math.abs(verdict.amount - Number(invoice.unique_amount)) > AMOUNT_TOLERANCE) {
     await releaseTxHash(tx_hash);
+    const lock = await recordWrongHash(session.user.id);
+    if (lock) {
+      return res.status(429).json({ success: false, error: "too_many_attempts", retry_after: lock });
+    }
     return res.status(202).json({
       success: false,
       error: "amount_mismatch",

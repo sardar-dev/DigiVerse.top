@@ -533,6 +533,7 @@ Run `supabase/migration_013_multi_supplier.sql` once in the Supabase SQL editor,
 | Variable | Value |
 |---|---|
 | `XPRO_API_BASE` | `http://paid2.daki.cc:4153/api/partner/v1` |
+| `GEMINI_API_KEY` | free key from aistudio.google.com — powers Admin → AI text (rewrites product descriptions; you review before saving). Optional `GEMINI_MODEL` (default `gemini-flash-latest`) |
 | `XPRO_API_KEY` | your `sk_live_…` key from the XPro bot (API → Create Key) |
 
 Rules:
