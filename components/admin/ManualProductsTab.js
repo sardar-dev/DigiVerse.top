@@ -1,3 +1,4 @@
+import ImagePicker from "./ImagePicker";
 import { useState } from "react";
 import { FormInput, FormTextarea, FormSelect } from "../ui/FormInput";
 import { PrimaryButton, SecondaryButton, LinkButton } from "../ui/Button";
@@ -185,6 +186,10 @@ export default function ManualProductsTab({
               hint="Used to build filter tabs on the homepage."
             />
           </div>
+          <ImagePicker
+            title={manualForm.title}
+            onPick={(u) => setManualForm({ ...manualForm, image_url: u })}
+          />
           {manualForm.image_url && (
             <img
               src={manualForm.image_url}

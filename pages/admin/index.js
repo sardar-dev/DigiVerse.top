@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import AdminLayout from "../../components/admin/AdminLayout";
+import AdminLayout, { ADMIN_TAB_IDS } from "../../components/admin/AdminLayout";
 import DashboardTab from "../../components/admin/DashboardTab";
 import ProductsTab from "../../components/admin/ProductsTab";
 import ManualProductsTab from "../../components/admin/ManualProductsTab";
@@ -22,7 +22,25 @@ export default function Admin() {
   const [allowed, setAllowed] = useState(false);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [tab, setTab] = useState("products");
+  const [tab, setTabState] = useState("products");
+  // Keep the open section in the URL (#orders …) so a refresh — or a
+  // shared/bookmarked link — returns to the same page, with no storage
+  // or server involved.
+  const setTab = (id) => {
+    setTabState(id);
+    try {
+      window.history.replaceState(null, "", `#${id}`);
+    } catch {}
+  };
+  useEffect(() => {
+    const apply = () => {
+      const h = window.location.hash.replace("#", "");
+      if (ADMIN_TAB_IDS.includes(h)) setTabState(h);
+    };
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
+  }, []);
   const [sortAvailableFirst, setSortAvailableFirst] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [orderSearch, setOrderSearch] = useState("");

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FormInput, FormTextarea } from "../ui/FormInput";
 import { PrimaryButton, SecondaryButton } from "../ui/Button";
+import ImagePicker from "./ImagePicker";
 
 // Shared editor for the merchandising fields every product — DigiTrust
 // or manual — can now carry: image, category, featured flag, low-
@@ -57,6 +58,7 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
           hint="Used to build filter tabs on the homepage."
         />
       </div>
+      <ImagePicker title={title || product.title} onPick={setImageUrl} />
       {imageUrl && (
         <img
           src={imageUrl}
