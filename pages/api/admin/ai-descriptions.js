@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       .maybeSingle();
     if (!p) return res.status(404).json({ success: false, error: "product_not_found" });
     const out = await rewriteDescription({ title: p.title, description: p.description });
-    if (!out.ok) return res.status(200).json({ success: false, error: out.error });
+    if (!out.ok) return res.status(200).json({ success: false, error: out.error, detail: out.detail || null });
     return res.status(200).json({ success: true, draft: out.text });
   }
 

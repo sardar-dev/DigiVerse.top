@@ -62,7 +62,10 @@ export default function AiDescriptionsTab() {
       setDrafts((x) => ({ ...x, [id]: d.draft }));
       return true;
     }
-    setRowErr((e) => ({ ...e, [id]: ERR[d.error] || d.error }));
+    setRowErr((e) => ({
+      ...e,
+      [id]: (ERR[d.error] || d.error) + (d.detail ? ` — ${d.detail}` : ""),
+    }));
     return false;
   }
 
