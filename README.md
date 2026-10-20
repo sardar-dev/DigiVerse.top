@@ -534,6 +534,7 @@ Run `supabase/migration_013_multi_supplier.sql` once in the Supabase SQL editor,
 |---|---|
 | `XPRO_API_BASE` | `http://paid2.daki.cc:4153/api/partner/v1` |
 | `GEMINI_API_KEY` | free key from aistudio.google.com — powers Admin → AI text (rewrites product descriptions; you review before saving). Optional `GEMINI_MODEL` (default `gemini-flash-latest`) |
+| `HF_API_KEY`, `TOGETHER_API_KEY`, `CF_ACCOUNT_ID` + `CF_API_TOKEN` | optional extra AI image providers for the product image picker (Gemini key is reused). Images are saved to Supabase Storage bucket `product-images` |
 | `XPRO_API_KEY` | your `sk_live_…` key from the XPro bot (API → Create Key) |
 
 Rules:
