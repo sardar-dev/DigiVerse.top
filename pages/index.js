@@ -6,6 +6,7 @@ import { fetchStorefrontProducts } from "../lib/storefrontProducts";
 import PaymentPanel from "../components/PaymentPanel";
 import RecentOrders from "../components/RecentOrders";
 import SEO from "../components/SEO";
+import { toProductCode, fromProductCode } from "../lib/productLink";
 import SiteHeader from "../components/layout/SiteHeader";
 import SiteFooter from "../components/layout/SiteFooter";
 import PageContainer from "../components/layout/PageContainer";
@@ -27,7 +28,7 @@ export async function getServerSideProps({ query }) {
   // preview (title/blurb/image) in WhatsApp/Telegram etc. Taken from the
   // list we already fetched — no extra query.
   const shared = query?.product
-    ? list.find((p) => String(p.id) === String(query.product))
+    ? list.find((p) => String(p.id) === fromProductCode(query.product))
     : null;
   const sharedMeta = shared
     ? {
@@ -75,7 +76,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     if (!productId || active) return;
     if (products.length === 0) return; // wait for the list to load first
 
-    const match = products.find((p) => String(p.id) === String(productId));
+    const match = products.find((p) => String(p.id) === fromProductCode(productId));
     if (match) {
       if (session) setActive(match);
     } else {
@@ -132,7 +133,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         <SEO
           title={sharedMeta.title}
           description={`${sharedMeta.description ? sharedMeta.description + " — " : ""}$${sharedMeta.price.toFixed(2)} on DigiVerse. Instant delivery and secure checkout.`}
-          path={`/?product=${sharedMeta.id}`}
+          path={`/?product=${toProductCode(sharedMeta.id)}`}
           image={sharedMeta.image || undefined}
         />
       ) : (
@@ -372,7 +373,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
 }
 
 function shareProduct(product) {
-  const url = `${window.location.origin}/?product=${product.id}`;
+  const url = `${window.location.origin}/?product=${toProductCode(product.id)}`;
   if (navigator.share) {
     navigator.share({ title: product.title, url }).catch(() => {});
     return;
