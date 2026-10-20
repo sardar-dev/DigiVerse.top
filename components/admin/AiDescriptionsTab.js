@@ -53,6 +53,12 @@ export default function AiDescriptionsTab() {
     setBusyFor(id, true);
     setRowErr((e) => ({ ...e, [id]: "" }));
     let d = await post({ action: "generate", id });
+    // Temporary Google trouble (busy / slow): wait a few seconds and retry,
+    // up to 2 more times. Each try is its own request, so no timeout piles up.
+    for (let i = 0; i < 2 && !d.success && ["ai_failed", "ai_timeout", "ai_empty"].includes(d.error); i++) {
+      await sleep(5000);
+      d = await post({ action: "generate", id });
+    }
     if (!d.success && d.error === "ai_rate_limited") {
       await sleep(30000); // free-tier per-minute limit: wait once, retry
       d = await post({ action: "generate", id });
