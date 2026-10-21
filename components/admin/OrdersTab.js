@@ -62,6 +62,7 @@ export default function OrdersTab({
   onCheckDigitrust,
   onReconcileDelivered,
   onRetrySupplier,
+  onRefund,
 }) {
   return (
     <>
@@ -165,9 +166,17 @@ export default function OrdersTab({
                   <LinkButton onClick={() => onDeliverManual(o)}>Deliver</LinkButton>
                 )}
                 {o.status === "failed" && (
-                  <LinkButton onClick={() => setOrderStatus(o.id, "refunded")}>
-                    Mark refunded
-                  </LinkButton>
+                  <>
+                    <LinkButton onClick={() => onRefund(o)} className="font-semibold text-success">
+                      Refund ${Number(o.total).toFixed(2)}
+                    </LinkButton>
+                    <LinkButton
+                      onClick={() => setOrderStatus(o.id, "refunded")}
+                      title="Only marks it refunded — use if you already returned the money by hand"
+                    >
+                      Mark refunded
+                    </LinkButton>
+                  </>
                 )}
                 {o.status === "needs_reconciliation" && (
                   <>

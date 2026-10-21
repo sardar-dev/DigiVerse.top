@@ -373,6 +373,33 @@ export default function Admin() {
     loadOrders();
   }
 
+  async function refundOrder(order) {
+    const who = order.user_email || "the customer";
+    if (
+      !confirm(
+        `Refund $${Number(order.total).toFixed(2)} to ${who}'s wallet balance and mark order #${order.order_number} as refunded?`
+      )
+    )
+      return;
+    const res = await fetch("/api/admin/refund-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: order.id }),
+    });
+    const data = await res.json();
+    alert(
+      data.success
+        ? `Refunded $${Number(data.refunded).toFixed(2)} to ${data.email || who}. New balance: $${Number(data.balance).toFixed(2)}.`
+        : `Refund failed: ${
+            {
+              no_confirmed_payment: "no confirmed payment found for this order (nothing to return).",
+              already_processed: "this order was already refunded.",
+            }[data.error] || data.error
+          }`
+    );
+    loadOrders();
+  }
+
   async function deleteOrder(id) {
     if (!confirm("Permanently delete this order? This can't be undone.")) return;
     await fetch("/api/admin/orders", {
@@ -517,6 +544,7 @@ export default function Admin() {
           visibleOrders={visibleOrders}
           setOrderStatus={setOrderStatus}
           deleteOrder={deleteOrder}
+          onRefund={refundOrder}
           onDeliverManual={(order) => setDeliverOrder(order)}
           onCheckDigitrust={loadDigitrustOrders}
           onReconcileDelivered={(order) => setReconcileOrder(order)}

@@ -4,6 +4,7 @@ import DataTable from "./DataTable";
 import SectionHeading from "../ui/SectionHeading";
 import { SecondaryButton } from "../ui/Button";
 import BalanceMessage from "./BalanceMessage";
+import UserLookup from "./UserLookup";
 import { ErrorState, LoadingState } from "../ui/States";
 
 const money = (n) => `$${Number(n || 0).toFixed(2)}`;
@@ -55,6 +56,7 @@ export default function StatsTab() {
           </SecondaryButton>
         }
       />
+      <UserLookup />
       {stats.truncated && (
         <p className="text-xs text-warning">
           Order stats are based on the most recent 10,000 orders only.
