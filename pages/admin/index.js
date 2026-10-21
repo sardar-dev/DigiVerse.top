@@ -414,6 +414,8 @@ export default function Admin() {
         (o.user_email || "").toLowerCase().includes(q) ||
         (o.email || "").toLowerCase().includes(q) ||
         (o.tx_hash || "").toLowerCase().includes(q) ||
+        String(o.supplier_order_id || o.digitrust_order_id || "").toLowerCase().includes(q) ||
+        String(o.id || "").toLowerCase().includes(q) ||
         JSON.stringify(o.items || "").toLowerCase().includes(q) ||
         String(o.order_number || "").includes(q) ||
         o.status.toLowerCase().includes(q)

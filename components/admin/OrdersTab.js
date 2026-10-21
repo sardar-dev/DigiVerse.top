@@ -1,7 +1,34 @@
+import { useState } from "react";
 import { FormInput } from "../ui/FormInput";
 import { LinkButton, SecondaryButton } from "../ui/Button";
 import StatusBadge from "../ui/StatusBadge";
 import DataTable from "./DataTable";
+
+// Tiny click-to-copy chip for ids used in support chats.
+function CopyChip({ value, label, title }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      title={title || "Click to copy"}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(String(value));
+        } catch {
+          window.prompt("Copy:", String(value));
+        }
+        setDone(true);
+        setTimeout(() => setDone(false), 1500);
+      }}
+      className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded bg-bg px-1.5 py-0.5 font-mono text-[11px] text-ink hover:bg-brand-soft"
+    >
+      <span className="truncate">
+        {label} {value}
+      </span>
+      <span aria-hidden="true">{done ? "✓" : "⧉"}</span>
+    </button>
+  );
+}
 
 // What the customer actually received (credentials / links / codes).
 function DeliveredItems({ items }) {
@@ -41,7 +68,7 @@ export default function OrdersTab({
       <FormInput
         value={orderSearch}
         onChange={(e) => setOrderSearch(e.target.value)}
-        placeholder="Search by order #, customer email, product, status, or tx hash…"
+        placeholder="Search by order #, customer email, product, status, tx hash or supplier order id…"
         className="mb-4 w-full"
         aria-label="Search orders"
       />
@@ -89,6 +116,22 @@ export default function OrdersTab({
               <td className="py-3 px-4 text-ink">
                 {o.products?.title}
                 {o.supplier && <div className="text-xs text-muted">via {o.supplier === "xpro" ? "XPro" : "DigiTrust"}</div>}
+                {(() => {
+                  const sid = o.supplier_order_id || o.digitrust_order_id;
+                  if (sid) return <CopyChip value={sid} label={`${o.supplier === "xpro" ? "XPro" : "Supplier"} order #`} />;
+                  // XPro orders are sent with our order id as externalOrderId,
+                  // so support can still find them at XPro even without their id.
+                  if (o.supplier === "xpro") {
+                    return (
+                      <CopyChip
+                        value={o.id}
+                        label="XPro ref"
+                        title="Our order id, sent to XPro as externalOrderId — use it to find this order there"
+                      />
+                    );
+                  }
+                  return null;
+                })()}
               </td>
               <td className="py-3 px-4 font-mono text-ink whitespace-nowrap">
                 {o.quantity}× ${Number(o.unit_price).toFixed(2)}
