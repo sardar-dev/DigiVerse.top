@@ -70,12 +70,16 @@ export default function Admin() {
 
   // Site settings
   const [whatsappLink, setWhatsappLink] = useState("");
+  const [channelType, setChannelType] = useState("whatsapp");
   const [settingsMessage, setSettingsMessage] = useState("");
 
   async function loadSettings() {
     const res = await fetch("/api/admin/settings");
     const data = await res.json();
-    if (data.success) setWhatsappLink(data.whatsapp_link || "");
+    if (data.success) {
+      setWhatsappLink(data.whatsapp_link || "");
+      setChannelType(data.channel_type === "telegram" ? "telegram" : "whatsapp");
+    }
   }
 
   async function saveSettings() {
@@ -83,10 +87,18 @@ export default function Admin() {
     const res = await fetch("/api/admin/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ whatsapp_link: whatsappLink }),
+      body: JSON.stringify({ whatsapp_link: whatsappLink, channel_type: channelType }),
     });
     const data = await res.json();
-    setSettingsMessage(data.success ? "Saved." : `Failed: ${data.error}`);
+    setSettingsMessage(
+      data.success
+        ? "Saved."
+        : {
+            invalid_url: "Failed: that isn't a valid link (it must start with https://).",
+            link_not_telegram: "Failed: this is not a Telegram link — use a t.me link, or switch the dropdown to WhatsApp.",
+            link_not_whatsapp: "Failed: this is not a WhatsApp link — use a chat.whatsapp.com / wa.me link, or switch the dropdown to Telegram.",
+          }[data.error] || `Failed: ${data.error}`
+    );
   }
 
   function emptyManualForm() {
@@ -565,6 +577,8 @@ export default function Admin() {
       {tab === "settings" && (
         <SettingsTab
           whatsappLink={whatsappLink}
+          channelType={channelType}
+          setChannelType={setChannelType}
           setWhatsappLink={setWhatsappLink}
           saveSettings={saveSettings}
           settingsMessage={settingsMessage}
