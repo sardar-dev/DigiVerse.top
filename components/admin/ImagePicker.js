@@ -235,6 +235,12 @@ export default function ImagePicker({ title, onPick }) {
               )}
             </>
           )}
+          {mode === "find" && (
+            <div className="rounded bg-warning-soft px-2 py-1.5 text-xs text-warning">
+              Careful: official brand logos can make Google flag the whole site as deceptive. Prefer
+              ✨ AI-made generic icons, or your own artwork.
+            </div>
+          )}
           {err && <div className="break-words text-xs text-danger">{err}</div>}
         </div>
       )}

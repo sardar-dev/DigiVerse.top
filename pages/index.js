@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
@@ -16,7 +17,7 @@ import Alert from "../components/ui/Alert";
 import { FormInput } from "../components/ui/FormInput";
 import { PrimaryButton, SecondaryButton } from "../components/ui/Button";
 import { EmptyState, ErrorState, LoadingState } from "../components/ui/States";
-import { SITE_NAME, SITE_TAGLINE } from "../lib/siteConfig";
+import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
 
 // Server-rendered so search engines (and the first paint) see the
 // actual product list immediately, not an empty page that fills in
@@ -139,6 +140,20 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       ) : (
         <SEO />
       )}
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                { "@type": "Organization", name: "DigiVerse", url: SITE_URL, description: SITE_DESCRIPTION },
+                { "@type": "WebSite", name: "DigiVerse", url: SITE_URL },
+              ],
+            }),
+          }}
+        />
+      </Head>
       <SiteHeader session={session} onSignOut={() => supabase.auth.signOut()} />
 
       <main className="flex-1">
@@ -157,12 +172,13 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                   : "Digital products store"}
               </span>
               <h1 className="mt-4 text-3xl font-bold leading-tight text-ink sm:text-5xl">
-                Premium digital accounts,{" "}
+                Digital subscriptions &amp; licenses,{" "}
                 <span className="text-brand">delivered instantly.</span>
               </h1>
               <p className="mt-4 max-w-lg text-base text-muted sm:text-lg">
-                Subscriptions and verified accounts at fair prices. Pay with USDT (BEP20) or your
-                wallet balance and get your login details the moment payment confirms.
+                An independent store for digital subscriptions, licenses and activation codes at fair
+                prices. Pay with USDT (BEP20) or your wallet balance and receive your order details
+                right after payment confirms.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
                 <a href="#catalog">
@@ -246,13 +262,13 @@ export default function Storefront({ initialProducts, sharedMeta }) {
               How it works
             </h2>
             <p className="mx-auto mt-1 max-w-md text-center text-sm text-muted">
-              From click to login details in three simple steps.
+              From choosing a product to receiving it, in three simple steps.
             </p>
             <ol className="mt-8 grid gap-4 sm:grid-cols-3">
               {[
                 { n: 1, title: "Choose a product", text: "Browse the catalog and pick what you need. Prices are shown upfront." },
                 { n: 2, title: "Pay with USDT or wallet", text: "Send the exact USDT (BEP20) amount, or pay instantly from your wallet balance." },
-                { n: 3, title: "Receive instantly", text: "Your details appear right away and stay saved under My Orders." },
+                { n: 3, title: "Receive instantly", text: "Your order details appear right away and stay saved under My Orders." },
               ].map((step) => (
                 <li
                   key={step.n}

@@ -1,6 +1,6 @@
 import { SITE_URL } from "../lib/siteConfig";
 
-const PAGES = ["", "/terms", "/privacy", "/login", "/signup"];
+const PAGES = ["", "/about", "/terms", "/privacy"];
 
 export async function getServerSideProps({ res }) {
   const urls = PAGES.map(
