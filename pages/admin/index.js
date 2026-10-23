@@ -10,6 +10,8 @@ import FeedbackTab from "../../components/admin/FeedbackTab";
 import CouponsTab from "../../components/admin/CouponsTab";
 import AiDescriptionsTab from "../../components/admin/AiDescriptionsTab";
 import SupportTab from "../../components/admin/SupportTab";
+import ApiConnectionsTab from "../../components/admin/ApiConnectionsTab";
+import WithdrawalsTab from "../../components/admin/WithdrawalsTab";
 import SuppliersTab from "../../components/admin/SuppliersTab";
 import StatsTab from "../../components/admin/StatsTab";
 import DebugTab from "../../components/admin/DebugTab";
@@ -515,6 +517,10 @@ export default function Admin() {
       {tab === "aitext" && <AiDescriptionsTab />}
 
       {tab === "support" && <SupportTab />}
+
+      {tab === "apis" && <ApiConnectionsTab onChanged={loadProducts} />}
+
+      {tab === "withdrawals" && <WithdrawalsTab />}
 
       {tab === "coupons" && (
         <CouponsTab products={[...products, ...manualProducts]} />

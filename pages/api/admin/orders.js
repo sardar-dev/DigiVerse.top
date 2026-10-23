@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
+import { supplierLabels } from "../../../lib/suppliers";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
@@ -24,7 +25,13 @@ export default async function handler(req, res) {
         .in("id", userIds);
       for (const p of profiles || []) emails.set(p.id, p.email);
     }
-    const orders = (data || []).map((o) => ({ ...o, user_email: emails.get(o.user_id) || null }));
+    const sup = await supplierLabels();
+    const orders = (data || []).map((o) => ({
+      ...o,
+      user_email: emails.get(o.user_id) || null,
+      supplier_label: o.supplier ? sup[o.supplier]?.label || o.supplier : null,
+      can_retry: Boolean(o.supplier && sup[o.supplier]?.idempotent),
+    }));
     return res.status(200).json({ success: true, orders });
   }
 

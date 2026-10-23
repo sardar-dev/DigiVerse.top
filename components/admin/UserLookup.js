@@ -139,7 +139,7 @@ export default function UserLookup() {
                     <td className="px-3 py-2 text-muted">{o.paid_with || "onchain"}</td>
                     <td className="px-3 py-2"><StatusBadge status={o.status} /></td>
                     <td className="max-w-[140px] break-all px-3 py-2 font-mono text-xs text-muted">
-                      {o.supplier_order_id ? `${o.supplier === "xpro" ? "XPro" : "Supplier"} #${o.supplier_order_id}` : "—"}
+                      {o.supplier_order_id ? `${o.supplier_label || o.supplier || "Supplier"} #${o.supplier_order_id}` : "—"}
                     </td>
                     <td className="px-3 py-2 text-xs text-muted">{when(o.created_at)}</td>
                   </tr>

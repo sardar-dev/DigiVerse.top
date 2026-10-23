@@ -4,6 +4,8 @@ import { SecondaryButton, LinkButton } from "../ui/Button";
 import { ErrorState, LoadingState } from "../ui/States";
 
 const LABEL = { digitrust: "DigiTrust", xpro: "XPro" };
+// admin-added APIs show their saved name (see custom_suppliers)
+const labelOf = (id) => LABEL[id] || id;
 const money = (n) => `$${Number(n).toFixed(2)}`;
 
 const STATUS = {
@@ -288,7 +290,7 @@ function ProductMatcher({ unlinked, targets, act }) {
 
   const canLink = (u, t) =>
     !t.sources.some((s) => s.supplier === u.product.provider) &&
-    !(t.requires_email && u.product.provider === "xpro");
+    !(t.requires_email && u.product.provider !== "digitrust");
 
   // Best guesses, shown as one-click suggestions.
   const suggestions = useMemo(() => {

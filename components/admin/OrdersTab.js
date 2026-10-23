@@ -116,17 +116,17 @@ export default function OrdersTab({
               </td>
               <td className="py-3 px-4 text-ink">
                 {o.products?.title}
-                {o.supplier && <div className="text-xs text-muted">via {o.supplier === "xpro" ? "XPro" : "DigiTrust"}</div>}
+                {o.supplier && <div className="text-xs text-muted">via {o.supplier_label || o.supplier}</div>}
                 {(() => {
                   const sid = o.supplier_order_id || o.digitrust_order_id;
-                  if (sid) return <CopyChip value={sid} label={`${o.supplier === "xpro" ? "XPro" : "Supplier"} order #`} />;
-                  // XPro orders are sent with our order id as externalOrderId,
-                  // so support can still find them at XPro even without their id.
-                  if (o.supplier === "xpro") {
+                  if (sid) return <CopyChip value={sid} label={`${o.supplier_label || "Supplier"} order #`} />;
+                  // Idempotent suppliers get our order id as their external id,
+                  // so support can still find the order there without their id.
+                  if (o.can_retry) {
                     return (
                       <CopyChip
                         value={o.id}
-                        label="XPro ref"
+                        label={`${o.supplier_label} ref`}
                         title="Our order id, sent to XPro as externalOrderId — use it to find this order there"
                       />
                     );
@@ -180,7 +180,7 @@ export default function OrdersTab({
                 )}
                 {o.status === "needs_reconciliation" && (
                   <>
-                    {o.supplier === "xpro" ? (
+                    {o.can_retry ? (
                       <LinkButton onClick={() => onRetrySupplier(o)}>Retry (safe)</LinkButton>
                     ) : (
                       <LinkButton onClick={onCheckDigitrust}>Check DigiTrust</LinkButton>

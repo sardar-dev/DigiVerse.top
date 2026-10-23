@@ -171,6 +171,9 @@ export default function Wallet() {
               <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/85">
                 <span className="rounded-full bg-white/15 px-2.5 py-1">USDT · BEP20</span>
                 <span className="rounded-full bg-white/15 px-2.5 py-1">Pay for any product instantly</span>
+                <Link href="/account/withdraw" className="rounded-full bg-white px-3 py-1 font-medium text-brand hover:bg-white/90">
+                  Withdraw
+                </Link>
               </div>
             </div>
           </section>

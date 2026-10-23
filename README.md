@@ -553,3 +553,11 @@ Articles are plain files in `content/blog/*.md` (front-matter: title, descriptio
 ## Support tickets
 
 Run `supabase/migration_019_support_tickets.sql` once. Logged-in users open tickets at `/account/support`; admins reply under Admin → Support. Closed tickets are purged after 60 days.
+
+## API connections (admin)
+
+Admin → API connections lets you add a supplier API without code: paste the docs / quick start / key, press "Draft settings with AI", test, save, then Sync. Keys are stored server-side only (table `custom_suppliers`, no client access). Needs `GEMINI_API_KEY` for the AI draft. Run migration 021 once.
+
+## Withdrawals
+
+Users request at `/account/withdraw` (USDT BEP20, minimum `MIN_WITHDRAWAL`, default 5). The amount is held immediately; Admin → Withdrawals: send the USDT yourself, then Approve (or Reject to refund).

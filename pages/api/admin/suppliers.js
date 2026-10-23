@@ -2,7 +2,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { recomputeProduct } from "../../../lib/syncProducts";
 import { retrySupplierOrder } from "../../../lib/fulfillOrder";
-import { SUPPLIERS, enabledSuppliers } from "../../../lib/suppliers";
+import { allSuppliers, enabledSuppliers, getSupplier } from "../../../lib/suppliers";
 
 // Everything the admin "Suppliers" tab needs. Read on demand only (when
 // the tab opens / Refresh is pressed) — never polled.
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     // Optional live check: supplier connection + wallet balance.
     if (req.query.check === "1") {
       const out = await Promise.all(
-        Object.values(SUPPLIERS).map(async (s) => {
+        (await allSuppliers()).map(async (s) => {
           if (!s.api.configured()) return { id: s.id, label: s.label, configured: false };
           try {
             const h = await s.api.health();
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      configured: enabledSuppliers().map((s) => ({ id: s.id, label: s.label })),
+      configured: (await enabledSuppliers()).map((s) => ({ id: s.id, label: s.label })),
       unlinked,
       multi,
       needsPrice,
@@ -145,7 +145,8 @@ export default async function handler(req, res) {
       if (stubSources.some((s) => (targetSources || []).some((t) => t.supplier === s.supplier))) {
         return res.status(409).json({ success: false, error: "target_already_has_this_supplier" });
       }
-      if (target.requires_email && stubSources.some((s) => SUPPLIERS[s.supplier]?.supportsEmail === false)) {
+      const stubSuppliers = await Promise.all(stubSources.map((s) => getSupplier(s.supplier)));
+      if (target.requires_email && stubSuppliers.some((x) => x && x.supportsEmail === false)) {
         return res.status(409).json({ success: false, error: "target_requires_email_supplier_cant_deliver" });
       }
 

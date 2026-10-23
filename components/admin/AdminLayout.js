@@ -17,6 +17,7 @@ const GROUPS = [
       { id: "products", label: "Products", icon: "🛍️" },
       { id: "manual", label: "Manual products", icon: "✍️" },
       { id: "suppliers", label: "Suppliers", icon: "🔗" },
+      { id: "apis", label: "API connections", icon: "🔌" },
       { id: "aitext", label: "AI text", icon: "✨" },
     ],
   },
@@ -26,6 +27,7 @@ const GROUPS = [
       { id: "orders", label: "Orders", icon: "📦" },
       { id: "deposits", label: "Deposits", icon: "💳" },
       { id: "coupons", label: "Coupons", icon: "🎟️" },
+      { id: "withdrawals", label: "Withdrawals", icon: "💸" },
     ],
   },
   {
@@ -48,6 +50,8 @@ export default function AdminLayout({ tab, onTabChange, dashboard, pendingManual
       ? pendingManualCount
       : id === "support" && dashboard?.openTickets > 0
       ? dashboard.openTickets
+      : id === "withdrawals" && dashboard?.pendingWithdrawals > 0
+      ? dashboard.pendingWithdrawals
       : 0;
   const low = dashboard && (dashboard.digitrust?.low || dashboard.xpro?.low);
 

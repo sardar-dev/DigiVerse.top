@@ -22,7 +22,11 @@ import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/site
 // Server-rendered so search engines (and the first paint) see the
 // actual product list immediately, not an empty page that fills in
 // after a client-side fetch.
-export async function getServerSideProps({ query }) {
+export async function getServerSideProps({ query, res }) {
+  // Same list for every visitor, so let Vercel's edge serve it for 30s
+  // (and refresh in the background) instead of querying the database on
+  // every page view.
+  res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120");
   const { data } = await fetchStorefrontProducts();
   const list = data || [];
   // Shared product links (?product=<id>) get a product-specific link

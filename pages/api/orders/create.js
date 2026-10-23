@@ -62,7 +62,7 @@ export default async function handler(req, res) {
   } else {
     try {
       const src = await resolveSource(localProduct);
-      const supplier = src && getSupplier(src.supplier);
+      const supplier = src && (await getSupplier(src.supplier));
       if (!supplier || (localProduct.requires_email && !supplier.supportsEmail)) {
         console.warn("[orders/create] no usable supplier source", { product_id, active: localProduct.active_supplier });
         return res.status(409).json({ success: false, error: "supplier_unavailable" });
