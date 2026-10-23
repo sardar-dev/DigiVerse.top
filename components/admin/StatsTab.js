@@ -82,15 +82,15 @@ export default function StatsTab() {
       </div>
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-ink">Orders &amp; revenue</h3>
+        <h3 className="mb-3 text-sm font-semibold text-ink">Orders &amp; profit</h3>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatCard label="Total orders" value={orders.total} />
           <StatCard label="Delivered" value={orders.delivered} />
           <StatCard label="Orders (7 days)" value={orders.last7} />
           <StatCard label="Orders (30 days)" value={orders.last30} />
-          <StatCard label="Revenue (all time)" value={money(revenue.total)} />
-          <StatCard label="Revenue (7 days)" value={money(revenue.last7)} />
-          <StatCard label="Revenue (30 days)" value={money(revenue.last30)} />
+          <StatCard label="Profit (all time)" value={money(revenue.profit)} hint={`${money(revenue.total)} sales`} />
+          <StatCard label="Profit (7 days)" value={money(revenue.profit7)} hint={`${money(revenue.last7)} sales`} />
+          <StatCard label="Profit (30 days)" value={money(revenue.profit30)} hint={`${money(revenue.last30)} sales`} />
           <StatCard label="Avg order value" value={money(orders.avgOrderValue)} />
         </div>
       </div>
@@ -160,13 +160,14 @@ export default function StatsTab() {
             <tr>
               <th className="px-4 py-2.5">Best sellers</th>
               <th className="px-4 py-2.5 text-right">Units</th>
-              <th className="px-4 py-2.5 text-right">Revenue</th>
+              <th className="px-4 py-2.5 text-right">Sales</th>
+              <th className="px-4 py-2.5 text-right">Profit</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {products.top.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-3 text-muted">
+                <td colSpan={4} className="px-4 py-3 text-muted">
                   No delivered orders yet.
                 </td>
               </tr>
@@ -175,11 +176,63 @@ export default function StatsTab() {
               <tr key={p.title}>
                 <td className="px-4 py-2.5 text-ink">{p.title}</td>
                 <td className="px-4 py-2.5 text-right font-mono">{p.units}</td>
-                <td className="px-4 py-2.5 text-right font-mono">{money(p.revenue)}</td>
+                <td className="px-4 py-2.5 text-right font-mono text-muted">{money(p.revenue)}</td>
+                <td className="px-4 py-2.5 text-right font-mono font-medium">{money(p.profit)}</td>
               </tr>
             ))}
           </tbody>
         </DataTable>
+
+        <h3 className="mb-1 mt-8 text-sm font-semibold text-ink">Selling fast at your suppliers</h3>
+        <p className="mb-3 text-xs text-muted">
+          Counted from supplier stock dropping between syncs, so it includes buyers on other stores too.
+          Products not on your store yet are flagged: add those.
+        </p>
+        {products.market === null ? (
+          <p className="text-sm text-warning">Run supabase/migration_020_market_trends.sql to start tracking.</p>
+        ) : (
+          <DataTable minWidth="min-w-[720px]">
+            <thead className="border-b border-border text-left text-xs text-muted">
+              <tr>
+                <th className="px-4 py-2.5">Supplier product</th>
+                <th className="px-4 py-2.5">Supplier</th>
+                <th className="px-4 py-2.5 text-right">Units sold</th>
+                <th className="px-4 py-2.5 text-right">Restocked</th>
+                <th className="px-4 py-2.5 text-right">Stock now</th>
+                <th className="px-4 py-2.5 text-right">Cost</th>
+                <th className="px-4 py-2.5">On your store?</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {products.market.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-3 text-muted">
+                    No stock movement recorded yet. It fills in as syncs run and supplier stock changes.
+                  </td>
+                </tr>
+              )}
+              {products.market.map((m, i) => (
+                <tr key={i}>
+                  <td className="px-4 py-2.5 text-ink">{m.title}</td>
+                  <td className="px-4 py-2.5 capitalize text-muted">{m.supplier}</td>
+                  <td className="px-4 py-2.5 text-right font-mono font-medium">{m.drops}</td>
+                  <td className="px-4 py-2.5 text-right font-mono text-muted">{m.ups}</td>
+                  <td className="px-4 py-2.5 text-right font-mono">{m.stock}</td>
+                  <td className="px-4 py-2.5 text-right font-mono">{money(m.cost)}</td>
+                  <td className="px-4 py-2.5">
+                    {m.onStore ? (
+                      <span className="text-success">Yes</span>
+                    ) : (
+                      <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+                        Not listed, add it
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
+        )}
       </div>
 
       <div>

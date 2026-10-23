@@ -37,6 +37,7 @@ export default async function handler(req, res) {
     topups,
     recentUsers,
     balances,
+    market,
   ] = await Promise.all([
     count("profiles"),
     count("profiles", (q) => q.gte("created_at", since7)),
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
     count("wallet_adjustments"),
     supabaseAdmin
       .from("orders")
-      .select("status, total, quantity, paid_with, created_at, user_id, product_id, products(title)")
+      .select("status, total, quantity, paid_with, created_at, user_id, product_id, unit_cost, products(title, cost_price)")
       .order("created_at", { ascending: false })
       .limit(ORDER_ROW_CAP),
     supabaseAdmin.from("wallet_topups").select("amount, status, created_at").limit(ORDER_ROW_CAP),
@@ -58,9 +59,24 @@ export default async function handler(req, res) {
       .order("created_at", { ascending: false })
       .limit(RECENT_USERS),
     supabaseAdmin.from("profiles").select("balance").gt("balance", 0).limit(ORDER_ROW_CAP),
+    // Supplier-side movers: biggest stock drops first (migration 020).
+    supabaseAdmin
+      .from("product_sources")
+      .select("supplier, supplier_title, product_id, cost, stock, stock_drops, stock_ups, drops_since, products(title, selected, sell_price)")
+      .gt("stock_drops", 0)
+      .order("stock_drops", { ascending: false })
+      .limit(15),
   ]);
 
-  const orderRows = orders.data || [];
+  let ordersRes = orders;
+  if (orders.error && /unit_cost/i.test(orders.error.message)) {
+    ordersRes = await supabaseAdmin
+      .from("orders")
+      .select("status, total, quantity, paid_with, created_at, user_id, product_id, products(title, cost_price)")
+      .order("created_at", { ascending: false })
+      .limit(ORDER_ROW_CAP);
+  }
+  const orderRows = ordersRes.data || [];
   const byStatus = {};
   const byMethod = { onchain: 0, wallet_balance: 0 };
   const topProducts = new Map();
@@ -70,6 +86,9 @@ export default async function handler(req, res) {
   let revenue = 0;
   let revenue7 = 0;
   let revenue30 = 0;
+  let profit = 0;
+  let profit7 = 0;
+  let profit30 = 0;
   let orders7 = 0;
   let orders30 = 0;
   const cutoff14 = Date.now() - 14 * 86400000;
@@ -81,17 +100,28 @@ export default async function handler(req, res) {
 
     if (o.status === "delivered") {
       const t = Number(o.total) || 0;
+      // Profit = what the customer paid minus what the supplier charged us.
+      const cost = Number(o.unit_cost ?? o.products?.cost_price ?? 0) * (o.quantity || 0);
+      const gain = t - cost;
       delivered++;
       revenue += t;
-      if (o.created_at >= since7) revenue7 += t;
-      if (o.created_at >= since30) revenue30 += t;
+      profit += gain;
+      if (o.created_at >= since7) {
+        revenue7 += t;
+        profit7 += gain;
+      }
+      if (o.created_at >= since30) {
+        revenue30 += t;
+        profit30 += gain;
+      }
       buyers.add(o.user_id);
       byMethod[o.paid_with] = (byMethod[o.paid_with] || 0) + 1;
 
       const title = o.products?.title || `#${o.product_id}`;
-      const cur = topProducts.get(o.product_id) || { title, units: 0, revenue: 0 };
+      const cur = topProducts.get(o.product_id) || { title, units: 0, revenue: 0, profit: 0 };
       cur.units += o.quantity;
       cur.revenue += t;
+      cur.profit += gain;
       topProducts.set(o.product_id, cur);
     }
 
@@ -134,6 +164,9 @@ export default async function handler(req, res) {
       total: round(revenue),
       last7: round(revenue7),
       last30: round(revenue30),
+      profit: round(profit),
+      profit7: round(profit7),
+      profit30: round(profit30),
     },
     products: {
       total: productsAll.count ?? 0,
@@ -142,7 +175,22 @@ export default async function handler(req, res) {
       top: Array.from(topProducts.values())
         .sort((a, b) => b.units - a.units)
         .slice(0, 8)
-        .map((p) => ({ ...p, revenue: round(p.revenue) })),
+        .map((p) => ({ ...p, revenue: round(p.revenue), profit: round(p.profit) })),
+      // Supplier products whose stock fell the most between syncs.
+      // null = migration 020 not run yet.
+      market: market.error
+        ? null
+        : (market.data || []).map((m) => ({
+            title: m.supplier_title || m.products?.title || `#${m.product_id}`,
+            supplier: m.supplier,
+            cost: Number(m.cost),
+            stock: m.stock,
+            drops: m.stock_drops,
+            ups: m.stock_ups,
+            since: m.drops_since,
+            onStore: !!m.products?.selected,
+            inCatalog: !!m.products,
+          })),
     },
     wallet: {
       topups: topupRows.length,
