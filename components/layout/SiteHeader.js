@@ -59,6 +59,7 @@ export default function SiteHeader({
         { href: "/", label: "Store" },
         { href: "/account/wallet", label: "Wallet" },
         { href: "/account/orders", label: "My Orders" },
+        { href: "/account/support", label: "Support" },
       ]
     : [{ href: "/", label: "Store" }];
 

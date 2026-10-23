@@ -31,6 +31,7 @@ const GROUPS = [
   {
     label: "Support & tools",
     items: [
+      { id: "support", label: "Support", icon: "🎧" },
       { id: "feedback", label: "Feedback", icon: "💬" },
       { id: "debug", label: "Debug payment", icon: "🛠️" },
       { id: "settings", label: "Settings", icon: "⚙️" },
@@ -42,7 +43,12 @@ const ALL = GROUPS.flatMap((g) => g.items);
 export const ADMIN_TAB_IDS = ALL.map((t) => t.id);
 
 export default function AdminLayout({ tab, onTabChange, dashboard, pendingManualCount, children }) {
-  const badge = (id) => (id === "orders" && pendingManualCount > 0 ? pendingManualCount : 0);
+  const badge = (id) =>
+    id === "orders" && pendingManualCount > 0
+      ? pendingManualCount
+      : id === "support" && dashboard?.openTickets > 0
+      ? dashboard.openTickets
+      : 0;
   const low = dashboard && (dashboard.digitrust?.low || dashboard.xpro?.low);
 
   return (

@@ -2,6 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // The sitemap lists blog posts by reading /content/blog at request time.
+  experimental: {
+    outputFileTracingIncludes: { "/sitemap.xml": ["./content/blog/**/*"] },
+  },
+
   // One canonical host: www.digiverse.top -> digiverse.top, so search
   // engines (and Safe Browsing) see a single site, not two copies.
   async redirects() {

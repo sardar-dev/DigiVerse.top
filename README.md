@@ -545,3 +545,11 @@ Rules:
 - Admin → Suppliers: link XPro-only products to a DigiTrust twin, approve a pricier source, check supplier balances.
 - XPro cannot take a customer email, so products that require one are served by DigiTrust only.
 - Stale data self-heals: a failed live stock/price check at checkout updates the product immediately. For faster auto-hide, point a free external scheduler (e.g. cron-job.org) at `/api/admin/sync?secret=CRON_SECRET` every 10–15 minutes.
+
+## Blog (no database)
+
+Articles are plain files in `content/blog/*.md` (front-matter: title, description, date, updated, keywords, cta_query, cta_label, draft). To publish: add a file, commit, push. Pages are generated at build time, so they cost no database or server load. The blog is linked only from the footer.
+
+## Support tickets
+
+Run `supabase/migration_019_support_tickets.sql` once. Logged-in users open tickets at `/account/support`; admins reply under Admin → Support. Closed tickets are purged after 60 days.

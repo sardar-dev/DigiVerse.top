@@ -22,8 +22,19 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
 
   return (
     <div
-      className="group flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-card transition-all duration-200 hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_16px_32px_-12px_rgba(23,33,58,0.22)]"
+      className={`group relative flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-card transition-all duration-200 ${
+        outOfStock
+          ? "bg-bg/60"
+          : "hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_16px_32px_-12px_rgba(23,33,58,0.22)]"
+      }`}
+      aria-disabled={outOfStock || undefined}
     >
+      {outOfStock && (
+        <span className="absolute -top-2.5 left-5 z-10 rounded-full bg-danger px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+          Sold out
+        </span>
+      )}
+      <div className={outOfStock ? "flex flex-1 flex-col opacity-60 grayscale" : "flex flex-1 flex-col"}>
       <div className="mb-3 flex items-start justify-between gap-2">
         {showImage ? (
           <img loading="lazy" decoding="async"
@@ -90,11 +101,18 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
         )}
       </div>
 
+      </div>
+
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
         <span className="text-xl font-bold tracking-tight text-ink">
           ${Number(product.sell_price).toFixed(2)}
         </span>
-        <PrimaryButton onClick={onBuy} disabled={disabled || outOfStock} className="px-4 py-2">
+        <PrimaryButton
+          onClick={onBuy}
+          disabled={disabled || outOfStock}
+          className={`px-4 py-2 ${outOfStock ? "pointer-events-none cursor-not-allowed opacity-40 blur-[1px]" : ""}`}
+          aria-label={outOfStock ? `${product.title} is out of stock` : undefined}
+        >
           {outOfStock ? "Out of stock" : "Buy now"}
         </PrimaryButton>
       </div>

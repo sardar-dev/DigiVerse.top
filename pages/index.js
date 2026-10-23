@@ -71,6 +71,15 @@ export default function Storefront({ initialProducts, sharedMeta }) {
   // popup automatically, so a link someone pastes elsewhere lands
   // straight on the right item instead of a bare homepage. No new
   // route/page needed — same popup, just opened on load.
+  // /?q=muse%20ai pre-fills the search box (used by blog links), so the
+  // visitor lands on the catalog already filtered to that product.
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q = router.query.q;
+    if (typeof q === "string" && q.trim()) setSearch(q.trim().slice(0, 60));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.q]);
+
   useEffect(() => {
     if (!router.isReady) return;
     const productId = router.query.product;
@@ -78,7 +87,9 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     if (products.length === 0) return; // wait for the list to load first
 
     const match = products.find((p) => String(p.id) === fromProductCode(productId));
-    if (match) {
+    if (match && match.available_stock <= 0) {
+      setSharedNotFound(true); // sold out: don't open a buy popup for it
+    } else if (match) {
       if (session) setActive(match);
     } else {
       setSharedNotFound(true);
@@ -115,6 +126,8 @@ export default function Storefront({ initialProducts, sharedMeta }) {
 
   // Filtering happens entirely in the browser — no extra requests to
   // our server per keystroke, since we already have the full list.
+  const inStock = useMemo(() => products.filter((p) => p.available_stock > 0), [products]);
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
@@ -167,8 +180,8 @@ export default function Storefront({ initialProducts, sharedMeta }) {
             <div>
               <span className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-surface px-3 py-1 text-xs font-medium text-brand shadow-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-                {products.length > 0
-                  ? `${products.length} product${products.length === 1 ? "" : "s"} in stock now`
+                {inStock.length > 0
+                  ? `${inStock.length} product${inStock.length === 1 ? "" : "s"} in stock now`
                   : "Digital products store"}
               </span>
               <h1 className="mt-4 text-3xl font-bold leading-tight text-ink sm:text-5xl">
@@ -180,7 +193,27 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                 prices. Pay with USDT (BEP20) or your wallet balance and receive your order details
                 right after payment confirms.
               </p>
-              <div className="mt-7 flex flex-wrap gap-3">
+              <form
+                className="mt-6 flex max-w-lg gap-2"
+                role="search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search a product, e.g. Gemini, Muse AI…"
+                  aria-label="Search products"
+                  className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-surface px-4 text-sm text-ink shadow-sm placeholder:text-muted focus:border-brand focus:outline-none"
+                />
+                <PrimaryButton type="submit" className="px-5">
+                  Search
+                </PrimaryButton>
+              </form>
+              <div className="mt-4 flex flex-wrap gap-3">
                 <a href="#catalog">
                   <PrimaryButton className="px-6">Browse products</PrimaryButton>
                 </a>
@@ -213,7 +246,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
             {/* Live preview of real in-stock products */}
             <div className="hidden md:block">
               <div className="mx-auto max-w-sm space-y-3 [transform:perspective(1000px)_rotateY(-6deg)_rotateX(2deg)]">
-                {products.slice(0, 3).map((p, i) => (
+                {inStock.slice(0, 3).map((p, i) => (
                   <a
                     key={p.id}
                     href="#catalog"
@@ -245,7 +278,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                     </span>
                   </a>
                 ))}
-                {products.length === 0 && (
+                {inStock.length === 0 && (
                   <div className="rounded-xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-muted">
                     New stock is added regularly — check back soon.
                   </div>

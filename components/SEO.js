@@ -9,6 +9,7 @@ export default function SEO({
   path = "",
   noindex = false,
   image,
+  type = "website",
 }) {
   const fullTitle = title
     ? `${title} — ${SITE_NAME}`
@@ -29,7 +30,7 @@ export default function SEO({
       {noindex && <meta name="robots" content="noindex, nofollow" />}
 
       {/* Open Graph */}
-      <meta property="og:type" content="website" />
+      <meta property="og:type" content={type} />
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />

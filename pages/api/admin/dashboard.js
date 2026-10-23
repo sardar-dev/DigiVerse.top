@@ -56,8 +56,19 @@ export default async function handler(req, res) {
     totalCost += Number(o.unit_cost ?? o.products?.cost_price ?? 0) * o.quantity;
   }
 
+  // Cheap head-count (no rows) for the Support tab badge; 0 if migration 019 isn't run yet.
+  let openTickets = 0;
+  try {
+    const { count } = await supabaseAdmin
+      .from("support_tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open");
+    openTickets = count || 0;
+  } catch {}
+
   return res.status(200).json({
     success: true,
+    openTickets,
     digitrust: {
       balance: digitrustBalance,
       error: digitrustBalanceError,

@@ -1,12 +1,17 @@
 import { SITE_URL } from "../lib/siteConfig";
+import { getAllPosts } from "../lib/blog";
 
-const PAGES = ["", "/about", "/terms", "/privacy"];
+const PAGES = ["", "/about", "/blog", "/terms", "/privacy"];
 
 export async function getServerSideProps({ res }) {
-  const urls = PAGES.map(
-    (p) =>
-      `<url><loc>${SITE_URL}${p}</loc><changefreq>daily</changefreq></url>`
-  ).join("");
+  const posts = getAllPosts()
+    .map(
+      (p) =>
+        `<url><loc>${SITE_URL}/blog/${p.slug}</loc><lastmod>${p.updated || p.date}</lastmod><changefreq>monthly</changefreq></url>`
+    )
+    .join("");
+  const urls =
+    PAGES.map((p) => `<url><loc>${SITE_URL}${p}</loc><changefreq>daily</changefreq></url>`).join("") + posts;
 
   res.setHeader("Content-Type", "text/xml");
   res.setHeader("Cache-Control", "public, s-maxage=3600");
