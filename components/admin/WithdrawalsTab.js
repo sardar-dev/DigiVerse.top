@@ -5,12 +5,14 @@ import Alert from "../ui/Alert";
 import { LoadingState } from "../ui/States";
 
 const when = (d) => (d ? new Date(d).toLocaleString() : "");
+const METHOD = { usdt_bep20: "USDT BEP20", pkr_iban: "PKR bank (IBAN)", binance: "Binance ID" };
 const ERR = {
   run_migration_021: "Run supabase/migration_021_api_connections_withdrawals_stats.sql in the Supabase SQL editor first.",
+  run_migration_022: "Run supabase/migration_022_withdrawal_methods.sql in the Supabase SQL editor first.",
   already_resolved: "That request was already handled.",
 };
 
-// Pending list first. Send the USDT yourself, then press Approve (add the
+// Pending list first. Pay it yourself, then press Approve (add the
 // transaction hash if you like). Reject returns the money to the user.
 export default function WithdrawalsTab() {
   const [d, setD] = useState(null);
@@ -61,7 +63,7 @@ export default function WithdrawalsTab() {
     <div className="space-y-8">
       <SectionHeading
         title="Withdrawal requests"
-        description="The amount is already taken from the user's balance. Send the USDT (BEP20) to the address, then press Approve. Reject returns the money."
+        description="The amount is already taken from the user's balance. Pay it by the method shown (USDT, PKR bank or Binance), then press Approve. Reject returns the money."
         action={<SecondaryButton onClick={load}>Refresh</SecondaryButton>}
       />
       {err && <Alert variant="error">{err}</Alert>}
@@ -81,14 +83,27 @@ export default function WithdrawalsTab() {
                       #{w.request_number} · {when(w.created_at)} · balance left ${Number(w.balance ?? 0).toFixed(2)}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => copy(w.address)}
-                    className="max-w-full break-all rounded bg-bg px-2 py-1 text-left font-mono text-xs text-ink hover:bg-brand-soft"
-                    title="Click to copy"
-                  >
-                    {w.address} {copied === w.address ? "✓" : "⧉"}
-                  </button>
+                  <div className="min-w-0 space-y-1 sm:text-right">
+                    <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand">
+                      {METHOD[w.method] || "USDT BEP20"}
+                    </span>
+                    {[
+                      [w.method === "pkr_iban" ? "IBAN" : w.method === "binance" ? "Binance ID" : "Address", w.address],
+                      ...(w.details?.account_title ? [["Account title", w.details.account_title]] : []),
+                      ...(w.details?.bank_name ? [["Bank", w.details.bank_name]] : []),
+                    ].map(([label, v]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => copy(v)}
+                        className="block max-w-full break-all rounded bg-bg px-2 py-1 text-left font-mono text-xs text-ink hover:bg-brand-soft sm:ml-auto"
+                        title="Click to copy"
+                      >
+                        <span className="text-muted">{label}: </span>
+                        {v} {copied === v ? "✓" : "⧉"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <input
@@ -115,7 +130,7 @@ export default function WithdrawalsTab() {
               {d.done.map((w) => (
                 <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
                   <span className="min-w-0 break-all">
-                    <span className="font-mono">#{w.request_number}</span> · ${Number(w.amount).toFixed(2)} · {w.email || "unknown"}
+                    <span className="font-mono">#{w.request_number}</span> · ${Number(w.amount).toFixed(2)} · {METHOD[w.method] || "USDT BEP20"} · {w.email || "unknown"}
                     {w.payout_tx ? <span className="text-xs text-muted"> · tx {w.payout_tx.slice(0, 14)}…</span> : null}
                   </span>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${w.status === "approved" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>

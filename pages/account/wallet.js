@@ -16,6 +16,8 @@ export default function Wallet() {
   const [session, setSession] = useState(null);
   const [balance, setBalance] = useState(null);
   const [ledger, setLedger] = useState([]);
+  const [tab, setTab] = useState("add"); // add | history
+  const [filter, setFilter] = useState("all"); // all | in | out
 
   // Deposit flow: request-amount -> invoice -> pay -> submit tx hash
   const [requestAmount, setRequestAmount] = useState("");
@@ -80,19 +82,22 @@ export default function Wallet() {
       ...(topups || []).map((t) => ({
         id: `topup-${t.id}`,
         date: t.created_at,
-        label: "Top-up credit",
+        label: "Funds added",
+        kind: "topup",
         amount: Number(t.amount),
       })),
       ...(adjustments || []).map((a) => ({
         id: `adj-${a.id}`,
         date: a.created_at,
-        label: `Admin adjustment — ${a.reason}`,
+        label: /^Withdrawal/i.test(a.reason) ? a.reason : `Adjustment: ${a.reason}`,
+        kind: /^Withdrawal/i.test(a.reason) ? "withdraw" : "adjust",
         amount: Number(a.amount),
       })),
       ...(spentOrders || []).map((o) => ({
         id: `order-${o.id}`,
         date: o.created_at,
-        label: `Purchase — ${o.products?.title || "product"}`,
+        label: o.products?.title || "Purchase",
+        kind: "order",
         amount: -Number(o.total),
       })),
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -164,21 +169,70 @@ export default function Wallet() {
             <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10" />
             <div className="pointer-events-none absolute -bottom-16 right-16 h-40 w-40 rounded-full bg-white/5" />
             <div className="relative">
-              <div className="text-sm font-medium text-white/80">Wallet balance</div>
+              <div className="text-sm font-medium text-white/80">Available balance</div>
               <div className="mt-1 text-4xl font-semibold tracking-tight sm:text-5xl">
                 {balance === null ? "…" : `$${balance.toFixed(2)}`}
               </div>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/85">
-                <span className="rounded-full bg-white/15 px-2.5 py-1">USDT · BEP20</span>
-                <span className="rounded-full bg-white/15 px-2.5 py-1">Pay for any product instantly</span>
-                <Link href="/account/withdraw" className="rounded-full bg-white px-3 py-1 font-medium text-brand hover:bg-white/90">
-                  Withdraw
+              <div className="mt-5 grid grid-cols-3 gap-2 sm:max-w-md sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTab("add")}
+                  className="flex flex-col items-center gap-0.5 rounded-xl bg-white px-2 py-2.5 text-sm font-semibold text-brand shadow-card hover:bg-white/90"
+                >
+                  <span aria-hidden="true">＋</span>Add funds
+                </button>
+                <Link
+                  href="/account/withdraw"
+                  className="flex flex-col items-center gap-0.5 rounded-xl bg-white/15 px-2 py-2.5 text-sm font-semibold text-white hover:bg-white/25"
+                >
+                  <span aria-hidden="true">↗</span>Withdraw
+                </Link>
+                <Link
+                  href="/account/orders"
+                  className="flex flex-col items-center gap-0.5 rounded-xl bg-white/15 px-2 py-2.5 text-sm font-semibold text-white hover:bg-white/25"
+                >
+                  <span aria-hidden="true">📦</span>My orders
                 </Link>
               </div>
+              <div className="mt-4 text-xs text-white/75">USDT · BEP20 · Use your balance on any product, instantly</div>
             </div>
           </section>
 
-          {/* Top up */}
+          {/* Quick totals from the loaded history */}
+          {ledger.length > 0 && (
+            <section className="grid grid-cols-3 gap-3">
+              {[
+                ["Added", ledger.filter((e) => e.kind === "topup").reduce((n, e) => n + e.amount, 0), "text-success"],
+                ["Spent", -ledger.filter((e) => e.kind === "order").reduce((n, e) => n + e.amount, 0), "text-ink"],
+                ["Withdrawn", -ledger.filter((e) => e.kind === "withdraw" && e.amount < 0).reduce((n, e) => n + e.amount, 0), "text-ink"],
+              ].map(([label, v, cls]) => (
+                <div key={label} className="rounded-xl border border-border bg-surface px-3 py-3 text-center shadow-card">
+                  <div className="text-[11px] uppercase tracking-wide text-muted">{label}</div>
+                  <div className={`mt-0.5 font-mono text-base font-semibold ${cls}`}>${v.toFixed(2)}</div>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {/* Tabs */}
+          <div role="tablist" className="grid grid-cols-2 rounded-xl border border-border bg-surface p-1 text-sm font-medium">
+            {[
+              ["add", "Add funds"],
+              ["history", `History${ledger.length ? ` (${ledger.length})` : ""}`],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`rounded-lg px-3 py-2 transition-colors ${tab === id ? "bg-brand text-white shadow-card" : "text-muted hover:text-ink"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {tab === "add" && (
           <section className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
             <h2 className="text-lg font-semibold text-ink">Add funds</h2>
 
@@ -319,20 +373,30 @@ export default function Wallet() {
             )}
           </section>
 
-          {/* History */}
+          )}
+
+          {tab === "history" && (
           <section>
-            <div className="mb-3 flex items-end justify-between">
-              <h2 className="text-lg font-semibold text-ink">History</h2>
-              <Link href="/account/orders" className="text-sm font-medium text-brand hover:underline">
-                View orders →
-              </Link>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {[["all", "All"], ["in", "Money in"], ["out", "Money out"]].map(([k, l]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFilter(k)}
+                  className={`rounded-full border px-3.5 py-1.5 text-sm font-medium ${
+                    filter === k ? "border-brand bg-brand text-white" : "border-border bg-surface text-muted hover:text-ink"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
             {ledger.length === 0 && (
               <EmptyState title="No transactions yet" description="Top-ups and wallet purchases will show up here." />
             )}
             {ledger.length > 0 && (
               <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
-                {ledger.map((entry) => {
+                {ledger.filter((e) => filter === "all" || (filter === "in" ? e.amount > 0 : e.amount < 0)).map((entry) => {
                   const debit = entry.amount < 0;
                   return (
                     <li key={entry.id} className="flex items-center gap-3 px-4 py-3.5 text-sm sm:px-5">
@@ -342,7 +406,7 @@ export default function Wallet() {
                         }`}
                         aria-hidden="true"
                       >
-                        {debit ? "↑" : "↓"}
+                        {{ topup: "＋", order: "🛍", withdraw: "↗", adjust: "±" }[entry.kind] || (debit ? "↑" : "↓")}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-ink">{entry.label}</div>
@@ -359,6 +423,7 @@ export default function Wallet() {
               </ul>
             )}
           </section>
+          )}
         </PageContainer>
       </main>
 

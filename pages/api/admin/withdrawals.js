@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (!session) return;
 
   if (req.method === "GET") {
-    const cols = "id, request_number, user_id, amount, address, network, status, admin_note, payout_tx, created_at, resolved_at";
+    const cols = "id, request_number, user_id, amount, address, network, method, details, status, admin_note, payout_tx, created_at, resolved_at";
     const [pending, done] = await Promise.all([
       supabaseAdmin.from("withdrawal_requests").select(cols).eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabaseAdmin.from("withdrawal_requests").select(cols).neq("status", "pending").order("resolved_at", { ascending: false }).limit(50),
