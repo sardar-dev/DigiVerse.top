@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
   const { data: product } = await supabaseAdmin
     .from("products")
-    .select("sell_price")
+    .select("sell_price, cost_price")
     .eq("id", product_id)
     .eq("selected", true)
     .single();
@@ -34,6 +34,8 @@ export default async function handler(req, res) {
     userId: session.user.id,
     productId: product_id,
     base,
+    unitCost: product.cost_price,
+    quantity: qty,
   });
   if (!result.ok) {
     return res.status(200).json({ success: false, error: result.reason, min_order: result.min_order });

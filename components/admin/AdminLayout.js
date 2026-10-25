@@ -18,6 +18,7 @@ const GROUPS = [
       { id: "manual", label: "Manual products", icon: "✍️" },
       { id: "suppliers", label: "Suppliers", icon: "🔗" },
       { id: "apis", label: "API connections", icon: "🔌" },
+      { id: "pricing", label: "Pricing & profit", icon: "💰" },
       { id: "aitext", label: "AI text", icon: "✨" },
     ],
   },

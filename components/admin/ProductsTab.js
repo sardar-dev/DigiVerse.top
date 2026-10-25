@@ -151,9 +151,24 @@ export default function ProductsTab({
                     type="number"
                     step="0.01"
                     defaultValue={p.sell_price}
-                    onBlur={(e) => updateProduct(p.id, { sell_price: Number(e.target.value) })}
+                    key={`${p.id}-${p.sell_price}`}
+                    onBlur={(e) => {
+                      // only a real change counts as a hand-set price
+                      if (Number(e.target.value) !== Number(p.sell_price)) updateProduct(p.id, { sell_price: Number(e.target.value) });
+                    }}
                     className="w-24 rounded-md border border-border px-2 py-1 font-mono text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
+                  {p.provider !== "manual" && (
+                    <label className="mt-1 flex cursor-pointer items-center gap-1 text-[11px] text-muted" title="Follow the supplier price using your profit rule (Pricing tab)">
+                      <input
+                        type="checkbox"
+                        checked={p.auto_price !== false}
+                        onChange={(e) => updateProduct(p.id, { auto_price: e.target.checked })}
+                        className="h-3 w-3 accent-brand"
+                      />
+                      Auto
+                    </label>
+                  )}
                 </td>
                 <td className="py-3 px-4">
                   <input

@@ -22,10 +22,10 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
 
   return (
     <div
-      className={`group relative flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-card transition-all duration-200 ${
+      className={`group relative flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-card transition-all duration-300 ${
         outOfStock
           ? "bg-bg/60"
-          : "hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_16px_32px_-12px_rgba(23,33,58,0.22)]"
+          : "before:pointer-events-none before:absolute before:inset-x-6 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-brand/60 before:to-transparent before:opacity-0 before:transition-opacity hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_0_0_1px_rgba(49,105,245,0.22),0_22px_44px_-18px_rgba(49,105,245,0.5)] hover:before:opacity-100"
       }`}
       aria-disabled={outOfStock || undefined}
     >
@@ -40,7 +40,7 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
           <img loading="lazy" decoding="async"
             src={product.image_url}
             alt=""
-            className="h-12 w-12 rounded-xl border border-border object-cover"
+            className="h-12 w-12 rounded-xl border border-border object-cover transition-shadow duration-300 group-hover:shadow-[0_0_18px_rgba(49,105,245,0.35)]"
             onError={() => setImageFailed(true)}
           />
         ) : (
@@ -89,8 +89,12 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
         {outOfStock ? (
           <span className="font-medium text-danger">Out of stock</span>
         ) : (
-          <span className={lowStock ? "font-medium text-warning" : ""}>
-            {lowStock && "🔥 "}
+          <span className={`inline-flex items-center gap-1.5 ${lowStock ? "font-medium text-warning" : ""}`}>
+            {lowStock ? (
+              "🔥 "
+            ) : (
+              <span className="dv-live-dot h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+            )}
             {product.available_stock} available
           </span>
         )}

@@ -12,6 +12,7 @@ import AiDescriptionsTab from "../../components/admin/AiDescriptionsTab";
 import SupportTab from "../../components/admin/SupportTab";
 import ApiConnectionsTab from "../../components/admin/ApiConnectionsTab";
 import WithdrawalsTab from "../../components/admin/WithdrawalsTab";
+import PricingTab from "../../components/admin/PricingTab";
 import SuppliersTab from "../../components/admin/SuppliersTab";
 import StatsTab from "../../components/admin/StatsTab";
 import DebugTab from "../../components/admin/DebugTab";
@@ -521,6 +522,8 @@ export default function Admin() {
       {tab === "apis" && <ApiConnectionsTab onChanged={loadProducts} />}
 
       {tab === "withdrawals" && <WithdrawalsTab />}
+
+      {tab === "pricing" && <PricingTab onChanged={loadProducts} />}
 
       {tab === "coupons" && (
         <CouponsTab products={[...products, ...manualProducts]} />

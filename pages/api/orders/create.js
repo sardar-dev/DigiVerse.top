@@ -125,6 +125,8 @@ export default async function handler(req, res) {
       userId: session.user.id,
       productId: product_id,
       base: fullBase,
+      unitCost, // live supplier cost (or the manual product's cost)
+      quantity,
     });
     if (!result.ok) {
       return res.status(400).json({ success: false, error: result.reason, min_order: result.min_order });

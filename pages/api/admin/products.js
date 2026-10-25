@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     // Single-product update: { id, selected?, sell_price?, image_url?,
     // category?, featured?, low_stock_threshold?, short_description? }
     // Bulk update: { ids: [...], selected?, sell_price_delta_percent? }
-    const { id, ids, title, selected, sell_price, image_url, category, featured, low_stock_threshold, short_description, sell_price_delta_percent } =
+    const { id, ids, title, selected, sell_price, image_url, category, featured, low_stock_threshold, short_description, sell_price_delta_percent, auto_price } =
       req.body || {};
 
     if (Array.isArray(ids) && ids.length > 0) {
@@ -66,6 +66,10 @@ export default async function handler(req, res) {
           .in("id", ids);
         if (readErr) return res.status(500).json({ success: false, error: readErr.message });
 
+        // A bulk % change is a manual price decision: keep these products
+        // out of auto-pricing so the next sync doesn't undo it.
+        await supabaseAdmin.from("products").update({ auto_price: false }).in("id", ids);
+
         const updates = rows.map((r) => ({
           id: r.id,
           sell_price: Math.max(0.01, Math.round(Number(r.sell_price) * (1 + pct / 100) * 100) / 100),
@@ -90,6 +94,11 @@ export default async function handler(req, res) {
     const patch = { updated_at: new Date().toISOString() };
     if (typeof selected === "boolean") patch.selected = selected;
     if (typeof sell_price === "number") patch.sell_price = sell_price;
+    // Setting a price by hand takes this product out of auto-pricing, so the
+    // next sync doesn't overwrite it. (auto_price: true puts it back.)
+    let autoField = {};
+    if (typeof auto_price === "boolean") autoField = { auto_price };
+    else if (typeof sell_price === "number") autoField = { auto_price: false };
     if (image_url !== undefined) patch.image_url = image_url || null;
     if (category !== undefined) patch.category = category || null;
     if (typeof featured === "boolean") patch.featured = featured;
@@ -117,8 +126,12 @@ export default async function handler(req, res) {
 
     let { error } = await supabaseAdmin
       .from("products")
-      .update({ ...patch, ...titleLockFields })
+      .update({ ...patch, ...titleLockFields, ...autoField })
       .eq("id", id);
+    if (error && /auto_price/i.test(error.message)) {
+      // migration 023 not run yet: save everything else.
+      ({ error } = await supabaseAdmin.from("products").update({ ...patch, ...titleLockFields }).eq("id", id));
+    }
     if (error && /title_locked/i.test(error.message)) {
       // migration 014 not run yet: still save the new title itself.
       ({ error } = await supabaseAdmin.from("products").update(patch).eq("id", id));
@@ -126,7 +139,7 @@ export default async function handler(req, res) {
     if (error) return res.status(500).json({ success: false, error: error.message });
     // A new sell price can make a pricier supplier eligible (or not), so
     // re-decide the active source right away, from stored data only.
-    if (patch.sell_price !== undefined) {
+    if (patch.sell_price !== undefined || autoField.auto_price === true) {
       try {
         await recomputeProduct(id);
       } catch {}

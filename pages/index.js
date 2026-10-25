@@ -176,21 +176,30 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       <main className="flex-1">
         {/* Hero */}
         <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-brand-soft via-surface to-surface">
+          <div className="dv-grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
           <div
-            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand/10 blur-3xl"
+            className="dv-orb pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-brand/25 blur-3xl"
+            aria-hidden="true"
+          />
+          <div
+            className="dv-orb pointer-events-none absolute -left-28 top-40 h-72 w-72 rounded-full bg-violet-400/20 blur-3xl [animation-delay:2s]"
+            aria-hidden="true"
+          />
+          <div
+            className="dv-orb pointer-events-none absolute bottom-[-4rem] right-1/3 h-56 w-56 rounded-full bg-cyan-300/20 blur-3xl [animation-delay:4s]"
             aria-hidden="true"
           />
           <PageContainer className="relative grid gap-10 py-12 sm:py-16 md:grid-cols-[1.1fr_0.9fr] md:items-center">
             <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-surface px-3 py-1 text-xs font-medium text-brand shadow-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+              <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-surface/90 px-3 py-1 text-xs font-medium text-brand shadow-[0_0_22px_-4px_rgba(49,105,245,0.45)] backdrop-blur">
+                <span className="dv-live-dot h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
                 {inStock.length > 0
                   ? `${inStock.length} product${inStock.length === 1 ? "" : "s"} in stock now`
                   : "Digital products store"}
               </span>
               <h1 className="mt-4 text-3xl font-bold leading-tight text-ink sm:text-5xl">
                 Digital subscriptions &amp; licenses,{" "}
-                <span className="text-brand">delivered instantly.</span>
+                <span className="dv-gradient-text">delivered instantly.</span>
               </h1>
               <p className="mt-4 max-w-lg text-base text-muted sm:text-lg">
                 An independent store for digital subscriptions, licenses and activation codes at fair
@@ -198,20 +207,21 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                 right after payment confirms.
               </p>
               <form
-                className="mt-6 flex max-w-lg gap-2"
+                className="dv-search mt-6 flex max-w-lg gap-2 rounded-2xl border border-border bg-surface/90 p-1.5 shadow-card backdrop-blur transition-shadow"
                 role="search"
                 onSubmit={(e) => {
                   e.preventDefault();
                   document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
                 }}
               >
+                <span className="flex items-center pl-3 text-muted" aria-hidden="true">🔍</span>
                 <input
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search a product, e.g. Gemini, Muse AI…"
                   aria-label="Search products"
-                  className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-surface px-4 text-sm text-ink shadow-sm placeholder:text-muted focus:border-brand focus:outline-none"
+                  className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-sm text-ink placeholder:text-muted focus:outline-none"
                 />
                 <PrimaryButton type="submit" className="px-5">
                   Search
@@ -233,7 +243,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                 ].map((f) => (
                   <li key={f.title} className="flex items-start gap-2.5">
                     <span
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-base"
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-base shadow-[0_0_16px_-2px_rgba(49,105,245,0.4)]"
                       aria-hidden="true"
                     >
                       {f.icon}
@@ -249,13 +259,13 @@ export default function Storefront({ initialProducts, sharedMeta }) {
 
             {/* Live preview of real in-stock products */}
             <div className="hidden md:block">
-              <div className="mx-auto max-w-sm space-y-3 [transform:perspective(1000px)_rotateY(-6deg)_rotateX(2deg)]">
+              <div className="mx-auto max-w-sm space-y-3">
                 {inStock.slice(0, 3).map((p, i) => (
                   <a
                     key={p.id}
                     href="#catalog"
-                    className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-[0_12px_24px_-10px_rgba(23,33,58,0.25)] transition-transform hover:-translate-y-0.5"
-                    style={{ marginLeft: `${i * 14}px` }}
+                    className="dv-float flex items-center gap-3 rounded-xl border border-brand/15 bg-surface/95 p-3.5 shadow-[0_0_0_1px_rgba(49,105,245,0.05),0_18px_36px_-14px_rgba(49,105,245,0.45)] backdrop-blur transition-shadow hover:shadow-[0_0_0_1px_rgba(49,105,245,0.35),0_22px_44px_-12px_rgba(49,105,245,0.6)]"
+                    style={{ marginLeft: `${i * 14}px`, animationDelay: `${i * 0.9}s` }}
                   >
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -309,9 +319,9 @@ export default function Storefront({ initialProducts, sharedMeta }) {
               ].map((step) => (
                 <li
                   key={step.n}
-                  className="rounded-xl border border-border bg-bg p-5 text-center shadow-card"
+                  className="rounded-xl border border-border bg-bg p-5 text-center shadow-card transition-shadow hover:shadow-[0_18px_36px_-18px_rgba(49,105,245,0.45)]"
                 >
-                  <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
+                  <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-light to-brand-dark text-sm font-semibold text-white shadow-[0_0_22px_rgba(49,105,245,0.55)]">
                     {step.n}
                   </span>
                   <h3 className="mt-3 text-base font-semibold text-ink">{step.title}</h3>
@@ -325,41 +335,58 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         {/* Catalog */}
         <section id="catalog">
           <PageContainer className="py-10">
-            <div className="mb-4 max-w-sm">
-              <FormInput
-                label="Search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search products…"
-                aria-label="Search products"
-              />
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-ink sm:text-2xl">Products</h2>
+                <p className="text-sm text-muted">
+                  {products.length > 0
+                    ? `${visible.length} of ${products.length} shown · ${inStock.length} in stock`
+                    : "Browse what's available"}
+                </p>
+              </div>
+              <div className="dv-search flex w-full max-w-sm items-center gap-2 rounded-xl border border-border bg-surface px-3 shadow-card transition-shadow sm:w-auto sm:min-w-[300px]">
+                <span className="text-muted" aria-hidden="true">🔍</span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search products…"
+                  aria-label="Search products"
+                  className="min-h-11 min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
+                />
+                {search && (
+                  <button type="button" onClick={() => setSearch("")} aria-label="Clear search" className="text-muted hover:text-ink">
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
 
             {categories.length > 1 && (
               <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Filter by category">
-                <button
-                  onClick={() => setCategory("")}
-                  className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                    category === "" ? "bg-brand text-white" : "bg-brand-soft text-brand hover:bg-brand/10"
-                  }`}
-                >
-                  All
-                </button>
-                {categories.map((c) => (
+                {["", ...categories].map((c) => (
                   <button
-                    key={c}
+                    key={c || "all"}
                     onClick={() => setCategory(c)}
-                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                      category === c ? "bg-brand text-white" : "bg-brand-soft text-brand hover:bg-brand/10"
+                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                      category === c
+                        ? "bg-brand text-white shadow-[0_8px_20px_-6px_rgba(49,105,245,0.75)]"
+                        : "bg-brand-soft text-brand hover:bg-brand/10 hover:shadow-[0_0_16px_-4px_rgba(49,105,245,0.4)]"
                     }`}
                   >
-                    {c}
+                    {c || "All"}
                   </button>
                 ))}
               </div>
             )}
 
-            {loading && products.length === 0 && <LoadingState label="Loading stock…" />}
+            {loading && products.length === 0 && (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy="true">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="dv-skeleton h-56 rounded-2xl border border-border" />
+                ))}
+              </div>
+            )}
 
             {loadError && (
               <ErrorState
@@ -744,6 +771,8 @@ function describeError(code, available, minOrder) {
       return `This coupon needs an order of at least $${Number(minOrder || 0).toFixed(2)}.`;
     case "coupon_used_up":
       return "That coupon has reached its usage limit.";
+    case "coupon_unavailable":
+      return "This coupon is temporarily disabled. Please try again later or contact support.";
     case "coupon_already_used":
       return "You've already used this coupon.";
     default:
