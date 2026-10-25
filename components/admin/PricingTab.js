@@ -8,8 +8,9 @@ import { LoadingState } from "../ui/States";
 const money = (n) => `$${Number(n).toFixed(2)}`;
 // Same formula as the server (lib/pricing.js), for the live preview.
 function sellFor(cost, r) {
-  const profit = Math.max(r.mode === "fixed" ? Number(r.value) : (cost * Number(r.value)) / 100, Number(r.min_profit) || 0);
-  return Math.max(0.01, Math.ceil((cost + profit) * 100 - 1e-6) / 100);
+  const raw = r.mode === "fixed" ? cost + Number(r.value) : cost * (1 + Number(r.value) / 100);
+  const units = Math.ceil(Math.round((raw / 0.05) * 1e6) / 1e6);
+  return Math.max(0.05, Math.round(units * 0.05 * 100) / 100);
 }
 const post = async (body) =>
   (await fetch("/api/admin/pricing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
@@ -76,7 +77,7 @@ export default function PricingTab({ onChanged }) {
           </span>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <FormSelect label="Profit type" value={rule.mode} onChange={set("mode")}>
             <option value="percent">Percentage of cost (%)</option>
             <option value="fixed">Fixed amount ($)</option>
@@ -89,19 +90,10 @@ export default function PricingTab({ onChanged }) {
             value={rule.value}
             onChange={set("value")}
           />
-          <FormInput
-            label="Minimum profit $ per item"
-            type="number"
-            min="0"
-            step="0.01"
-            value={rule.min_profit}
-            onChange={set("min_profit")}
-            hint="Cheap items never earn less than this."
-          />
         </div>
 
         <p className="rounded-lg bg-brand-soft p-3 text-sm text-ink">
-          Example: supplier charges <b>{money(exampleCost)}</b> → you sell at <b>{money(exSell)}</b> (profit {money(exSell - exampleCost)}).
+          Prices always round UP to the next $0.05 (never down). Example: supplier charges <b>{money(exampleCost)}</b> → you sell at <b>{money(exSell)}</b> (profit {money(exSell - exampleCost)}).
           If the supplier goes to $0.80 → {money(sellFor(0.8, rule))}; if it drops to $0.50 → {money(sellFor(0.5, rule))}.
         </p>
 
