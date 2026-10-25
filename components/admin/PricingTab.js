@@ -44,11 +44,10 @@ export default function PricingTab({ onChanged }) {
     load();
   }
   async function run(action, ok) {
-    if (action === "all_auto" && !window.confirm("Put every product back on auto-pricing? Hand-set prices will be replaced.")) return;
     setBusy(action);
     const r = await post({ action });
     setBusy("");
-    if (!r.success) return setMsg({ type: "error", text: r.error === "run_migration_023" ? "Run supabase/migration_023_auto_pricing.sql first." : r.error });
+    if (!r.success) return setMsg({ type: "error", text: r.error });
     setMsg({ type: "success", text: `${ok}: ${r.changed} of ${r.total} product(s) changed.` });
     load();
     onChanged && onChanged();
@@ -64,13 +63,13 @@ export default function PricingTab({ onChanged }) {
         title="Pricing & profit"
         description="Choose the profit you want. Your prices then move with the supplier's cost, up and down, keeping that profit."
       />
-      {!d.migrated && <Alert variant="warning">Run supabase/migration_023_auto_pricing.sql so hand-priced products can be excluded.</Alert>}
+      {!d.migrated && <Alert variant="warning">Run supabase/migration_023_auto_pricing.sql first.</Alert>}
 
       <div className="max-w-2xl space-y-4 rounded-xl border border-border bg-surface p-5 shadow-card">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="font-semibold text-ink">Auto-pricing</div>
-            <div className="text-xs text-muted">Applies to supplier products that were not priced by hand.</div>
+            <div className="font-semibold text-ink">Auto-pricing (master switch)</div>
+            <div className="text-xs text-muted">Only products you tick "Auto" on in Products follow this rule. Nothing else changes.</div>
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-medium ${rule.enabled ? "bg-success-soft text-success" : "bg-border text-muted"}`}>
             {rule.enabled ? "ON" : "OFF"}
@@ -116,7 +115,7 @@ export default function PricingTab({ onChanged }) {
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-ink">Preview (first {preview.length} products)</h3>
+        <h3 className="mb-2 text-sm font-semibold text-ink">Preview (auto-priced products)</h3>
         <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
           <table className="w-full min-w-[520px] text-sm">
             <thead className="border-b border-border text-left text-xs text-muted">
@@ -139,23 +138,15 @@ export default function PricingTab({ onChanged }) {
                 </tr>
               ))}
               {preview.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-3 text-muted">No supplier products yet.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-3 text-muted">No product is on Auto yet. Tick "Auto" in Products.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      <div className="max-w-2xl rounded-xl border border-border bg-surface p-5 shadow-card">
-        <div className="text-sm text-ink">
-          <b>{d.manual}</b> of {d.total} supplier products are priced by hand (auto-pricing skips them). Changing a price in Products turns auto off for that product;
-          tick "Auto" there to bring it back.
-        </div>
-        {d.manual > 0 && (
-          <SecondaryButton className="mt-3" onClick={() => run("all_auto", "Back to auto")} disabled={busy !== "" || !d.rule.enabled}>
-            Put all products back on auto
-          </SecondaryButton>
-        )}
+      <div className="max-w-2xl rounded-xl border border-border bg-surface p-5 shadow-card text-sm text-ink">
+        <b>{d.auto}</b> product(s) are on auto-pricing. Go to <b>Products</b> and tick <b>Auto</b> on the ones you want. Everything else keeps its own price.
       </div>
     </div>
   );

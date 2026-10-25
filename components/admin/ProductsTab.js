@@ -159,10 +159,10 @@ export default function ProductsTab({
                     className="w-24 rounded-md border border-border px-2 py-1 font-mono text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                   {p.provider !== "manual" && (
-                    <label className="mt-1 flex cursor-pointer items-center gap-1 text-[11px] text-muted" title="Follow the supplier price using your profit rule (Pricing tab)">
+                    <label className="mt-1 flex cursor-pointer items-center gap-1 text-[11px] text-muted" title="Follow the supplier price using your profit rule (Pricing tab). Off unless you tick it.">
                       <input
                         type="checkbox"
-                        checked={p.auto_price !== false}
+                        checked={p.auto_price === true}
                         onChange={(e) => updateProduct(p.id, { auto_price: e.target.checked })}
                         className="h-3 w-3 accent-brand"
                       />

@@ -6,7 +6,7 @@ import { repriceAll } from "../../../lib/syncProducts";
 export const config = { maxDuration: 60 };
 
 // GET  -> current rule, counts, and a preview of what it would do
-// POST { action: "save", rule } | { action: "apply" } | { action: "all_auto" }
+// POST { action: "save", rule } | { action: "apply" }  (apply = only products ticked Auto)
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
   if (!session) return;
@@ -25,6 +25,7 @@ export default async function handler(req, res) {
         .select("id, title, cost_price, sell_price, selected")
         .neq("provider", "manual")
         .gt("cost_price", 0)
+        .eq("auto_price", true)
         .order("selected", { ascending: false })
         .order("title")
         .limit(8),
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
       migrated,
       rule,
       total: all.count ?? 0,
-      manual: manual.count ?? 0,
+      auto: manual.count ?? 0,
       sample: (sample.data || []).map((p) => ({
         id: p.id,
         title: p.title,
@@ -55,11 +56,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, rule });
     }
     if (b.action === "apply") {
-      return res.status(200).json({ success: true, ...(await repriceAll()) });
-    }
-    if (b.action === "all_auto") {
-      const { error } = await supabaseAdmin.from("products").update({ auto_price: true }).neq("provider", "manual");
-      if (error) throw new Error(/auto_price/i.test(error.message) ? "run_migration_023" : error.message);
       return res.status(200).json({ success: true, ...(await repriceAll()) });
     }
     return res.status(400).json({ success: false, error: "unknown_action" });
