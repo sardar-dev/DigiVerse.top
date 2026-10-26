@@ -109,7 +109,7 @@ export default function CouponsTab({ products }) {
   const describe = (c) =>
     c.discount_type === "percent"
       ? `${Number(c.discount_value)}% off`
-      : `$${Number(c.discount_value).toFixed(2)} off`;
+      : `$${Number(c.discount_value).toFixed(2)} off each item`;
 
   const state = (c) => {
     if (!c.active) return { label: "Disabled", cls: "bg-border text-muted" };

@@ -646,7 +646,10 @@ function BuyModal({ product, onClose }) {
               <>
                 <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} mono />
                 <div className="flex justify-between px-3.5 py-3 text-success">
-                  <span>Coupon {coupon.code}</span>
+                  <span>
+                    Coupon {coupon.code}
+                    {coupon.discount_type !== "percent" && quantity > 1 ? ` (per item × ${quantity})` : ""}
+                  </span>
                   <span className="font-mono">−${Number(coupon.discount).toFixed(2)}</span>
                 </div>
               </>
