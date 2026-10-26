@@ -47,6 +47,8 @@ export default function Admin() {
   }, []);
   const [sortAvailableFirst, setSortAvailableFirst] = useState(false);
   const [productSearch, setProductSearch] = useState("");
+  // all | live (on the home page now) | hidden (not on the home page)
+  const [productView, setProductView] = useState("all");
   const [orderSearch, setOrderSearch] = useState("");
   const [dashboard, setDashboard] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -444,9 +446,11 @@ export default function Admin() {
       ? [...products].sort((a, b) => b.available_stock - a.available_stock)
       : products;
     const q = productSearch.trim().toLowerCase();
+    if (productView === "live") list = list.filter((p) => p.selected);
+    if (productView === "hidden") list = list.filter((p) => !p.selected);
     if (q) list = list.filter((p) => p.title.toLowerCase().includes(q));
     return list;
-  }, [products, sortAvailableFirst, productSearch]);
+  }, [products, sortAvailableFirst, productSearch, productView]);
 
   const visibleOrders = useMemo(() => {
     const q = orderSearch.trim().toLowerCase();
@@ -533,6 +537,8 @@ export default function Admin() {
         <ProductsTab
           productSearch={productSearch}
           setProductSearch={setProductSearch}
+          productView={productView}
+          setProductView={setProductView}
           sortAvailableFirst={sortAvailableFirst}
           setSortAvailableFirst={setSortAvailableFirst}
           visibleProducts={visibleProducts}

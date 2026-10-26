@@ -13,6 +13,8 @@ export default function ProductsTab({
   sortAvailableFirst,
   setSortAvailableFirst,
   visibleProducts,
+  productView = "all",
+  setProductView,
   updateProduct,
   bulkUpdateProducts,
 }) {
@@ -47,6 +49,27 @@ export default function ProductsTab({
           className="min-w-[200px] flex-1 max-w-sm"
           aria-label="Search products"
         />
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Show products">
+          {[
+            ["all", "All"],
+            ["live", "On home page"],
+            ["hidden", "Hidden"],
+          ].map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setProductView?.(k)}
+              aria-pressed={productView === k}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-all ${
+                productView === k
+                  ? "bg-brand text-white shadow-[0_6px_16px_-6px_rgba(49,105,245,0.8)]"
+                  : "bg-brand-soft text-brand hover:bg-brand/10"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <SecondaryButton onClick={() => setSortAvailableFirst((s) => !s)} className="whitespace-nowrap text-sm">
           {sortAvailableFirst ? "Sorted: in-stock first ✓" : "Sort: in-stock first"}
         </SecondaryButton>
