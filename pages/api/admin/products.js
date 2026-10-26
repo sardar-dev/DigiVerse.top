@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     // Single-product update: { id, selected?, sell_price?, image_url?,
     // category?, featured?, low_stock_threshold?, short_description? }
     // Bulk update: { ids: [...], selected?, sell_price_delta_percent? }
-    const { id, ids, title, selected, sell_price, image_url, category, featured, low_stock_threshold, short_description, sell_price_delta_percent, auto_price } =
+    const { id, ids, title, selected, sell_price, image_url, category, featured, low_stock_threshold, short_description, sell_price_delta_percent, auto_price, auto_margin } =
       req.body || {};
 
     if (Array.isArray(ids) && ids.length > 0) {
@@ -99,6 +99,17 @@ export default async function handler(req, res) {
     let autoField = {};
     if (typeof auto_price === "boolean") autoField = { auto_price };
     else if (typeof sell_price === "number") autoField = { auto_price: false };
+    // Per-product margin: empty = use the global rule; a number = fixed $
+    // profit over the supplier cost. Entering a margin turns Auto on.
+    let marginField = {};
+    if (auto_margin !== undefined) {
+      const m = auto_margin === null || auto_margin === "" ? null : Number(auto_margin);
+      if (m !== null && (!Number.isFinite(m) || m < 0 || m > 1000)) {
+        return res.status(400).json({ success: false, error: "invalid_margin" });
+      }
+      marginField = { auto_margin: m };
+      if (m !== null) autoField = { auto_price: true };
+    }
     if (image_url !== undefined) patch.image_url = image_url || null;
     if (category !== undefined) patch.category = category || null;
     if (typeof featured === "boolean") patch.featured = featured;
@@ -126,8 +137,12 @@ export default async function handler(req, res) {
 
     let { error } = await supabaseAdmin
       .from("products")
-      .update({ ...patch, ...titleLockFields, ...autoField })
+      .update({ ...patch, ...titleLockFields, ...autoField, ...marginField })
       .eq("id", id);
+    if (error && /auto_margin/i.test(error.message)) {
+      // migration 025 not run yet: save the rest.
+      ({ error } = await supabaseAdmin.from("products").update({ ...patch, ...titleLockFields, ...autoField }).eq("id", id));
+    }
     if (error && /auto_price/i.test(error.message)) {
       // migration 023 not run yet: save everything else.
       ({ error } = await supabaseAdmin.from("products").update({ ...patch, ...titleLockFields }).eq("id", id));
@@ -139,7 +154,7 @@ export default async function handler(req, res) {
     if (error) return res.status(500).json({ success: false, error: error.message });
     // A new sell price can make a pricier supplier eligible (or not), so
     // re-decide the active source right away, from stored data only.
-    if (patch.sell_price !== undefined || autoField.auto_price === true) {
+    if (patch.sell_price !== undefined || autoField.auto_price === true || marginField.auto_margin !== undefined) {
       try {
         await recomputeProduct(id);
       } catch {}

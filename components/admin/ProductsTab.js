@@ -182,15 +182,33 @@ export default function ProductsTab({
                     className="w-24 rounded-md border border-border px-2 py-1 font-mono text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                   {p.provider !== "manual" && (
-                    <label className="mt-1 flex cursor-pointer items-center gap-1 text-[11px] text-muted" title="Follow the supplier price using your profit rule (Pricing tab). Off unless you tick it.">
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
+                      <label className="flex cursor-pointer items-center gap-1" title="Follow the supplier price using your profit rule (Pricing tab). Off unless you tick it.">
+                        <input
+                          type="checkbox"
+                          checked={p.auto_price === true}
+                          onChange={(e) => updateProduct(p.id, { auto_price: e.target.checked })}
+                          className="h-3 w-3 accent-brand"
+                        />
+                        Auto
+                      </label>
                       <input
-                        type="checkbox"
-                        checked={p.auto_price === true}
-                        onChange={(e) => updateProduct(p.id, { auto_price: e.target.checked })}
-                        className="h-3 w-3 accent-brand"
+                        key={`m-${p.id}-${p.auto_margin ?? ""}`}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        defaultValue={p.auto_margin ?? ""}
+                        placeholder="margin $"
+                        aria-label={`Margin in dollars for ${p.title}`}
+                        title="Your profit per item in $. Empty = use the Pricing tab rule."
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          const next = v === "" ? null : Number(v);
+                          if (next !== (p.auto_margin ?? null)) updateProduct(p.id, { auto_margin: next });
+                        }}
+                        className="w-16 rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-ink focus:border-brand focus:outline-none"
                       />
-                      Auto
-                    </label>
+                    </div>
                   )}
                 </td>
                 <td className="py-3 px-4">
