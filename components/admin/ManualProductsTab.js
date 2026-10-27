@@ -1,3 +1,4 @@
+import CategorySelect from "./CategorySelect";
 import ImagePicker from "./ImagePicker";
 import { useState } from "react";
 import { FormInput, FormTextarea, FormSelect } from "../ui/FormInput";
@@ -178,12 +179,11 @@ export default function ManualProductsTab({
               placeholder="https://…"
               hint="Paste a link to an already-hosted image. Leave blank for the default letter icon."
             />
-            <FormInput
+            <CategorySelect
               label="Category (optional)"
               value={manualForm.category}
-              onChange={(e) => setManualForm({ ...manualForm, category: e.target.value })}
-              placeholder="e.g. Streaming"
-              hint="Used to build filter tabs on the homepage."
+              onChange={(v) => setManualForm({ ...manualForm, category: v })}
+              hint="Shown as a filter on the homepage."
             />
           </div>
           <ImagePicker
