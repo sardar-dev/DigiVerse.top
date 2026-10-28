@@ -17,6 +17,7 @@ export default function PaymentPanel({ order, onDone }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
 
   useEffect(() => {
     (async () => {
@@ -36,7 +37,24 @@ export default function PaymentPanel({ order, onDone }) {
       .catch(() => {});
   }, [order.payout_wallet]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const canPayWithBalance = balance !== null && balance >= Number(order.total);
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  const timeExpired = timeLeft === 0;
 
   async function payWithBalance() {
     setError("");
@@ -75,16 +93,25 @@ export default function PaymentPanel({ order, onDone }) {
   if (!method) {
     return (
       <div className="space-y-3">
-        <p className="text-sm font-medium text-ink">Choose how to pay</p>
-        {canPayWithBalance && (
-          <button
-            onClick={() => setMethod("wallet")}
-            className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"
-          >
-            <span className="font-medium text-ink">Wallet balance</span>
-            <span className="font-mono text-muted">${balance.toFixed(2)} available</span>
-          </button>
+        {timeExpired && (
+          <Alert variant="error">
+            Payment session expired. Please refresh the page to try again.
+          </Alert>
         )}
+        {!timeExpired && (
+          <div className="text-xs text-center text-muted">
+            ⏱️ Payment expires in {minutes}:{seconds.toString().padStart(2, "0")}
+          </div>
+        )}
+        <p className="text-sm font-medium text-ink">Choose how to pay</p>
+        <button
+          onClick={() => setMethod("wallet")}
+          className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"
+          disabled={balance === null}
+        >
+          <span className="font-medium text-ink">Pay with wallet</span>
+          <span className="font-mono text-sm">${(balance ?? 0).toFixed(2)} balance</span>
+        </button>
         <button
           onClick={() => setMethod("onchain")}
           className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"

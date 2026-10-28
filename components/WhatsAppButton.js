@@ -1,41 +1,109 @@
 import { useEffect, useState } from "react";
 
 export default function WhatsAppButton() {
-  const [link, setLink] = useState("");
-  const [type, setType] = useState("whatsapp");
+  const [links, setLinks] = useState({ telegram: "", whatsapp: "" });
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
       .then((d) => {
-        setLink(d.whatsapp_link || "");
-        setType(d.channel_type === "telegram" ? "telegram" : "whatsapp");
+        const link = d.whatsapp_link || "";
+        const type = d.channel_type === "telegram" ? "telegram" : "whatsapp";
+        setLinks({
+          telegram: type === "telegram" ? link : "",
+          whatsapp: type === "whatsapp" ? link : "",
+        });
       })
       .catch(() => {});
   }, []);
 
-  if (!link) return null;
-  const tg = type === "telegram";
+  const hasAny = links.telegram || links.whatsapp;
+  if (!hasAny) return null;
 
+  const hasBoth = links.telegram && links.whatsapp;
+
+  if (!hasBoth) {
+    // Only one channel configured, show direct link
+    const isTg = !!links.telegram;
+    const link = isTg ? links.telegram : links.whatsapp;
+    return (
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={isTg ? "Join our Telegram channel" : "Join our WhatsApp channel"}
+        className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-5 z-40 flex items-center gap-2 rounded-full ${
+          isTg ? "bg-[#229ED9]" : "bg-[#25D366]"
+        } px-4 py-3 text-white shadow-card-hover transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+          isTg ? "focus-visible:outline-[#229ED9]" : "focus-visible:outline-[#25D366]"
+        }`}
+      >
+        {isTg ? (
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <path d="M21.9 4.6 18.7 19.7c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.4-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.6 13.5 1.9 12c-1-.3-1-1 .2-1.5L20.4 3.4c.9-.3 1.6.2 1.5 1.2z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <path d="M17.5 14.4c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.2.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5C11 9.2 10.5 8 10.3 7.5c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1 0 1.2.9 2.4 1 2.6.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.4.5.6.2 1.2.2 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z" />
+            <path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.6 1.4 5.1L2 22l5.1-1.3C8.5 21.5 10.2 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3C4 15 3.5 13.5 3.5 12 3.5 7.3 7.3 3.5 12 3.5S20.5 7.3 20.5 12 16.7 20.2 12 20.2z" />
+          </svg>
+        )}
+        <span className="hidden text-sm font-medium sm:inline">Join our {isTg ? "Telegram" : "WhatsApp"}</span>
+      </a>
+    );
+  }
+
+  // Both channels, show dropdown
   return (
-    <a
-      href={link}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={tg ? "Join our Telegram channel" : "Join our WhatsApp channel"}
-      className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-5 z-40 flex items-center gap-2 rounded-full ${tg ? "bg-[#229ED9]" : "bg-[#25D366]"} px-4 py-3 text-white shadow-card-hover transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${tg ? "focus-visible:outline-[#229ED9]" : "focus-visible:outline-[#25D366]"}`}
-    >
-      {tg ? (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
-          <path d="M21.9 4.6 18.7 19.7c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.4-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.6 13.5 1.9 12c-1-.3-1-1 .2-1.5L20.4 3.4c.9-.3 1.6.2 1.5 1.2z" />
-        </svg>
-      ) : (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
-          <path d="M17.5 14.4c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.2.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5C11 9.2 10.5 8 10.3 7.5c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1 0 1.2.9 2.4 1 2.6.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.4.5.6.2 1.2.2 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z" />
-          <path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.6 1.4 5.1L2 22l5.1-1.3C8.5 21.5 10.2 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3C4 15 3.5 13.5 3.5 12 3.5 7.3 7.3 3.5 12 3.5S20.5 7.3 20.5 12 16.7 20.2 12 20.2z" />
-        </svg>
+    <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-5 z-40">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 rounded-full bg-brand px-4 py-3 text-white shadow-card-hover transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        aria-label="Join our channels"
+        aria-expanded={open}
+      >
+        <span aria-hidden="true">💬</span>
+        <span className="hidden text-sm font-medium sm:inline">Join us</span>
+      </button>
+
+      {open && (
+        <div className="absolute bottom-16 right-0 w-48 rounded-lg border border-border bg-surface shadow-card">
+          <a
+            href={links.telegram}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-brand-soft text-ink first:rounded-t-lg transition"
+            onClick={() => setOpen(false)}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#229ED9" aria-hidden="true">
+              <path d="M21.9 4.6 18.7 19.7c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.4-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.6 13.5 1.9 12c-1-.3-1-1 .2-1.5L20.4 3.4c.9-.3 1.6.2 1.5 1.2z" />
+            </svg>
+            <span>Telegram Channel</span>
+          </a>
+          <a
+            href={links.whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-brand-soft text-ink last:rounded-b-lg transition border-t border-border"
+            onClick={() => setOpen(false)}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#25D366" aria-hidden="true">
+              <path d="M17.5 14.4c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.2.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5C11 9.2 10.5 8 10.3 7.5c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1 0 1.2.9 2.4 1 2.6.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.4.5.6.2 1.2.2 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z" />
+              <path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.6 1.4 5.1L2 22l5.1-1.3C8.5 21.5 10.2 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3C4 15 3.5 13.5 3.5 12 3.5 7.3 7.3 3.5 12 3.5S20.5 7.3 20.5 12 16.7 20.2 12 20.2z" />
+            </svg>
+            <span>WhatsApp Channel</span>
+          </a>
+        </div>
       )}
-      <span className="hidden text-sm font-medium sm:inline">Join our {tg ? "Telegram" : "WhatsApp"}</span>
-    </a>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-30"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+    </div>
   );
 }

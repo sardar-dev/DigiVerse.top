@@ -248,6 +248,9 @@ export default function Withdraw() {
           {info && info.requests.length > 0 && (
             <section>
               <h2 className="mb-3 text-sm font-semibold">Your requests</h2>
+              <div className="mb-4 rounded-lg border border-warning/20 bg-warning-soft p-3 text-sm text-warning">
+                ⏱️ <span className="font-medium">Withdrawal processing time:</span> Up to 24 hours. If not received within 24 hours, please contact our support team.
+              </div>
               <ul className="space-y-2">
                 {info.requests.map((w) => (
                   <li key={w.id} className="rounded-xl border border-border bg-surface px-4 py-3 text-sm shadow-card">

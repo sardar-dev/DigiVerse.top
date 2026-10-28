@@ -36,6 +36,7 @@ export default function Orders() {
   }
 
   async function cancelOrder(id) {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
     await fetch("/api/orders/cancel", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -8,6 +8,7 @@ import PaymentPanel from "../components/PaymentPanel";
 import RecentOrders from "../components/RecentOrders";
 import SEO from "../components/SEO";
 import { toProductCode, fromProductCode } from "../lib/productLink";
+import { useToast } from "../components/ui/Toast";
 import SiteHeader from "../components/layout/SiteHeader";
 import SiteFooter from "../components/layout/SiteFooter";
 import PageContainer from "../components/layout/PageContainer";
@@ -50,6 +51,7 @@ export async function getServerSideProps({ query, res }) {
 
 export default function Storefront({ initialProducts, sharedMeta }) {
   const router = useRouter();
+  const { notify } = useToast();
   const [session, setSession] = useState(null);
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(false);
@@ -422,7 +424,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                   key={p.id}
                   product={p}
                   onBuy={() => (session ? setActive(p) : (window.location.href = "/login"))}
-                  onShare={() => shareProduct(p)}
+                  onShare={() => shareProduct(p, notify)}
                 />
               ))}
             </div>
@@ -452,7 +454,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
   );
 }
 
-function shareProduct(product) {
+function shareProduct(product, notify) {
   const url = `${window.location.origin}/?product=${toProductCode(product.id)}`;
   if (navigator.share) {
     navigator.share({ title: product.title, url }).catch(() => {});
@@ -460,7 +462,7 @@ function shareProduct(product) {
   }
   navigator.clipboard
     ?.writeText(url)
-    .then(() => window.alert("Product link copied to clipboard"))
+    .then(() => notify?.("Product link copied! 🔗"))
     .catch(() => window.prompt("Copy this link:", url));
 }
 
