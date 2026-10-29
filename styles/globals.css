@@ -82,12 +82,30 @@ select:focus-visible,
 }
 
 .dv-grid-bg {
+  /* Dot grid */
+  background-image: radial-gradient(circle, rgba(49, 105, 245, 0.18) 1px, transparent 1px);
+  background-size: 28px 28px;
+  /* Fade in from top, completely gone by 65% */
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 10%, rgba(0,0,0,0.6) 40%, transparent 70%);
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 10%, rgba(0,0,0,0.6) 40%, transparent 70%);
+}
+
+/* Concentric ring pulse behind the hero — pure CSS, no JS */
+.dv-rings {
   background-image:
-    linear-gradient(rgba(49, 105, 245, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(49, 105, 245, 0.07) 1px, transparent 1px);
-  background-size: 38px 38px;
-  -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 25%, transparent 72%);
-  mask-image: radial-gradient(ellipse at 50% 0%, #000 25%, transparent 72%);
+    radial-gradient(circle at 50% 50%, transparent 30%, rgba(49,105,245,0.07) 31%, rgba(49,105,245,0.07) 32%, transparent 33%),
+    radial-gradient(circle at 50% 50%, transparent 48%, rgba(49,105,245,0.05) 49%, rgba(49,105,245,0.05) 50%, transparent 51%),
+    radial-gradient(circle at 50% 50%, transparent 66%, rgba(49,105,245,0.03) 67%, rgba(49,105,245,0.03) 68%, transparent 69%);
+  background-size: 600px 600px;
+  background-position: center top;
+  background-repeat: no-repeat;
+  animation: dv-rings-pulse 8s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes dv-rings-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
 }
 
 .dv-live-dot { position: relative; }

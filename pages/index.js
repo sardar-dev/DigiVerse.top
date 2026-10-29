@@ -180,6 +180,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-brand-soft via-surface to-surface">
           {/* Background decorations */}
           <div className="dv-grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
+          <div className="dv-rings pointer-events-none absolute inset-0" aria-hidden="true" />
           <div className="dv-orb pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/20 blur-3xl sm:-right-24 sm:-top-24 sm:h-96 sm:w-96 sm:bg-brand/25" aria-hidden="true" />
           <div className="dv-orb pointer-events-none absolute -left-16 top-32 h-56 w-56 rounded-full bg-violet-400/15 blur-3xl [animation-delay:2s] sm:-left-28 sm:top-40 sm:h-72 sm:w-72 sm:bg-violet-400/20" aria-hidden="true" />
           <div className="dv-orb pointer-events-none absolute bottom-0 right-1/3 h-40 w-40 rounded-full bg-cyan-300/15 blur-3xl [animation-delay:4s] sm:h-56 sm:w-56 sm:bg-cyan-300/20 sm:-bottom-16" aria-hidden="true" />
