@@ -106,7 +106,7 @@ export default function OrdersTab({
             const cost = o.unit_cost != null ? Number(o.unit_cost) * Number(o.quantity) : null;
             const profit = cost != null ? sale - cost : null;
             return (
-            <tr key={o.id} className="border-b border-border align-top last:border-0">
+              <tr key={o.id} className="border-b border-border align-top last:border-0">
               {/* Order # + Status */}
               <td className="py-3 px-4 whitespace-nowrap">
                 <div className="font-mono text-sm text-ink">{o.order_number}</div>
@@ -212,7 +212,8 @@ export default function OrdersTab({
                 )}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </DataTable>
     </>
