@@ -178,128 +178,159 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       <main className="flex-1">
         {/* Hero */}
         <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-brand-soft via-surface to-surface">
+          {/* Background decorations */}
           <div className="dv-grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
-          <div
-            className="dv-orb pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-brand/25 blur-3xl"
-            aria-hidden="true"
-          />
-          <div
-            className="dv-orb pointer-events-none absolute -left-28 top-40 h-72 w-72 rounded-full bg-violet-400/20 blur-3xl [animation-delay:2s]"
-            aria-hidden="true"
-          />
-          <div
-            className="dv-orb pointer-events-none absolute bottom-[-4rem] right-1/3 h-56 w-56 rounded-full bg-cyan-300/20 blur-3xl [animation-delay:4s]"
-            aria-hidden="true"
-          />
-          <PageContainer className="relative grid gap-10 py-12 sm:py-16 md:grid-cols-[1.1fr_0.9fr] md:items-center">
-            <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-surface/90 px-3 py-1 text-xs font-medium text-brand shadow-[0_0_22px_-4px_rgba(49,105,245,0.45)] backdrop-blur">
-                <span className="dv-live-dot h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-                {inStock.length > 0
-                  ? `${inStock.length} product${inStock.length === 1 ? "" : "s"} in stock now`
-                  : "Digital products store"}
-              </span>
-              <h1 className="mt-4 text-3xl font-bold leading-tight text-ink sm:text-5xl">
-                Digital subscriptions &amp; licenses,{" "}
-                <span className="dv-gradient-text">delivered instantly.</span>
-              </h1>
-              <p className="mt-4 max-w-lg text-base text-muted sm:text-lg">
-                An independent store for digital subscriptions, licenses and activation codes at fair
-                prices. Pay with USDT (BEP20) or your wallet balance and receive your order details
-                right after payment confirms.
-              </p>
-              <form
-                className="dv-search mt-6 flex max-w-lg gap-2 rounded-2xl border border-border bg-surface/90 p-1.5 shadow-card backdrop-blur transition-shadow"
-                role="search"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
-                }}
-              >
-                <span className="flex items-center pl-3 text-muted" aria-hidden="true">🔍</span>
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search a product, e.g. Gemini, Muse AI…"
-                  aria-label="Search products"
-                  className="min-h-11 min-w-0 flex-1 bg-transparent px-1 text-sm text-ink placeholder:text-muted focus:outline-none"
-                />
-                <PrimaryButton type="submit" className="px-5">
-                  Search
-                </PrimaryButton>
-              </form>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <a href="#catalog">
-                  <PrimaryButton className="px-6">Browse products</PrimaryButton>
-                </a>
-                <a href="#how-it-works">
-                  <SecondaryButton className="px-6">How it works</SecondaryButton>
-                </a>
-              </div>
-              <ul className="mt-8 grid max-w-lg grid-cols-1 gap-3 text-sm text-ink sm:grid-cols-3">
-                {[
-                  { icon: "⚡", title: "Instant delivery", text: "Automatic items arrive right after payment" },
-                  { icon: "🔒", title: "Secure USDT payment", text: "On-chain BEP20, verified automatically" },
-                  { icon: "💬", title: "Real support", text: "Questions? We are here to help" },
-                ].map((f) => (
-                  <li key={f.title} className="flex items-start gap-2.5">
-                    <span
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-base shadow-[0_0_16px_-2px_rgba(49,105,245,0.4)]"
-                      aria-hidden="true"
-                    >
-                      {f.icon}
-                    </span>
-                    <span>
-                      <span className="block font-semibold">{f.title}</span>
-                      <span className="block text-xs text-muted">{f.text}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="dv-orb pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/20 blur-3xl sm:-right-24 sm:-top-24 sm:h-96 sm:w-96 sm:bg-brand/25" aria-hidden="true" />
+          <div className="dv-orb pointer-events-none absolute -left-16 top-32 h-56 w-56 rounded-full bg-violet-400/15 blur-3xl [animation-delay:2s] sm:-left-28 sm:top-40 sm:h-72 sm:w-72 sm:bg-violet-400/20" aria-hidden="true" />
+          <div className="dv-orb pointer-events-none absolute bottom-0 right-1/3 h-40 w-40 rounded-full bg-cyan-300/15 blur-3xl [animation-delay:4s] sm:h-56 sm:w-56 sm:bg-cyan-300/20 sm:-bottom-16" aria-hidden="true" />
 
-            {/* Live preview of real in-stock products */}
-            <div className="hidden md:block">
-              <div className="mx-auto max-w-sm space-y-3">
-                {inStock.slice(0, 3).map((p, i) => (
-                  <a
-                    key={p.id}
-                    href="#catalog"
-                    className="dv-float flex items-center gap-3 rounded-xl border border-brand/15 bg-surface/95 p-3.5 shadow-[0_0_0_1px_rgba(49,105,245,0.05),0_18px_36px_-14px_rgba(49,105,245,0.45)] backdrop-blur transition-shadow hover:shadow-[0_0_0_1px_rgba(49,105,245,0.35),0_22px_44px_-12px_rgba(49,105,245,0.6)]"
-                    style={{ marginLeft: `${i * 14}px`, animationDelay: `${i * 0.9}s` }}
-                  >
-                    {p.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img loading="lazy" decoding="async"
-                        src={p.image_url}
-                        alt=""
-                        className="h-11 w-11 flex-shrink-0 rounded-lg border border-border object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-base font-semibold text-brand">
-                        {(p.title || "?").trim().charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-ink">{p.title}</span>
-                      <span className="block text-xs text-success">
-                        {p.provider === "manual" && !p.auto_delivery
-                          ? "Manual delivery"
-                          : "Instant delivery"}
-                      </span>
-                    </span>
-                    <span className="text-sm font-semibold text-ink">
-                      ${Number(p.sell_price).toFixed(2)}
-                    </span>
+          <PageContainer className="relative py-10 sm:py-14 md:py-18">
+            {/* Two-column on desktop, single column on mobile */}
+            <div className="grid gap-8 md:grid-cols-[1.15fr_0.85fr] md:items-center md:gap-12">
+
+              {/* ── Left / main content ── */}
+              <div className="flex flex-col items-center text-center md:items-start md:text-left">
+
+                {/* Live badge */}
+                <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-surface/90 px-3 py-1.5 text-xs font-medium text-brand shadow-[0_0_22px_-4px_rgba(49,105,245,0.45)] backdrop-blur">
+                  <span className="dv-live-dot h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+                  {inStock.length > 0
+                    ? `${inStock.length} product${inStock.length === 1 ? "" : "s"} in stock`
+                    : "Digital products store"}
+                </span>
+
+                {/* Headline */}
+                <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl lg:text-5xl">
+                  Digital subscriptions &amp; licenses,{" "}
+                  <span className="dv-gradient-text">delivered instantly.</span>
+                </h1>
+
+                {/* Sub-copy */}
+                <p className="mt-3 max-w-md text-sm text-muted sm:text-base md:max-w-lg">
+                  Fair prices, instant delivery after payment, and real support. Pay with USDT (BEP20) or your wallet balance.
+                </p>
+
+                {/* Search bar */}
+                <form
+                  className="dv-search mt-5 flex w-full max-w-md gap-2 rounded-2xl border border-border bg-surface/90 p-1.5 shadow-card backdrop-blur transition-shadow"
+                  role="search"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  <span className="flex items-center pl-3 text-muted" aria-hidden="true">🔍</span>
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search, e.g. Gemini, Muse AI…"
+                    aria-label="Search products"
+                    className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm text-ink placeholder:text-muted focus:outline-none"
+                  />
+                  <PrimaryButton type="submit" className="px-4 text-sm">
+                    Search
+                  </PrimaryButton>
+                </form>
+
+                {/* CTA buttons */}
+                <div className="mt-4 flex w-full max-w-md flex-col gap-2.5 sm:flex-row sm:justify-center md:justify-start">
+                  <a href="#catalog" className="flex-1 sm:flex-none">
+                    <PrimaryButton className="w-full px-7 py-2.5 sm:w-auto">Browse products</PrimaryButton>
                   </a>
-                ))}
-                {inStock.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-muted">
-                    New stock is added regularly — check back soon.
+                  <a href="#how-it-works" className="flex-1 sm:flex-none">
+                    <SecondaryButton className="w-full px-7 py-2.5 sm:w-auto">How it works</SecondaryButton>
+                  </a>
+                </div>
+
+                {/* Feature pills */}
+                <ul className="mt-6 flex flex-wrap justify-center gap-2 md:justify-start">
+                  {[
+                    { icon: "⚡", label: "Instant delivery" },
+                    { icon: "🔒", label: "Secure USDT payment" },
+                    { icon: "💬", label: "Real support" },
+                  ].map((f) => (
+                    <li
+                      key={f.label}
+                      className="flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-ink shadow-sm backdrop-blur"
+                    >
+                      <span aria-hidden="true">{f.icon}</span>
+                      {f.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* ── Right / product preview ── */}
+              {/* Desktop: staggered float cards. Mobile: horizontal scroll strip */}
+              <div>
+                {/* Desktop stacked cards */}
+                <div className="hidden md:block">
+                  <div className="mx-auto max-w-xs space-y-3 lg:max-w-sm">
+                    {inStock.slice(0, 3).map((p, i) => (
+                      <a
+                        key={p.id}
+                        href="#catalog"
+                        className="dv-float flex items-center gap-3 rounded-xl border border-brand/15 bg-surface/95 p-3.5 shadow-[0_0_0_1px_rgba(49,105,245,0.05),0_18px_36px_-14px_rgba(49,105,245,0.45)] backdrop-blur transition-shadow hover:shadow-[0_0_0_1px_rgba(49,105,245,0.35),0_22px_44px_-12px_rgba(49,105,245,0.6)]"
+                        style={{ marginLeft: `${i * 14}px`, animationDelay: `${i * 0.9}s` }}
+                      >
+                        {p.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img loading="lazy" decoding="async" src={p.image_url} alt=""
+                            className="h-11 w-11 flex-shrink-0 rounded-lg border border-border object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-lg font-bold text-brand">
+                            {(p.title || "?").trim().charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-ink">{p.title}</span>
+                          <span className="block text-xs text-success">
+                            {p.provider === "manual" && !p.auto_delivery ? "Manual delivery" : "Instant delivery"}
+                          </span>
+                        </span>
+                        <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
+                      </a>
+                    ))}
+                    {inStock.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-muted">
+                        New stock added regularly — check back soon.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile: horizontal scroll strip (shown below the text block) */}
+                {inStock.length > 0 && (
+                  <div className="mt-6 md:hidden">
+                    <p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted">In stock now</p>
+                    <div className="flex gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {inStock.slice(0, 6).map((p) => (
+                        <a
+                          key={p.id}
+                          href="#catalog"
+                          className="flex w-32 flex-shrink-0 flex-col items-center gap-2 rounded-xl border border-brand/15 bg-surface/95 p-3 text-center shadow-card backdrop-blur"
+                        >
+                          {p.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img loading="lazy" decoding="async" src={p.image_url} alt=""
+                              className="h-10 w-10 rounded-lg border border-border object-cover"
+                            />
+                          ) : (
+                            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-lg font-bold text-brand">
+                              {(p.title || "?").trim().charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                          <span className="line-clamp-2 text-xs font-semibold leading-tight text-ink">{p.title}</span>
+                          <span className="text-xs font-bold text-brand">${Number(p.sell_price).toFixed(2)}</span>
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
+
             </div>
           </PageContainer>
         </section>
