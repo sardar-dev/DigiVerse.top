@@ -88,40 +88,45 @@ export default function OrdersTab({
         </div>
       )}
 
-      <DataTable minWidth="min-w-[1200px]">
+      <DataTable minWidth="min-w-[900px]">
         <thead>
           <tr className="text-left text-muted border-b border-border">
-            <th className="py-3 px-4">Order #</th>
+            <th className="py-3 px-4">Order</th>
             <th className="py-3 px-4">Customer</th>
             <th className="py-3 px-4">Product</th>
-            <th className="py-3 px-4">Qty × rate</th>
-            <th className="py-3 px-4">Total</th>
-            <th className="py-3 px-4">Paid with</th>
-            <th className="py-3 px-4">Status</th>
-            <th className="py-3 px-4">Activation info</th>
-            <th className="py-3 px-4">Delivered to customer</th>
+            <th className="py-3 px-4">Financials</th>
+            <th className="py-3 px-4">Delivery</th>
             <th className="py-3 px-4">Tx hash</th>
             <th className="py-3 px-4">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {visibleOrders.map((o) => (
+          {visibleOrders.map((o) => {
+            const sale = Number(o.total);
+            const cost = o.unit_cost != null ? Number(o.unit_cost) * Number(o.quantity) : null;
+            const profit = cost != null ? sale - cost : null;
+            return (
             <tr key={o.id} className="border-b border-border align-top last:border-0">
-              <td className="py-3 px-4 font-mono text-ink">{o.order_number}</td>
+              {/* Order # + Status */}
+              <td className="py-3 px-4 whitespace-nowrap">
+                <div className="font-mono text-sm text-ink">{o.order_number}</div>
+                <div className="mt-1"><StatusBadge status={o.status} /></div>
+              </td>
+              {/* Customer + paid with */}
               <td className="py-3 px-4 max-w-[180px] break-all text-ink">
                 {o.user_email || <span className="text-muted">unknown</span>}
                 {o.email && o.email !== o.user_email && (
                   <div className="text-xs text-muted">delivery: {o.email}</div>
                 )}
+                <div className="mt-0.5 text-xs text-muted">{o.paid_with || "onchain"}</div>
               </td>
+              {/* Product + supplier */}
               <td className="py-3 px-4 text-ink">
                 {o.products?.title}
                 {o.supplier && <div className="text-xs text-muted">via {o.supplier_label || o.supplier}</div>}
                 {(() => {
                   const sid = o.supplier_order_id || o.digitrust_order_id;
                   if (sid) return <CopyChip value={sid} label={`${o.supplier_label || "Supplier"} order #`} />;
-                  // Idempotent suppliers get our order id as their external id,
-                  // so support can still find the order there without their id.
                   if (o.can_retry) {
                     return (
                       <CopyChip
@@ -134,25 +139,32 @@ export default function OrdersTab({
                   return null;
                 })()}
               </td>
-              <td className="py-3 px-4 font-mono text-ink whitespace-nowrap">
-                {o.quantity}× ${Number(o.unit_price).toFixed(2)}
-              </td>
-              <td className="py-3 px-4 font-mono text-ink">
-                ${Number(o.total).toFixed(2)}
+              {/* Financials: sale + cost + profit */}
+              <td className="py-3 px-4 whitespace-nowrap font-mono text-sm">
+                <div className="text-ink">
+                  {o.quantity}× ${Number(o.unit_price).toFixed(2)}
+                  {" = "}
+                  <span className="font-semibold">${sale.toFixed(2)}</span>
+                </div>
+                {cost != null && (
+                  <div className="text-xs text-muted">Cost: ${cost.toFixed(2)}</div>
+                )}
+                {profit != null && (
+                  <div className={`text-xs font-medium ${profit >= 0 ? "text-success" : "text-danger"}`}>
+                    Profit: {profit >= 0 ? "+" : ""}${profit.toFixed(2)}
+                  </div>
+                )}
                 {o.coupon_code && (
                   <div className="text-xs text-success">
                     🎟️ {o.coupon_code} (−${Number(o.discount_amount).toFixed(2)})
                   </div>
                 )}
               </td>
-              <td className="py-3 px-4 text-muted">{o.paid_with || "onchain"}</td>
-              <td className="py-3 px-4">
-                <StatusBadge status={o.status} />
-              </td>
-              <td className="py-3 px-4 max-w-[140px] break-all text-muted">
-                {o.activation_info || "—"}
-              </td>
+              {/* Activation info + delivered items */}
               <td className="py-3 px-4 max-w-[240px] text-xs">
+                {o.activation_info && (
+                  <div className="mb-1 break-all text-muted">{o.activation_info}</div>
+                )}
                 <DeliveredItems items={o.items} />
               </td>
               <td className="py-3 px-4 max-w-[160px] break-all font-mono text-xs text-muted">
