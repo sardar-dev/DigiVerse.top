@@ -99,6 +99,41 @@ export default async function handler(req, res) {
           await refreshSourceFromLive(localProduct.id, src.supplier, live);
         } catch {}
       }
+
+      // Balance check: if the supplier has a balance API, ensure our
+      // account can afford this order. We never expose the raw balance
+      // to the user — we only tell them the max quantity they can order
+      // right now (1 fewer than the balance would technically allow, so
+      // we always keep a safety margin on the account).
+      if (Number.isFinite(unitCost) && unitCost > 0) {
+        try {
+          const { balance } = await supplier.api.getBalance();
+          if (Number.isFinite(balance)) {
+            // How many units can we actually fulfil? Keep 1-unit buffer.
+            const affordableQty = Math.max(0, Math.floor(balance / unitCost) - 1);
+            if (affordableQty < quantity) {
+              console.warn("[orders/create] insufficient supplier balance", {
+                product_id,
+                supplier: supplier.id,
+                balance,
+                unitCost,
+                affordableQty,
+                requested: quantity,
+              });
+              return res.status(409).json({
+                success: false,
+                error: "supplier_balance_limit",
+                max_qty: affordableQty,
+              });
+            }
+          }
+        } catch (balErr) {
+          // Balance check is best-effort — if the API is down or doesn't
+          // support it, we let the order proceed and handle a failure at
+          // payment/fulfilment instead of blocking all orders.
+          console.warn("[orders/create] balance check failed (non-fatal)", balErr?.message);
+        }
+      }
     } catch (e) {
       return res.status(502).json({ success: false, error: "stock_check_failed" });
     }

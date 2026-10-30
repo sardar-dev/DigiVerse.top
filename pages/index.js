@@ -428,7 +428,7 @@ function BuyModal({ product, onClose }) {
     const data = await res.json();
     setCreating(false);
     if (!data.success) {
-      setError(describeError(data.error, data.available, data.min_order));
+      setError(describeError(data.error, data.available, data.min_order, data.max_qty));
       setCoupon(null);
       setStep("form");
       return;
@@ -631,7 +631,7 @@ function Row({ label, value, mono }) {
   );
 }
 
-function describeError(code, available, minOrder) {
+function describeError(code, available, minOrder, maxQty) {
   switch (code) {
     case "not_enough_stock":
       return Number(available) > 0
@@ -659,6 +659,10 @@ function describeError(code, available, minOrder) {
       return "This coupon is temporarily disabled. Please try again later or contact support.";
     case "coupon_already_used":
       return "You've already used this coupon.";
+    case "supplier_balance_limit":
+      return Number(maxQty) > 0
+        ? `You can only order up to ${maxQty} of this product right now. Please lower the quantity.`
+        : "This product is temporarily unavailable. Please try again later.";
     default:
       return code ? code.replaceAll("_", " ") : "";
   }
