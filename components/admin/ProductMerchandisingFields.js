@@ -18,6 +18,7 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
     product.low_stock_threshold ?? ""
   );
   const [shortDescription, setShortDescription] = useState(product.short_description || "");
+  const [description, setDescription] = useState(product.description || "");
 
   function save() {
     onSave({
@@ -27,6 +28,7 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
       featured,
       low_stock_threshold: lowStockThreshold === "" ? null : Number(lowStockThreshold),
       short_description: shortDescription.trim(),
+      description: description.trim(),
     });
   }
 
@@ -75,6 +77,17 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
         onChange={(e) => setShortDescription(e.target.value)}
         rows={2}
         hint="Shown on the product grid card. Falls back to the full description if left blank."
+      />
+      <FormTextarea
+        label="Full description (product popup)"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={5}
+        hint={
+          product.description
+            ? "Editing the supplier's description. Your changes are saved and syncs won't overwrite them."
+            : "No supplier description yet — add your own."
+        }
       />
       <div className="flex flex-wrap items-end gap-4">
         <FormInput

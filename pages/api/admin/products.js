@@ -121,6 +121,11 @@ export default async function handler(req, res) {
     }
     if (short_description !== undefined) patch.short_description = short_description || null;
 
+    // Description: admin can edit or override the supplier's full description.
+    // Stored as-is; syncs never touch this field once it's been set manually.
+    const { description } = req.body || {};
+    if (description !== undefined) patch.description = description || null;
+
     // Title: any product (manual or supplier) can be renamed. A custom
     // title is "locked" so the next sync never overwrites it. An empty
     // title unlocks it again (the supplier's title returns on next sync).
