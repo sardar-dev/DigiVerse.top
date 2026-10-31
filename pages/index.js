@@ -371,7 +371,7 @@ function BuyModal({ product, onClose }) {
 
   function reviewOrder() {
     setError("");
-    if (product.requires_email && !email) {
+    if (product.requires_email && product.provider !== "manual" && !email) {
       setError(describeError("email_required"));
       return;
     }
@@ -485,7 +485,7 @@ function BuyModal({ product, onClose }) {
               setCoupon(null);
             }}
           />
-          {product.requires_email && (
+          {product.requires_email && product.provider !== "manual" && (
             <FormInput
               label="Email for delivery"
               type="email"
@@ -516,7 +516,7 @@ function BuyModal({ product, onClose }) {
             <Row label="Product" value={product.title} />
             <Row label="Quantity" value={quantity} mono />
             <Row label="Unit price" value={`$${Number(product.sell_price).toFixed(2)}`} mono />
-            {product.requires_email && <Row label="Delivery email" value={email} />}
+            {product.requires_email && product.provider !== "manual" && <Row label="Delivery email" value={email} />}
             {activationLabel && (
               <Row label={activationLabel.replace(" (for activation)", "")} value={activationInfo} />
             )}
