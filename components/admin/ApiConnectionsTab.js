@@ -221,6 +221,37 @@ export default function ApiConnectionsTab({ onChanged }) {
     setBusy("");
     if (!d.success) return say("error", errText(d));
     setTest(d.result);
+
+    // Auto-improve: append test result JSON to smart paste and re-parse
+    // so field names can be fixed from the real API response.
+    const rawFirst = d.result?.list?.rawFirst;
+    const rawBalance = d.result?.balance?.rawBalance;
+    if (rawFirst || rawBalance) {
+      const extra = [
+        rawFirst   ? `\n\nProduct response sample:\n${rawFirst}` : "",
+        rawBalance ? `\nBalance response sample:\n${rawBalance}` : "",
+      ].join("");
+      if (extra.trim()) {
+        setSmartPaste(prev => {
+          const updated = (prev || "") + extra;
+          // Re-parse with the enriched text
+          const reparsed = parseApiDocs(updated);
+          if (reparsed._meta?.ok) {
+            setSmartResult(reparsed);
+            setF(cur => {
+              const next = { ...cur };
+              const skip = ["_meta", "_orderIdKey", "_isIdempotent", "label", "base_url", "api_key", "auth_type", "auth_header", "auth_prefix"];
+              for (const [k, v] of Object.entries(reparsed)) {
+                if (skip.includes(k)) continue;
+                if (v && reparsed._meta?.confidences?.[k] === "high") next[k] = v;
+              }
+              return next;
+            });
+          }
+          return updated;
+        });
+      }
+    }
   }
 
   async function save() {
@@ -269,8 +300,8 @@ export default function ApiConnectionsTab({ onChanged }) {
           <div>
             <p className="text-sm font-semibold text-ink">🧠 Smart paste — fill everything automatically</p>
             <p className="mt-0.5 text-xs text-muted">
-              Paste anything: API docs, endpoint URLs, example JSON responses, auth instructions.
-              No API key needed — runs fully in your browser.
+              Paste your supplier's full API docs here — endpoints, auth, sample responses, everything.
+              After you press Test, field names auto-improve from the real API response. No API key needed.
             </p>
           </div>
           <FormTextarea
