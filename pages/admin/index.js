@@ -293,21 +293,17 @@ export default function Admin() {
     const data = await res.json();
     setSyncing(false);
     if (data.success) {
-      setSyncMessage(
-        `Synced ${data.synced} supplier products — ${data.updated ?? data.synced} updated${
-          data.newProducts ? `, ${data.newProducts} new` : ""
-        }.` +
-          (data.suppliers
-            ? " " +
-              Object.entries(data.suppliers)
-                .map(([k, v]) => (v.ok ? `${k}: ${v.count} ✓${v.hint ? ` (${v.hint})` : ""}` : `${k}: FAILED (${v.error})`))
-                .join(" · ")
-            : "")
-      );
+      setSyncMessage({
+        ok: true,
+        synced: data.synced,
+        updated: data.updated ?? data.synced,
+        newProducts: data.newProducts ?? 0,
+        suppliers: data.suppliers || {},
+      });
       loadProducts();
       loadDashboard();
     } else {
-      setSyncMessage(`Failed: ${data.error}`);
+      setSyncMessage({ ok: false, error: data.error });
     }
   }
 
