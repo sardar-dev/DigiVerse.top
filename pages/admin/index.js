@@ -47,8 +47,10 @@ export default function Admin() {
   }, []);
   const [sortAvailableFirst, setSortAvailableFirst] = useState(false);
   const [productSearch, setProductSearch] = useState("");
-  // all | live (on the home page now) | hidden (not on the home page)
+  // all | live | hidden
   const [productView, setProductView] = useState("all");
+  // "all" | supplier id e.g. "digitrust" | "c_canboso"
+  const [supplierFilter, setSupplierFilter] = useState("all");
   const [orderSearch, setOrderSearch] = useState("");
   const [dashboard, setDashboard] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -437,6 +439,17 @@ export default function Admin() {
     setDebugLoading(false);
   }
 
+  // Unique suppliers from loaded products (for dynamic filter tabs)
+  const supplierList = useMemo(() => {
+    const seen = new Set();
+    for (const p of products) {
+      const id = p.active_supplier || p.provider;
+      if (id && id !== "manual") seen.add(id);
+      if (p.sources) for (const s of p.sources) seen.add(s.supplier);
+    }
+    return Array.from(seen).sort();
+  }, [products]);
+
   const visibleProducts = useMemo(() => {
     let list = sortAvailableFirst
       ? [...products].sort((a, b) => b.available_stock - a.available_stock)
@@ -444,9 +457,17 @@ export default function Admin() {
     const q = productSearch.trim().toLowerCase();
     if (productView === "live") list = list.filter((p) => p.selected);
     if (productView === "hidden") list = list.filter((p) => !p.selected);
+    if (supplierFilter !== "all") {
+      list = list.filter((p) => {
+        const id = p.active_supplier || p.provider;
+        if (id === supplierFilter) return true;
+        if (p.sources?.some((s) => s.supplier === supplierFilter)) return true;
+        return false;
+      });
+    }
     if (q) list = list.filter((p) => p.title.toLowerCase().includes(q));
     return list;
-  }, [products, sortAvailableFirst, productSearch, productView]);
+  }, [products, sortAvailableFirst, productSearch, productView, supplierFilter]);
 
   const visibleOrders = useMemo(() => {
     const q = orderSearch.trim().toLowerCase();
@@ -535,6 +556,9 @@ export default function Admin() {
           setProductSearch={setProductSearch}
           productView={productView}
           setProductView={setProductView}
+          supplierFilter={supplierFilter}
+          setSupplierFilter={setSupplierFilter}
+          supplierList={supplierList}
           sortAvailableFirst={sortAvailableFirst}
           setSortAvailableFirst={setSortAvailableFirst}
           visibleProducts={visibleProducts}
