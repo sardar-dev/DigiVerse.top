@@ -347,7 +347,7 @@ function shareProduct(product, notify) {
 
 function BuyModal({ product, onClose }) {
   const [step, setStep] = useState("form"); // form | summary | order | done
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState("1"); // string so input can be cleared while typing
   const [email, setEmail] = useState("");
   const [activationInfo, setActivationInfo] = useState("");
   const [order, setOrder] = useState(null);
@@ -371,6 +371,12 @@ function BuyModal({ product, onClose }) {
 
   function reviewOrder() {
     setError("");
+    const parsedQty = parseInt(quantity, 10);
+    // Validate quantity first — applies to all products
+    if (!quantity || isNaN(parsedQty) || parsedQty < 1) {
+      setError("Please enter a quantity of at least 1.");
+      return;
+    }
     if (product.requires_email && product.provider !== "manual" && !email) {
       setError(describeError("email_required"));
       return;
@@ -378,11 +384,11 @@ function BuyModal({ product, onClose }) {
     if (product.provider === "manual") {
       const minQty = product.min_order_qty ?? 1;
       const maxQty = product.max_order_qty ?? null;
-      if (quantity < minQty) {
+      if (parsedQty < minQty) {
         setError(describeError("qty_below_minimum", undefined, undefined, undefined, minQty));
         return;
       }
-      if (maxQty !== null && quantity > maxQty) {
+      if (maxQty !== null && parsedQty > maxQty) {
         setError(describeError("qty_exceeds_maximum", undefined, undefined, maxQty));
         return;
       }
@@ -402,7 +408,7 @@ function BuyModal({ product, onClose }) {
       const res = await fetch("/api/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponInput, product_id: product.id, quantity }),
+        body: JSON.stringify({ code: couponInput, product_id: product.id, quantity: parseInt(quantity, 10) || 1 }),
       });
       const data = await res.json();
       if (data.success) {
@@ -431,7 +437,7 @@ function BuyModal({ product, onClose }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         product_id: product.id,
-        quantity,
+        quantity: parseInt(quantity, 10) || 1,
         email,
         activation_info: activationInfo,
         coupon_code: coupon ? coupon.code : undefined,
@@ -449,7 +455,7 @@ function BuyModal({ product, onClose }) {
     setStep("order");
   }
 
-  const subtotal = Number(product.sell_price) * quantity;
+  const subtotal = Number(product.sell_price) * (parseInt(quantity, 10) || 0);
   const total = (coupon ? coupon.final : subtotal).toFixed(2);
   const stepLabels = { form: "1. Details", summary: "2. Review", order: "3. Payment", done: "4. Done" };
 
@@ -492,9 +498,18 @@ function BuyModal({ product, onClose }) {
             max={product.provider === "manual" && product.max_order_qty ? product.max_order_qty : product.available_stock}
             value={quantity}
             onChange={(e) => {
-              setQuantity(Number(e.target.value));
-              // Discount depends on the order value — re-apply after a change.
+              // Keep raw string so user can clear the box and retype freely
+              const raw = e.target.value;
+              setQuantity(raw === "" ? "" : raw.replace(/^0+(\d)/, "$1"));
               setCoupon(null);
+            }}
+            onBlur={() => {
+              // On blur: if empty or invalid, reset to minimum (1 or min_order_qty)
+              const parsed = parseInt(quantity, 10);
+              const minQty = (product.provider === "manual" && product.min_order_qty) ? product.min_order_qty : 1;
+              if (!quantity || isNaN(parsed) || parsed < 1) {
+                setQuantity(String(minQty));
+              }
             }}
             hint={
               product.provider === "manual" && product.max_order_qty
