@@ -1,4 +1,3 @@
-import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
 import { fetchStorefrontProducts } from "../../lib/storefrontProducts";
 
@@ -12,20 +11,32 @@ export default async function handler(req, res) {
   }
 
   // Check if the requester is an admin. Admins see supplier cost_price
-  // (no markup) instead of sell_price so they can verify pricing live.
-  // We do a lightweight session+profile check here — no error thrown if
-  // the user is not logged in or not admin, they just get regular prices.
+  // alongside sell_price so they can verify margins live.
+  // We read the access token from the cookie Supabase sets
+  // (sb-<project>-auth-token) without using createPagesServerClient,
+  // which modifies response headers and can conflict with caching.
+  // If anything goes wrong we silently fall back to non-admin mode.
   let isAdmin = false;
   try {
-    const supabaseServer = createPagesServerClient({ req, res });
-    const { data: { session } } = await supabaseServer.auth.getSession();
-    if (session) {
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", session.user.id)
-        .single();
-      isAdmin = Boolean(profile?.is_admin);
+    // Supabase stores the session as JSON in a cookie named
+    // sb-<ref>-auth-token. Parse it to get the access_token.
+    const cookieHeader = req.headers.cookie || "";
+    const tokenMatch = cookieHeader.match(/sb-[^=]+-auth-token=([^;]+)/);
+    if (tokenMatch) {
+      const raw = decodeURIComponent(tokenMatch[1]);
+      const parsed = JSON.parse(raw);
+      const accessToken = Array.isArray(parsed) ? parsed[0] : parsed?.access_token;
+      if (accessToken) {
+        const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+        if (user) {
+          const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("is_admin")
+            .eq("id", user.id)
+            .single();
+          isAdmin = Boolean(profile?.is_admin);
+        }
+      }
     }
   } catch (_) {
     // Not critical — fall through to regular pricing
@@ -41,7 +52,7 @@ export default async function handler(req, res) {
   // is never exposed to regular customers.
   const products = isAdmin
     ? data
-    : data?.map(({ cost_price, ...p }) => p);
+    : data?.map(({ cost_price, min_order_qty, max_order_qty, ...p }) => ({ ...p, min_order_qty, max_order_qty }));
 
   // Admin responses must not be cached at the edge — they carry
   // cost_price which should never leak into a shared cache entry.

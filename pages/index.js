@@ -28,8 +28,15 @@ export async function getServerSideProps({ query, res }) {
   // (and refresh in the background) instead of querying the database on
   // every page view.
   res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120");
-  const { data } = await fetchStorefrontProducts();
-  const list = data || [];
+  let list = [];
+  try {
+    const { data } = await fetchStorefrontProducts();
+    list = data || [];
+  } catch (_) {
+    // DB unreachable at SSR time — render with empty list; the client
+    // will retry via /api/products on load.
+    list = [];
+  }
   // Shared product links (?product=<id>) get a product-specific link
   // preview (title/blurb/image) in WhatsApp/Telegram etc. Taken from the
   // list we already fetched — no extra query.
