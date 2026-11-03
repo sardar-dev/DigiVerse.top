@@ -28,15 +28,8 @@ export async function getServerSideProps({ query, res }) {
   // (and refresh in the background) instead of querying the database on
   // every page view.
   res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120");
-  let list = [];
-  try {
-    const { data } = await fetchStorefrontProducts();
-    list = data || [];
-  } catch (_) {
-    // DB unreachable at SSR time — render with empty list; the client
-    // will retry via /api/products on load.
-    list = [];
-  }
+  const { data } = await fetchStorefrontProducts();
+  const list = data || [];
   // Shared product links (?product=<id>) get a product-specific link
   // preview (title/blurb/image) in WhatsApp/Telegram etc. Taken from the
   // list we already fetched — no extra query.
@@ -60,7 +53,6 @@ export default function Storefront({ initialProducts, sharedMeta }) {
   const router = useRouter();
   const { notify } = useToast();
   const [session, setSession] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -122,7 +114,6 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       .then((d) => {
         if (!d.success) throw new Error("bad_response");
         setProducts(d.products || []);
-        setIsAdmin(Boolean(d.isAdmin));
       })
       .catch(() => {
         if (products.length === 0) setLoadError(true);
@@ -311,7 +302,6 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                 <ProductCard
                   key={p.id}
                   product={p}
-                  isAdmin={isAdmin}
                   onBuy={() => (session ? setActive(p) : (window.location.href = "/login"))}
                   onShare={() => shareProduct(p, notify)}
                 />
@@ -328,7 +318,6 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       {active && (
         <BuyModal
           product={active}
-          isAdmin={isAdmin}
           onClose={() => {
             setActive(null);
             // Drop ?product= so closing the popup doesn't reopen it
@@ -356,14 +345,9 @@ function shareProduct(product, notify) {
     .catch(() => window.prompt("Copy this link:", url));
 }
 
-function BuyModal({ product, onClose, isAdmin }) {
+function BuyModal({ product, onClose }) {
   const [step, setStep] = useState("form"); // form | summary | order | done
-  // Start at min_order_qty (for manual products) or 1
-  const [quantity, setQuantity] = useState(
-    product?.provider === "manual" && product.min_order_qty > 1
-      ? product.min_order_qty
-      : 1
-  );
+  const [quantity, setQuantity] = useState(1);
   const [email, setEmail] = useState("");
   const [activationInfo, setActivationInfo] = useState("");
   const [order, setOrder] = useState(null);
@@ -444,7 +428,7 @@ function BuyModal({ product, onClose, isAdmin }) {
     const data = await res.json();
     setCreating(false);
     if (!data.success) {
-      setError(describeError(data.error, data.available, data.min_order, data.max_qty, data.min_qty));
+      setError(describeError(data.error, data.available, data.min_order, data.max_qty));
       setCoupon(null);
       setStep("form");
       return;
@@ -490,18 +474,10 @@ function BuyModal({ product, onClose, isAdmin }) {
             </Alert>
           )}
           <FormInput
-            label={
-              product.provider === "manual" && (product.min_order_qty > 1 || product.max_order_qty)
-                ? `Quantity (${product.min_order_qty ?? 1}–${product.max_order_qty ?? "∞"})`
-                : "Quantity"
-            }
+            label="Quantity"
             type="number"
-            min={product.provider === "manual" ? (product.min_order_qty ?? 1) : 1}
-            max={
-              product.provider === "manual" && product.max_order_qty
-                ? Math.min(product.max_order_qty, product.available_stock)
-                : product.available_stock
-            }
+            min={1}
+            max={product.available_stock}
             value={quantity}
             onChange={(e) => {
               setQuantity(Number(e.target.value));
@@ -540,9 +516,6 @@ function BuyModal({ product, onClose, isAdmin }) {
             <Row label="Product" value={product.title} />
             <Row label="Quantity" value={quantity} mono />
             <Row label="Unit price" value={`$${Number(product.sell_price).toFixed(2)}`} mono />
-            {isAdmin && product.cost_price != null && (
-              <Row label="↳ Supplier cost" value={`$${Number(product.cost_price).toFixed(2)}`} mono />
-            )}
             {product.requires_email && product.provider !== "manual" && <Row label="Delivery email" value={email} />}
             {activationLabel && (
               <Row label={activationLabel.replace(" (for activation)", "")} value={activationInfo} />
@@ -658,7 +631,7 @@ function Row({ label, value, mono }) {
   );
 }
 
-function describeError(code, available, minOrder, maxQty, minQty) {
+function describeError(code, available, minOrder, maxQty) {
   switch (code) {
     case "not_enough_stock":
       return Number(available) > 0
@@ -686,10 +659,6 @@ function describeError(code, available, minOrder, maxQty, minQty) {
       return "This coupon is temporarily disabled. Please try again later or contact support.";
     case "coupon_already_used":
       return "You've already used this coupon.";
-    case "qty_below_minimum":
-      return `Minimum order for this product is ${minQty ?? 1}. Please increase the quantity.`;
-    case "qty_exceeds_maximum":
-      return `You can order at most ${maxQty} of this product per order. Please lower the quantity.`;
     case "supplier_balance_limit":
       return Number(maxQty) > 0
         ? `You can only order up to ${maxQty} of this product right now. Please lower the quantity.`
@@ -869,14 +838,7 @@ function HeroSection({ inStock, search, setSearch }) {
                       {p.provider === "manual" && !p.auto_delivery ? "Manual delivery" : "Instant delivery"}
                     </span>
                   </span>
-                  {isAdmin && p.cost_price != null ? (
-                    <span className="flex flex-col items-end gap-0">
-                      <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
-                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Cost ${Number(p.cost_price).toFixed(2)}</span>
-                    </span>
-                  ) : (
-                    <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
-                  )}
+                  <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
                 </a>
               ))}
               {inStock.length === 0 && (
@@ -909,14 +871,7 @@ function HeroSection({ inStock, search, setSearch }) {
                       </span>
                     )}
                     <span className="line-clamp-2 text-xs font-semibold leading-tight text-ink">{p.title}</span>
-                    {isAdmin && p.cost_price != null ? (
-                      <span className="flex flex-col items-center gap-0">
-                        <span className="text-xs font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
-                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">c${Number(p.cost_price).toFixed(2)}</span>
-                      </span>
-                    ) : (
-                      <span className="text-xs font-bold text-brand">${Number(p.sell_price).toFixed(2)}</span>
-                    )}
+                    <span className="text-xs font-bold text-brand">${Number(p.sell_price).toFixed(2)}</span>
                   </a>
                 ))}
               </div>

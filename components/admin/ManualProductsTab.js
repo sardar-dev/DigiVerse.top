@@ -203,31 +203,6 @@ export default function ManualProductsTab({
 
           <div className="flex flex-wrap items-end gap-4">
             <FormInput
-              label="Min qty per order"
-              type="number"
-              min="1"
-              step="1"
-              value={manualForm.min_order_qty}
-              onChange={(e) => setManualForm({ ...manualForm, min_order_qty: e.target.value })}
-              placeholder="1 (default)"
-              className="w-40"
-              hint="Minimum a customer must buy."
-            />
-            <FormInput
-              label="Max qty per order"
-              type="number"
-              min="1"
-              step="1"
-              value={manualForm.max_order_qty}
-              onChange={(e) => setManualForm({ ...manualForm, max_order_qty: e.target.value })}
-              placeholder="Unlimited"
-              className="w-40"
-              hint="Cap per order (blank = no limit)."
-            />
-          </div>
-
-          <div className="flex flex-wrap items-end gap-4">
-            <FormInput
               label="Low-stock threshold (optional)"
               type="number"
               min="0"

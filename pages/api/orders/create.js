@@ -26,11 +26,6 @@ export default async function handler(req, res) {
   if (!product_id || quantity < 1) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
-  // Quantity limits are validated after we fetch the product below,
-  // but do a basic sanity cap here to prevent absurd values.
-  if (!Number.isInteger(quantity) || quantity > 100000) {
-    return res.status(400).json({ success: false, error: "invalid_quantity" });
-  }
 
   const { data: localProduct, error: localErr } = await supabaseAdmin
     .from("products")
@@ -43,24 +38,10 @@ export default async function handler(req, res) {
     return res.status(404).json({ success: false, error: "product_not_available" });
   }
 
-  // Manual products: enforce min/max order quantity and activation fields.
+  // Manual products: whatever the admin set as activation_field
+  // ('email' or 'username') is required here. DigiTrust products use
+  // the older, separate requires_email flag.
   if (localProduct.provider === "manual") {
-    const minQty = localProduct.min_order_qty ?? 1;
-    const maxQty = localProduct.max_order_qty ?? null;
-    if (quantity < minQty) {
-      return res.status(400).json({
-        success: false,
-        error: "qty_below_minimum",
-        min_qty: minQty,
-      });
-    }
-    if (maxQty !== null && quantity > maxQty) {
-      return res.status(400).json({
-        success: false,
-        error: "qty_exceeds_maximum",
-        max_qty: maxQty,
-      });
-    }
     if (localProduct.activation_field && !String(activation_info || "").trim()) {
       return res.status(400).json({ success: false, error: "activation_info_required" });
     }

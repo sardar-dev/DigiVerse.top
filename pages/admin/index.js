@@ -126,8 +126,6 @@ export default function Admin() {
       category: "",
       featured: false,
       low_stock_threshold: "",
-      min_order_qty: "",
-      max_order_qty: "",
       auto_delivery: false,
       new_boxes: "",
       box_split: "separator",
@@ -159,10 +157,6 @@ export default function Admin() {
       featured: Boolean(manualForm.featured),
       low_stock_threshold:
         manualForm.low_stock_threshold === "" ? null : Number(manualForm.low_stock_threshold),
-      min_order_qty:
-        manualForm.min_order_qty === "" ? null : Number(manualForm.min_order_qty),
-      max_order_qty:
-        manualForm.max_order_qty === "" ? null : Number(manualForm.max_order_qty),
       // Only sent when on (or when editing a product that has it), so
       // saving ordinary products works before migration_012 is run.
       ...(manualForm.auto_delivery || manualForm._hadAuto
@@ -215,8 +209,6 @@ export default function Admin() {
       category: p.category || "",
       featured: Boolean(p.featured),
       low_stock_threshold: p.low_stock_threshold ?? "",
-      min_order_qty: p.min_order_qty ?? "",
-      max_order_qty: p.max_order_qty ?? "",
       auto_delivery: Boolean(p.auto_delivery),
       _hadAuto: Boolean(p.auto_delivery),
       new_boxes: "",
