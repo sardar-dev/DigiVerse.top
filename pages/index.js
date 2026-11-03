@@ -328,6 +328,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       {active && (
         <BuyModal
           product={active}
+          isAdmin={isAdmin}
           onClose={() => {
             setActive(null);
             // Drop ?product= so closing the popup doesn't reopen it
@@ -355,7 +356,7 @@ function shareProduct(product, notify) {
     .catch(() => window.prompt("Copy this link:", url));
 }
 
-function BuyModal({ product, onClose }) {
+function BuyModal({ product, onClose, isAdmin }) {
   const [step, setStep] = useState("form"); // form | summary | order | done
   // Start at min_order_qty (for manual products) or 1
   const [quantity, setQuantity] = useState(
