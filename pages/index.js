@@ -53,6 +53,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
   const router = useRouter();
   const { notify } = useToast();
   const [session, setSession] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -114,6 +115,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       .then((d) => {
         if (!d.success) throw new Error("bad_response");
         setProducts(d.products || []);
+        setIsAdmin(Boolean(d.isAdmin));
       })
       .catch(() => {
         if (products.length === 0) setLoadError(true);
@@ -302,6 +304,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                 <ProductCard
                   key={p.id}
                   product={p}
+                  isAdmin={isAdmin}
                   onBuy={() => (session ? setActive(p) : (window.location.href = "/login"))}
                   onShare={() => shareProduct(p, notify)}
                 />
@@ -437,7 +440,12 @@ function BuyModal({ product, onClose }) {
     setStep("order");
   }
 
-  const subtotal = Number(product.sell_price) * quantity;
+  // Admin sees cost price — the actual supplier charge — instead of
+  // the marked-up sell_price so they know exactly what an order costs.
+  const unitPrice = isAdmin && product.cost_price != null
+    ? Number(product.cost_price)
+    : Number(product.sell_price);
+  const subtotal = unitPrice * quantity;
   const total = (coupon ? coupon.final : subtotal).toFixed(2);
   const stepLabels = { form: "1. Details", summary: "2. Review", order: "3. Payment", done: "4. Done" };
 
@@ -515,7 +523,11 @@ function BuyModal({ product, onClose }) {
           <div className="divide-y divide-border rounded-lg border border-border">
             <Row label="Product" value={product.title} />
             <Row label="Quantity" value={quantity} mono />
-            <Row label="Unit price" value={`$${Number(product.sell_price).toFixed(2)}`} mono />
+            {isAdmin && product.cost_price != null ? (
+              <Row label="Cost price (admin)" value={`$${Number(product.cost_price).toFixed(2)}`} mono />
+            ) : (
+              <Row label="Unit price" value={`$${Number(product.sell_price).toFixed(2)}`} mono />
+            )}
             {product.requires_email && product.provider !== "manual" && <Row label="Delivery email" value={email} />}
             {activationLabel && (
               <Row label={activationLabel.replace(" (for activation)", "")} value={activationInfo} />
@@ -838,7 +850,14 @@ function HeroSection({ inStock, search, setSearch }) {
                       {p.provider === "manual" && !p.auto_delivery ? "Manual delivery" : "Instant delivery"}
                     </span>
                   </span>
-                  <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
+                  {isAdmin && p.cost_price != null ? (
+                    <span className="flex flex-col items-end gap-0.5">
+                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">Cost: ${Number(p.cost_price).toFixed(2)}</span>
+                      <span className="text-xs line-through text-muted">${Number(p.sell_price).toFixed(2)}</span>
+                    </span>
+                  ) : (
+                    <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
+                  )}
                 </a>
               ))}
               {inStock.length === 0 && (
@@ -871,7 +890,14 @@ function HeroSection({ inStock, search, setSearch }) {
                       </span>
                     )}
                     <span className="line-clamp-2 text-xs font-semibold leading-tight text-ink">{p.title}</span>
-                    <span className="text-xs font-bold text-brand">${Number(p.sell_price).toFixed(2)}</span>
+                    {isAdmin && p.cost_price != null ? (
+                      <span className="flex flex-col items-center gap-0">
+                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">${Number(p.cost_price).toFixed(2)}</span>
+                        <span className="text-[10px] line-through text-muted">${Number(p.sell_price).toFixed(2)}</span>
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-brand">${Number(p.sell_price).toFixed(2)}</span>
+                    )}
                   </a>
                 ))}
               </div>

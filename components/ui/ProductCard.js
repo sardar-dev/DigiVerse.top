@@ -9,7 +9,7 @@ import { PrimaryButton } from "./Button";
 // grid reads as a stack of physical cards rather than flat tiles at
 // rest), and softens — lifts slightly, tilt relaxes, shadow spreads —
 // on hover. Pure CSS transform/perspective, no JS and no library.
-export default function ProductCard({ product, onBuy, onShare, disabled }) {
+export default function ProductCard({ product, onBuy, onShare, disabled, isAdmin }) {
   const isManual = product.provider === "manual" && !product.auto_delivery;
   const threshold =
     product.low_stock_threshold != null ? Number(product.low_stock_threshold) : 3;
@@ -108,9 +108,19 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
       </div>
 
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
-        <span className="text-xl font-bold tracking-tight text-ink">
-          ${Number(product.sell_price).toFixed(2)}
-        </span>
+        {isAdmin && product.cost_price != null ? (
+          <span className="flex flex-col gap-0">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted">Cost</span>
+            <span className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
+              ${Number(product.cost_price).toFixed(2)}
+            </span>
+            <span className="text-xs line-through text-muted">${Number(product.sell_price).toFixed(2)}</span>
+          </span>
+        ) : (
+          <span className="text-xl font-bold tracking-tight text-ink">
+            ${Number(product.sell_price).toFixed(2)}
+          </span>
+        )}
         <PrimaryButton
           onClick={onBuy}
           disabled={disabled || outOfStock}
