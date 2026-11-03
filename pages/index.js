@@ -350,7 +350,12 @@ function shareProduct(product, notify) {
 
 function BuyModal({ product, onClose }) {
   const [step, setStep] = useState("form"); // form | summary | order | done
-  const [quantity, setQuantity] = useState(1);
+  // Start at min_order_qty (for manual products) or 1
+  const [quantity, setQuantity] = useState(
+    product?.provider === "manual" && product.min_order_qty > 1
+      ? product.min_order_qty
+      : 1
+  );
   const [email, setEmail] = useState("");
   const [activationInfo, setActivationInfo] = useState("");
   const [order, setOrder] = useState(null);
@@ -431,7 +436,7 @@ function BuyModal({ product, onClose }) {
     const data = await res.json();
     setCreating(false);
     if (!data.success) {
-      setError(describeError(data.error, data.available, data.min_order, data.max_qty));
+      setError(describeError(data.error, data.available, data.min_order, data.max_qty, data.min_qty));
       setCoupon(null);
       setStep("form");
       return;
@@ -440,12 +445,7 @@ function BuyModal({ product, onClose }) {
     setStep("order");
   }
 
-  // Admin sees cost price — the actual supplier charge — instead of
-  // the marked-up sell_price so they know exactly what an order costs.
-  const unitPrice = isAdmin && product.cost_price != null
-    ? Number(product.cost_price)
-    : Number(product.sell_price);
-  const subtotal = unitPrice * quantity;
+  const subtotal = Number(product.sell_price) * quantity;
   const total = (coupon ? coupon.final : subtotal).toFixed(2);
   const stepLabels = { form: "1. Details", summary: "2. Review", order: "3. Payment", done: "4. Done" };
 
@@ -482,10 +482,18 @@ function BuyModal({ product, onClose }) {
             </Alert>
           )}
           <FormInput
-            label="Quantity"
+            label={
+              product.provider === "manual" && (product.min_order_qty > 1 || product.max_order_qty)
+                ? `Quantity (${product.min_order_qty ?? 1}–${product.max_order_qty ?? "∞"})`
+                : "Quantity"
+            }
             type="number"
-            min={1}
-            max={product.available_stock}
+            min={product.provider === "manual" ? (product.min_order_qty ?? 1) : 1}
+            max={
+              product.provider === "manual" && product.max_order_qty
+                ? Math.min(product.max_order_qty, product.available_stock)
+                : product.available_stock
+            }
             value={quantity}
             onChange={(e) => {
               setQuantity(Number(e.target.value));
@@ -523,10 +531,9 @@ function BuyModal({ product, onClose }) {
           <div className="divide-y divide-border rounded-lg border border-border">
             <Row label="Product" value={product.title} />
             <Row label="Quantity" value={quantity} mono />
-            {isAdmin && product.cost_price != null ? (
-              <Row label="Cost price (admin)" value={`$${Number(product.cost_price).toFixed(2)}`} mono />
-            ) : (
-              <Row label="Unit price" value={`$${Number(product.sell_price).toFixed(2)}`} mono />
+            <Row label="Unit price" value={`$${Number(product.sell_price).toFixed(2)}`} mono />
+            {isAdmin && product.cost_price != null && (
+              <Row label="↳ Supplier cost" value={`$${Number(product.cost_price).toFixed(2)}`} mono />
             )}
             {product.requires_email && product.provider !== "manual" && <Row label="Delivery email" value={email} />}
             {activationLabel && (
@@ -643,7 +650,7 @@ function Row({ label, value, mono }) {
   );
 }
 
-function describeError(code, available, minOrder, maxQty) {
+function describeError(code, available, minOrder, maxQty, minQty) {
   switch (code) {
     case "not_enough_stock":
       return Number(available) > 0
@@ -671,6 +678,10 @@ function describeError(code, available, minOrder, maxQty) {
       return "This coupon is temporarily disabled. Please try again later or contact support.";
     case "coupon_already_used":
       return "You've already used this coupon.";
+    case "qty_below_minimum":
+      return `Minimum order for this product is ${minQty ?? 1}. Please increase the quantity.`;
+    case "qty_exceeds_maximum":
+      return `You can order at most ${maxQty} of this product per order. Please lower the quantity.`;
     case "supplier_balance_limit":
       return Number(maxQty) > 0
         ? `You can only order up to ${maxQty} of this product right now. Please lower the quantity.`
@@ -851,9 +862,9 @@ function HeroSection({ inStock, search, setSearch }) {
                     </span>
                   </span>
                   {isAdmin && p.cost_price != null ? (
-                    <span className="flex flex-col items-end gap-0.5">
-                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">Cost: ${Number(p.cost_price).toFixed(2)}</span>
-                      <span className="text-xs line-through text-muted">${Number(p.sell_price).toFixed(2)}</span>
+                    <span className="flex flex-col items-end gap-0">
+                      <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
+                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Cost ${Number(p.cost_price).toFixed(2)}</span>
                     </span>
                   ) : (
                     <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
@@ -892,8 +903,8 @@ function HeroSection({ inStock, search, setSearch }) {
                     <span className="line-clamp-2 text-xs font-semibold leading-tight text-ink">{p.title}</span>
                     {isAdmin && p.cost_price != null ? (
                       <span className="flex flex-col items-center gap-0">
-                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">${Number(p.cost_price).toFixed(2)}</span>
-                        <span className="text-[10px] line-through text-muted">${Number(p.sell_price).toFixed(2)}</span>
+                        <span className="text-xs font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
+                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">c${Number(p.cost_price).toFixed(2)}</span>
                       </span>
                     ) : (
                       <span className="text-xs font-bold text-brand">${Number(p.sell_price).toFixed(2)}</span>

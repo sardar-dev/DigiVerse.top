@@ -109,12 +109,14 @@ export default function ProductCard({ product, onBuy, onShare, disabled, isAdmin
 
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
         {isAdmin && product.cost_price != null ? (
-          <span className="flex flex-col gap-0">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted">Cost</span>
-            <span className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
+          <span className="flex flex-col gap-0.5">
+            <span className="text-xl font-bold tracking-tight text-ink">
+              ${Number(product.sell_price).toFixed(2)}
+            </span>
+            <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:bg-amber-900/40">Cost</span>
               ${Number(product.cost_price).toFixed(2)}
             </span>
-            <span className="text-xs line-through text-muted">${Number(product.sell_price).toFixed(2)}</span>
           </span>
         ) : (
           <span className="text-xl font-bold tracking-tight text-ink">

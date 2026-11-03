@@ -57,6 +57,8 @@ export default async function handler(req, res) {
       new_boxes, // pasted box text to add in the same save (auto-delivery products)
       box_split, // "separator" (--- lines) | "line" (one box per line)
       sell_price_delta_percent, // bulk-only: e.g. 5 for +5%
+      min_order_qty, // minimum qty customer must order (null = 1)
+      max_order_qty, // maximum qty customer can order per order (null = unlimited)
     } = req.body || {};
 
     if (Array.isArray(ids) && ids.length > 0) {
@@ -167,6 +169,14 @@ export default async function handler(req, res) {
             low_stock_threshold === undefined || low_stock_threshold === null || low_stock_threshold === ""
               ? null
               : Math.max(0, Number(low_stock_threshold) || 0),
+          min_order_qty:
+            min_order_qty === undefined || min_order_qty === null || min_order_qty === ""
+              ? 1
+              : Math.max(1, Math.floor(Number(min_order_qty) || 1)),
+          max_order_qty:
+            max_order_qty === undefined || max_order_qty === null || max_order_qty === ""
+              ? null
+              : Math.max(1, Math.floor(Number(max_order_qty) || 1)),
         })
         .select()
         .single();
@@ -247,6 +257,18 @@ export default async function handler(req, res) {
         low_stock_threshold === null || low_stock_threshold === ""
           ? null
           : Math.max(0, Number(low_stock_threshold) || 0);
+    }
+    if (min_order_qty !== undefined) {
+      patch.min_order_qty =
+        min_order_qty === null || min_order_qty === ""
+          ? 1
+          : Math.max(1, Math.floor(Number(min_order_qty) || 1));
+    }
+    if (max_order_qty !== undefined) {
+      patch.max_order_qty =
+        max_order_qty === null || max_order_qty === ""
+          ? null
+          : Math.max(1, Math.floor(Number(max_order_qty) || 1));
     }
 
     const { data: updated, error: updateErr } = await supabaseAdmin
