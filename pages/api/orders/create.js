@@ -42,6 +42,15 @@ export default async function handler(req, res) {
   // ('email' or 'username') is required here. DigiTrust products use
   // the older, separate requires_email flag.
   if (localProduct.provider === "manual") {
+    // Enforce min/max order quantity for manual products
+    const minQty = localProduct.min_order_qty ?? 1;
+    const maxQty = localProduct.max_order_qty ?? null;
+    if (quantity < minQty) {
+      return res.status(400).json({ success: false, error: "qty_below_minimum", min_qty: minQty });
+    }
+    if (maxQty !== null && quantity > maxQty) {
+      return res.status(400).json({ success: false, error: "qty_exceeds_maximum", max_qty: maxQty });
+    }
     if (localProduct.activation_field && !String(activation_info || "").trim()) {
       return res.status(400).json({ success: false, error: "activation_info_required" });
     }

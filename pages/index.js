@@ -375,9 +375,21 @@ function BuyModal({ product, onClose }) {
       setError(describeError("email_required"));
       return;
     }
-    if (product.provider === "manual" && product.activation_field && !activationInfo.trim()) {
-      setError(describeError("activation_info_required"));
-      return;
+    if (product.provider === "manual") {
+      const minQty = product.min_order_qty ?? 1;
+      const maxQty = product.max_order_qty ?? null;
+      if (quantity < minQty) {
+        setError(describeError("qty_below_minimum", undefined, undefined, undefined, minQty));
+        return;
+      }
+      if (maxQty !== null && quantity > maxQty) {
+        setError(describeError("qty_exceeds_maximum", undefined, undefined, maxQty));
+        return;
+      }
+      if (product.activation_field && !activationInfo.trim()) {
+        setError(describeError("activation_info_required"));
+        return;
+      }
     }
     setStep("summary");
   }
@@ -476,14 +488,21 @@ function BuyModal({ product, onClose }) {
           <FormInput
             label="Quantity"
             type="number"
-            min={1}
-            max={product.available_stock}
+            min={product.provider === "manual" && product.min_order_qty ? product.min_order_qty : 1}
+            max={product.provider === "manual" && product.max_order_qty ? product.max_order_qty : product.available_stock}
             value={quantity}
             onChange={(e) => {
               setQuantity(Number(e.target.value));
               // Discount depends on the order value — re-apply after a change.
               setCoupon(null);
             }}
+            hint={
+              product.provider === "manual" && product.max_order_qty
+                ? `Max ${product.max_order_qty} per order${product.min_order_qty > 1 ? ` · Min ${product.min_order_qty}` : ""}`
+                : product.provider === "manual" && product.min_order_qty > 1
+                ? `Min ${product.min_order_qty} per order`
+                : undefined
+            }
           />
           {product.requires_email && product.provider !== "manual" && (
             <FormInput
@@ -631,8 +650,12 @@ function Row({ label, value, mono }) {
   );
 }
 
-function describeError(code, available, minOrder, maxQty) {
+function describeError(code, available, minOrder, maxQty, minQty) {
   switch (code) {
+    case "qty_below_minimum":
+      return `Minimum order quantity is ${minQty}. Please increase the quantity.`;
+    case "qty_exceeds_maximum":
+      return `Maximum order quantity is ${maxQty}. Please lower the quantity.`;
     case "not_enough_stock":
       return Number(available) > 0
         ? `Only ${available} left — lower the quantity and try again.`

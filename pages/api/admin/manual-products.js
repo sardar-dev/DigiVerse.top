@@ -46,6 +46,8 @@ export default async function handler(req, res) {
       category, // free-text tag, used for storefront filter tabs
       featured, // pin to show first on the storefront
       low_stock_threshold, // per-product "low stock" cutoff; null = default (3)
+      min_order_qty, // minimum quantity per order (null = 1)
+      max_order_qty, // maximum quantity per order (null = unlimited)
       sell_price,
       cost_price,
       available_stock,
@@ -167,6 +169,14 @@ export default async function handler(req, res) {
             low_stock_threshold === undefined || low_stock_threshold === null || low_stock_threshold === ""
               ? null
               : Math.max(0, Number(low_stock_threshold) || 0),
+          min_order_qty:
+            min_order_qty === undefined || min_order_qty === null || min_order_qty === ""
+              ? null
+              : Math.max(1, Math.floor(Number(min_order_qty))),
+          max_order_qty:
+            max_order_qty === undefined || max_order_qty === null || max_order_qty === ""
+              ? null
+              : Math.max(1, Math.floor(Number(max_order_qty))),
         })
         .select()
         .single();
@@ -247,6 +257,18 @@ export default async function handler(req, res) {
         low_stock_threshold === null || low_stock_threshold === ""
           ? null
           : Math.max(0, Number(low_stock_threshold) || 0);
+    }
+    if (min_order_qty !== undefined) {
+      patch.min_order_qty =
+        min_order_qty === null || min_order_qty === ""
+          ? null
+          : Math.max(1, Math.floor(Number(min_order_qty)));
+    }
+    if (max_order_qty !== undefined) {
+      patch.max_order_qty =
+        max_order_qty === null || max_order_qty === ""
+          ? null
+          : Math.max(1, Math.floor(Number(max_order_qty)));
     }
 
     const { data: updated, error: updateErr } = await supabaseAdmin
