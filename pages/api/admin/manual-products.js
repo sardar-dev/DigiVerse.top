@@ -54,7 +54,8 @@ export default async function handler(req, res) {
       requires_email,
       delivery, // estimated delivery time text, e.g. "Within 1-6 hours"
       selected, // active/inactive
-      activation_field, // null | 'email' | 'username' — what the customer must provide for activation
+      activation_field, // null | free-text label shown to customer at checkout
+      activation_placeholder, // optional placeholder text inside the activation input
       auto_delivery, // true = customers get stored text "boxes" instantly after payment
       new_boxes, // pasted box text to add in the same save (auto-delivery products)
       box_split, // "separator" (--- lines) | "line" (one box per line)
@@ -107,15 +108,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "box_too_long" });
     }
 
-    const validActivation =
-      activation_field === undefined ||
-      activation_field === null ||
-      activation_field === "" ||
-      ["email", "username"].includes(activation_field);
-    if (!validActivation) {
-      return res.status(400).json({ success: false, error: "invalid_activation_field" });
+    // activation_field is now a free-text label (e.g. "Your Game ID")
+    // — no whitelist needed, just length cap.
+    if (activation_field !== undefined && activation_field !== null && activation_field !== "") {
+      if (typeof activation_field !== "string" || activation_field.trim().length > 80) {
+        return res.status(400).json({ success: false, error: "invalid_activation_field" });
+      }
     }
-    const normalizedActivation = activation_field || null;
+    const normalizedActivation = (activation_field && activation_field.trim()) ? activation_field.trim() : null;
+    const normalizedPlaceholder = (activation_placeholder && String(activation_placeholder).trim())
+      ? String(activation_placeholder).trim()
+      : null;
 
     // Never trust a price/stock from the client without validating
     // it server-side — these become real charges and real inventory.
@@ -161,6 +164,7 @@ export default async function handler(req, res) {
           ...(auto_delivery === true ? { auto_delivery: true } : {}),
           selected: Boolean(selected),
           activation_field: normalizedActivation,
+          activation_placeholder: normalizedPlaceholder,
           short_description: short_description || null,
           image_url: image_url || null,
           category: category || null,
@@ -246,7 +250,9 @@ export default async function handler(req, res) {
     if (selected !== undefined) patch.selected = Boolean(selected);
     if (activation_field !== undefined) {
       patch.activation_field = normalizedActivation;
-      if (normalizedActivation === "email") patch.requires_email = true;
+    }
+    if (activation_placeholder !== undefined) {
+      patch.activation_placeholder = normalizedPlaceholder;
     }
     if (short_description !== undefined) patch.short_description = short_description || null;
     if (image_url !== undefined) patch.image_url = image_url || null;

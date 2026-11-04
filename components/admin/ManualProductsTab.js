@@ -160,16 +160,24 @@ export default function ManualProductsTab({
             onChange={(e) => setManualForm({ ...manualForm, delivery: e.target.value })}
             placeholder='e.g. "Within 1-6 hours"'
           />
-          <FormSelect
-            label="Activation info needed from customer"
-            value={manualForm.activation_field}
-            onChange={(e) => setManualForm({ ...manualForm, activation_field: e.target.value })}
-            hint="Shown to the customer as the box's label/placeholder at checkout, so they know exactly what to provide for activation."
-          >
-            <option value="">None</option>
-            <option value="email">Email</option>
-            <option value="username">Username</option>
-          </FormSelect>
+          <div className="flex flex-wrap items-end gap-4">
+            <FormInput
+              label="Activation info label (optional)"
+              value={manualForm.activation_field}
+              onChange={(e) => setManualForm({ ...manualForm, activation_field: e.target.value })}
+              placeholder='e.g. "Game ID" or "Discord Username"'
+              className="flex-1 min-w-48"
+              hint="Leave blank if no info is needed. This becomes the field label at checkout."
+            />
+            <FormInput
+              label="Placeholder text (optional)"
+              value={manualForm.activation_placeholder}
+              onChange={(e) => setManualForm({ ...manualForm, activation_placeholder: e.target.value })}
+              placeholder='e.g. "Enter your 9-digit Game ID"'
+              className="flex-1 min-w-48"
+              hint="Shown inside the input box as an example for the customer."
+            />
+          </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormInput

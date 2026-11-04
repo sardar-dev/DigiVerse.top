@@ -10,6 +10,7 @@ import FeedbackTab from "../../components/admin/FeedbackTab";
 import CouponsTab from "../../components/admin/CouponsTab";
 import AiDescriptionsTab from "../../components/admin/AiDescriptionsTab";
 import SupportTab from "../../components/admin/SupportTab";
+import MessagesTab from "../../components/admin/MessagesTab";
 import ApiConnectionsTab from "../../components/admin/ApiConnectionsTab";
 import WithdrawalsTab from "../../components/admin/WithdrawalsTab";
 import PricingTab from "../../components/admin/PricingTab";
@@ -122,6 +123,7 @@ export default function Admin() {
       delivery: "Within 1-6 hours",
       selected: true,
       activation_field: "",
+      activation_placeholder: "",
       image_url: "",
       category: "",
       featured: false,
@@ -154,6 +156,7 @@ export default function Admin() {
       delivery: manualForm.delivery,
       selected: manualForm.selected,
       activation_field: manualForm.activation_field || null,
+      activation_placeholder: manualForm.activation_placeholder || null,
       image_url: manualForm.image_url || null,
       category: manualForm.category || null,
       featured: Boolean(manualForm.featured),
@@ -211,6 +214,7 @@ export default function Admin() {
       delivery: p.delivery || "",
       selected: p.selected,
       activation_field: p.activation_field || "",
+      activation_placeholder: p.activation_placeholder || "",
       image_url: p.image_url || "",
       category: p.category || "",
       featured: Boolean(p.featured),
@@ -546,6 +550,7 @@ export default function Admin() {
 
       {tab === "aitext" && <AiDescriptionsTab />}
 
+      {tab === "messages" && <MessagesTab />}
       {tab === "support" && <SupportTab />}
 
       {tab === "apis" && <ApiConnectionsTab onChanged={loadProducts} />}

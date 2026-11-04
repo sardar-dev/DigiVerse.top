@@ -60,6 +60,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(""); // "" = all
   const [sharedNotFound, setSharedNotFound] = useState(false);
+  const [adminMessages, setAdminMessages] = useState([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -72,6 +73,15 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     return () => sub.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fetch admin messages for logged-in users
+  useEffect(() => {
+    if (!session) return;
+    fetch("/api/messages/inbox")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setAdminMessages(d.messages || []); })
+      .catch(() => {});
+  }, [session]);
 
   // Shareable product links: /?product=<id> opens that product's buy
   // popup automatically, so a link someone pastes elsewhere lands
@@ -176,6 +186,15 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       <SiteHeader session={session} onSignOut={() => supabase.auth.signOut()} />
 
       <main className="flex-1">
+        {/* Admin message banners */}
+        {adminMessages.length > 0 && (
+          <AdminMessageBanner
+            messages={adminMessages}
+            onDismiss={(id) => setAdminMessages((prev) => prev.filter((m) => m.id !== id))}
+            onReply={(id) => setAdminMessages((prev) => prev.filter((m) => m.id !== id))}
+          />
+        )}
+
         {/* Hero */}
         <HeroSection
           inStock={inStock}
@@ -362,12 +381,17 @@ function BuyModal({ product, onClose }) {
 
   const isManualDelivery = product.provider === "manual" && !product.auto_delivery;
 
-  const activationLabel =
-    product.activation_field === "email"
+  // activation_field is now a free-text label set by the admin
+  // (e.g. "Game ID", "Discord Username"). Legacy values "email"/"username"
+  // are kept working via friendly display names.
+  const activationLabel = product.activation_field
+    ? product.activation_field === "email"
       ? "Your email (for activation)"
       : product.activation_field === "username"
       ? "Your username (for activation)"
-      : null;
+      : product.activation_field
+    : null;
+  const activationPlaceholder = product.activation_placeholder || activationLabel || "";
 
   function reviewOrder() {
     setError("");
@@ -533,7 +557,7 @@ function BuyModal({ product, onClose }) {
               type="text"
               value={activationInfo}
               onChange={(e) => setActivationInfo(e.target.value)}
-              placeholder={activationLabel}
+              placeholder={activationPlaceholder}
               hint="We'll use this to activate your subscription after payment."
             />
           )}
@@ -919,5 +943,136 @@ function HeroSection({ inStock, search, setSearch }) {
         </div>
       </PageContainer>
     </section>
+  );
+}
+
+// ─── Admin Message Banner ──────────────────────────────────────────────────
+// Shows a dismissable notification banner for each unread admin message.
+// User can reply once; then the message disappears from the banner.
+function AdminMessageBanner({ messages, onDismiss, onReply }) {
+  return (
+    <div className="border-b border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40">
+      <PageContainer className="py-0">
+        {messages.map((msg) => (
+          <AdminMessageItem
+            key={msg.id}
+            msg={msg}
+            onDismiss={onDismiss}
+            onReply={onReply}
+          />
+        ))}
+      </PageContainer>
+    </div>
+  );
+}
+
+function AdminMessageItem({ msg, onDismiss, onReply }) {
+  const [expanded, setExpanded] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [replyError, setReplyError] = useState("");
+
+  async function dismiss() {
+    await fetch("/api/messages/inbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: msg.id }),
+    }).catch(() => {});
+    onDismiss(msg.id);
+  }
+
+  async function sendReply() {
+    if (!replyText.trim()) return;
+    setSending(true);
+    setReplyError("");
+    try {
+      const res = await fetch("/api/messages/inbox", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: msg.id, reply: replyText.trim() }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setReplyError(data.error === "already_replied" ? "You've already replied to this message." : "Failed to send reply. Please try again.");
+        setSending(false);
+        return;
+      }
+      onReply(msg.id);
+    } catch {
+      setReplyError("Failed to send reply. Please try again.");
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="border-b border-amber-200 py-3 last:border-0 dark:border-amber-800">
+      <div className="flex items-start gap-3">
+        {/* Bell icon */}
+        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-700 dark:bg-amber-800 dark:text-amber-200">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+        </span>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+              {msg.subject}
+            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="text-xs text-amber-700 underline-offset-2 hover:underline dark:text-amber-300"
+              >
+                {expanded ? "Hide" : "View"}
+              </button>
+              <button
+                onClick={dismiss}
+                className="text-xs text-amber-500 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-200"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {expanded && (
+            <div className="mt-2 space-y-3">
+              <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap">
+                {msg.body}
+              </p>
+              {!msg.reply_body && (
+                <div className="space-y-2">
+                  <textarea
+                    rows={2}
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Type a reply… (optional)"
+                    maxLength={2000}
+                    className="w-full rounded border border-amber-300 bg-white px-3 py-1.5 text-sm text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-amber-700 dark:bg-surface"
+                  />
+                  {replyError && <p className="text-xs text-red-600 dark:text-red-400">{replyError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={sendReply}
+                      disabled={sending || !replyText.trim()}
+                      className="rounded bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {sending ? "Sending…" : "Send reply"}
+                    </button>
+                    <button
+                      onClick={dismiss}
+                      className="rounded border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/40"
+                    >
+                      Dismiss without reply
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

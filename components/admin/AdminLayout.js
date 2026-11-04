@@ -34,6 +34,7 @@ const GROUPS = [
   {
     label: "Support & tools",
     items: [
+      { id: "messages", label: "Messages", icon: "📨" },
       { id: "support", label: "Support", icon: "🎧" },
       { id: "feedback", label: "Feedback", icon: "💬" },
       { id: "debug", label: "Debug payment", icon: "🛠️" },
