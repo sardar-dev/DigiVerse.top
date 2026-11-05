@@ -289,21 +289,48 @@ function similarity(a, b) {
 
 const includesText = (q, text) => !q.trim() || String(text).toLowerCase().includes(q.trim().toLowerCase());
 
-function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
-  const lbl = (id) => labelMap[id] || LABEL[id] || id;
-  const [sSel, setSSel] = useState(null); // supplier-only product id
-  const [dSel, setDSel] = useState(null); // DigiTrust product id
-  const [sq, setSq] = useState("");
-  const [dq, setDq] = useState("");
-  // Filter: which supplier to show on left; "" = all
-  const [supplierFilter, setSupplierFilter] = useState("");
-
-  const sItem = unlinked.find((u) => u.product.id === sSel) || null;
+// One supplier column — shows its own unlinked products, tracks its own
+// selection, highlights matches with whatever DigiTrust item is selected.
+function SupplierColumn({ supplierId, unlinked, dSel, targets, onSelect, selId, lbl }) {
+  const [q, setQ] = useState("");
   const dItem = targets.find((t) => t.id === dSel) || null;
 
-  const canLink = (u, t) =>
-    !t.sources.some((s) => s.supplier === u.product.provider) &&
-    !(t.requires_email && u.product.provider !== "digitrust");
+  const list = unlinked
+    .filter((u) => u.product.provider === supplierId && includesText(q, u.product.title))
+    .map((u) => ({
+      u,
+      score: dItem ? similarity(u.product.title, dItem.title) : 0,
+    }))
+    .sort((a, b) => b.score - a.score || a.u.product.title.localeCompare(b.u.product.title));
+
+  return (
+    <MatchColumn
+      title={`${lbl(supplierId)} (${list.length})`}
+      query={q}
+      setQuery={setQ}
+      empty={`No ${lbl(supplierId)} products.`}
+    >
+      {list.map(({ u, score }) => (
+        <MatchRow
+          key={u.product.id}
+          active={selId === u.product.id}
+          onClick={() => onSelect(selId === u.product.id ? null : u.product.id)}
+          title={u.product.title}
+          meta={`Cost ${u.source ? money(u.source.cost) : "—"} · stock ${u.source ? u.source.stock : "—"}`}
+          badge={dItem && score >= 0.3 ? `${Math.round(score * 100)}%` : null}
+        />
+      ))}
+    </MatchColumn>
+  );
+}
+
+function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
+  const lbl = (id) => labelMap[id] || LABEL[id] || id;
+
+  // One selected product id per supplier column, keyed by supplier id
+  const [selBySupplier, setSelBySupplier] = useState({}); // { xpro: 123, c_shotix: 456 }
+  const [dSel, setDSel] = useState(null); // DigiTrust product id
+  const [dq, setDq] = useState("");
 
   // All unique non-DigiTrust suppliers present in unlinked list
   const supplierIds = useMemo(() => {
@@ -312,7 +339,20 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
     return [...seen].sort();
   }, [unlinked]);
 
-  // Best guesses, shown as one-click suggestions.
+  const canLink = (u, t) =>
+    !t.sources.some((s) => s.supplier === u.product.provider) &&
+    !(t.requires_email && u.product.provider !== "digitrust");
+
+  // Currently selected supplier item (first one that has a selection)
+  const selectedSupplierItems = supplierIds
+    .filter((id) => selBySupplier[id])
+    .map((id) => unlinked.find((u) => u.product.id === selBySupplier[id]))
+    .filter(Boolean);
+  const anySupplierSel = selectedSupplierItems[0] || null; // used for DT scoring
+
+  const dItem = targets.find((t) => t.id === dSel) || null;
+
+  // Auto-suggestions: best DigiTrust match for each unlinked product
   const suggestions = useMemo(() => {
     const out = [];
     for (const u of unlinked) {
@@ -328,11 +368,9 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlinked, targets]);
 
-  const sList = unlinked
-    .filter((u) => (!supplierFilter || u.product.provider === supplierFilter) && includesText(sq, u.product.title));
   const dList = targets
     .filter((t) => includesText(dq, t.title))
-    .map((t) => ({ t, score: sItem ? similarity(sItem.product.title, t.title) : 0 }))
+    .map((t) => ({ t, score: anySupplierSel ? similarity(anySupplierSel.product.title, t.title) : 0 }))
     .sort((a, b) => b.score - a.score || a.t.title.localeCompare(b.t.title));
 
   async function link(u, t) {
@@ -340,7 +378,7 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
       { action: "link", stub_product_id: u.product.id, target_product_id: t.id },
       "Linked. These are now one product; the cheaper eligible supplier is used."
     );
-    setSSel(null);
+    setSelBySupplier((prev) => ({ ...prev, [u.product.provider]: null }));
     setDSel(null);
   }
 
@@ -352,48 +390,9 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
     );
   }
 
-  const dtCost = dItem?.sources.find((s) => s.supplier === "digitrust")?.cost;
-  const sCost = sItem?.source?.cost;
-  const sLabel = sItem ? lbl(sItem.product.provider) : "Supplier";
-  const cheaper =
-    dtCost !== undefined && sCost !== undefined
-      ? Number(sCost) < Number(dtCost)
-        ? sLabel
-        : Number(sCost) > Number(dtCost)
-        ? "DigiTrust"
-        : "Same"
-      : null;
-
   return (
     <div className="space-y-4">
-      {/* Supplier filter chips — only shown when there are 2+ suppliers */}
-      {supplierIds.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSupplierFilter("")}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              !supplierFilter ? "border-brand bg-brand text-white" : "border-border bg-surface text-muted hover:text-ink"
-            }`}
-          >
-            All ({unlinked.length})
-          </button>
-          {supplierIds.map((id) => {
-            const count = unlinked.filter((u) => u.product.provider === id).length;
-            return (
-              <button
-                key={id}
-                onClick={() => setSupplierFilter(supplierFilter === id ? "" : id)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  supplierFilter === id ? "border-brand bg-brand text-white" : "border-border bg-surface text-muted hover:text-ink"
-                }`}
-              >
-                {lbl(id)} ({count})
-              </button>
-            );
-          })}
-        </div>
-      )}
-
+      {/* Auto-suggestions */}
       {suggestions.length > 0 && (
         <div className="rounded-xl border border-border bg-brand-soft p-3">
           <div className="mb-2 text-xs font-semibold text-ink">Likely matches</div>
@@ -419,99 +418,105 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <MatchColumn
-          title={`${supplierFilter ? lbl(supplierFilter) : "Supplier"} products (${sList.length})`}
-          query={sq}
-          setQuery={setSq}
-          empty="No products match."
-        >
-          {sList.map((u) => (
-            <MatchRow
-              key={u.product.id}
-              active={sSel === u.product.id}
-              onClick={() => setSSel(sSel === u.product.id ? null : u.product.id)}
-              title={u.product.title}
-              meta={`${lbl(u.product.provider)} · Cost ${u.source ? money(u.source.cost) : "—"} · stock ${u.source ? u.source.stock : "—"}`}
-            />
-          ))}
-        </MatchColumn>
+      {/* One column per supplier + DigiTrust column on the right */}
+      <div
+        className="grid gap-3"
+        style={{ gridTemplateColumns: `repeat(${supplierIds.length + 1}, minmax(0, 1fr))` }}
+      >
+        {supplierIds.map((supplierId) => (
+          <SupplierColumn
+            key={supplierId}
+            supplierId={supplierId}
+            unlinked={unlinked}
+            dSel={dSel}
+            targets={targets}
+            selId={selBySupplier[supplierId] || null}
+            onSelect={(id) => setSelBySupplier((prev) => ({ ...prev, [supplierId]: id }))}
+            lbl={lbl}
+          />
+        ))}
 
+        {/* DigiTrust column — always last */}
         <MatchColumn
-          title={`DigiTrust products (${dList.length})`}
+          title={`DigiTrust (${dList.length})`}
           query={dq}
           setQuery={setDq}
           empty="No DigiTrust products match."
         >
           {dList.map(({ t, score }) => {
-            const blocked = sItem && !canLink(sItem, t);
+            const blockedBy = anySupplierSel && !canLink(anySupplierSel, t) ? anySupplierSel : null;
             const dt = t.sources.find((s) => s.supplier === "digitrust");
             return (
               <MatchRow
                 key={t.id}
                 active={dSel === t.id}
-                disabled={Boolean(blocked)}
+                disabled={Boolean(blockedBy)}
                 onClick={() => setDSel(dSel === t.id ? null : t.id)}
                 title={t.title}
                 meta={
-                  blocked
+                  blockedBy
                     ? t.requires_email
-                      ? `Needs customer email — ${sItem ? lbl(sItem.product.provider) : "this supplier"} can't deliver this`
+                      ? `Needs email — ${lbl(blockedBy.product.provider)} can't deliver`
                       : "Already linked to this supplier"
-                    : `Cost ${dt ? money(dt.cost) : "—"} · your price ${money(t.sell_price)} · stock ${t.available_stock}${
-                        t.sources.length > 1 ? ` · has ${t.sources.length} sources` : ""
+                    : `Cost ${dt ? money(dt.cost) : "—"} · price ${money(t.sell_price)} · stock ${t.available_stock}${
+                        t.sources.length > 1 ? ` · ${t.sources.length} sources` : ""
                       }`
                 }
-                badge={sItem && score >= 0.3 ? `${Math.round(score * 100)}%` : null}
+                badge={anySupplierSel && score >= 0.3 ? `${Math.round(score * 100)}%` : null}
               />
             );
           })}
         </MatchColumn>
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-4 shadow-card">
-        {sItem && dItem ? (
-          <div className="space-y-3">
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <div className="text-xs text-muted">{sLabel}</div>
-                <div className="text-ink">{sItem.product.title}</div>
-                <div className="font-mono text-xs text-muted">cost {money(sCost ?? 0)}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted">DigiTrust (kept as the store product)</div>
-                <div className="text-ink">{dItem.title}</div>
-                <div className="font-mono text-xs text-muted">
-                  cost {dtCost !== undefined ? money(dtCost) : "—"} · your price {money(dItem.sell_price)}
+      {/* Link panel — shown when any supplier product + DigiTrust product selected */}
+      {selectedSupplierItems.length > 0 || dItem ? (
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-card space-y-3">
+          {selectedSupplierItems.length > 0 && dItem ? (
+            <>
+              <div className="grid gap-3 text-sm" style={{ gridTemplateColumns: `repeat(${selectedSupplierItems.length + 1}, minmax(0,1fr))` }}>
+                {selectedSupplierItems.map((sItem) => (
+                  <div key={sItem.product.id}>
+                    <div className="text-xs text-muted">{lbl(sItem.product.provider)}</div>
+                    <div className="text-ink truncate">{sItem.product.title}</div>
+                    <div className="font-mono text-xs text-muted">cost {money(sItem.source?.cost ?? 0)}</div>
+                  </div>
+                ))}
+                <div>
+                  <div className="text-xs text-muted">DigiTrust (store product)</div>
+                  <div className="text-ink truncate">{dItem.title}</div>
+                  <div className="font-mono text-xs text-muted">
+                    cost {dItem.sources.find((s) => s.supplier === "digitrust") ? money(dItem.sources.find((s) => s.supplier === "digitrust").cost) : "—"} · price {money(dItem.sell_price)}
+                  </div>
                 </div>
               </div>
-            </div>
-            {cheaper && (
-              <p className="text-xs text-muted">
-                Cheaper right now: <b className="text-ink">{cheaper}</b>. Customers pay{" "}
-                <b className="text-ink">{money(dItem.sell_price)}</b> either way.
-                {Number(sCost) > Number(dItem.sell_price) &&
-                  ` ${sLabel} costs more than your price, so it stays hidden unless you approve it.`}
-              </p>
-            )}
-            <SecondaryButton
-              onClick={() =>
-                window.confirm(`Link "${sItem.product.title}" with "${dItem.title}" as the same product?`) && link(sItem, dItem)
-              }
-            >
-              Link as the same product
-            </SecondaryButton>
-          </div>
-        ) : (
-          <p className="text-sm text-muted">
-            {!sItem && !dItem
-              ? "Step 1: pick a supplier product on the left. Step 2: pick the matching DigiTrust product on the right."
-              : !sItem
-              ? "Now pick the supplier product on the left."
-              : "Now pick the matching DigiTrust product on the right (best matches are listed first)."}
-          </p>
-        )}
-      </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedSupplierItems.map((sItem) => (
+                  <SecondaryButton
+                    key={sItem.product.id}
+                    onClick={() =>
+                      window.confirm(`Link "${sItem.product.title}" (${lbl(sItem.product.provider)}) with "${dItem.title}"?`) &&
+                      link(sItem, dItem)
+                    }
+                  >
+                    Link {lbl(sItem.product.provider)} ↔ DigiTrust
+                  </SecondaryButton>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted">
+              {selectedSupplierItems.length > 0
+                ? "Now select the matching DigiTrust product on the right."
+                : "Now select the supplier product on the left."}
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-4 text-center text-sm text-muted">
+          Select a product from any supplier column, then select its match in DigiTrust to link them.
+        </p>
+      )}
     </div>
   );
 }
