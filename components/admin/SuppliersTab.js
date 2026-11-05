@@ -88,24 +88,22 @@ export default function SuppliersTab({ onChanged }) {
     setChecking(false);
   }
 
-  if (loading && !data) return <LoadingState label="Loading suppliers…" />;
-  if (error && !data) return <ErrorState title="Couldn't load suppliers" message={error} onRetry={load} />;
-  if (!data) return null;
-
-  const labelMap = buildLabelMap(data.configured || []);
+  // derived values — always computed (hooks must not be conditional)
+  const labelMap = useMemo(() => buildLabelMap(data?.configured || []), [data]);
   const lbl = (id) => labelMap[id] || autoLabel(id);
 
-  // Stats
-  const totalSupplierProducts = (data.unlinked?.length || 0) +
-    (data.multi?.reduce((s, m) => s + m.sources.length, 0) || 0);
-  const linkedCount = data.multi?.length || 0;
-  const unlinkedCount = data.unlinked?.length || 0;
-  const outOfStockCount = data.multi?.filter((m) => m.product.supplier_status === "out_of_stock").length || 0;
+  const totalSupplierProducts = useMemo(() =>
+    (data?.unlinked?.length || 0) + (data?.multi?.reduce((s, m) => s + (m.sources?.length || 0), 0) || 0),
+  [data]);
+  const linkedCount   = data?.multi?.length || 0;
+  const unlinkedCount = data?.unlinked?.length || 0;
+  const outOfStockCount = useMemo(() =>
+    (data?.multi || []).filter((m) => m.product?.supplier_status === "out_of_stock").length,
+  [data]);
 
-  // Suggestions (score ≥ 0.5)
   const canLink = (u, t) =>
-    !t.sources.some((s) => s.supplier === u.product.provider) &&
-    !(t.requires_email && u.product.provider !== "digitrust");
+    !(t.sources || []).some((s) => s.supplier === u.product?.provider) &&
+    !(t.requires_email && u.product?.provider !== "digitrust");
 
   const suggestions = useMemo(() => {
     if (!data) return [];
@@ -114,18 +112,22 @@ export default function SuppliersTab({ onChanged }) {
       let best = null;
       for (const t of data.linkTargets || []) {
         if (!canLink(u, t)) continue;
-        const score = similarity(u.product.title, t.title);
+        const score = similarity(u.product?.title || "", t.title || "");
         if (!best || score > best.score) best = { u, t, score };
       }
       if (best && best.score >= 0.5) out.push(best);
     }
     return out.sort((a, b) => b.score - a.score);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
-  const highSuggestions = suggestions.filter((s) => s.score >= 0.9);
-  const midSuggestions = suggestions.filter((s) => s.score >= 0.7 && s.score < 0.9);
-  const lowSuggestions = suggestions.filter((s) => s.score < 0.7);
+  const highSuggestions = useMemo(() => suggestions.filter((s) => s.score >= 0.9), [suggestions]);
+  const midSuggestions  = useMemo(() => suggestions.filter((s) => s.score >= 0.7 && s.score < 0.9), [suggestions]);
+  const lowSuggestions  = useMemo(() => suggestions.filter((s) => s.score < 0.7), [suggestions]);
+
+  if (loading && !data) return <LoadingState label="Loading suppliers…" />;
+  if (error && !data) return <ErrorState title="Couldn't load suppliers" description={error} onRetry={load} />;
+  if (!data) return null;
 
   return (
     <div className="space-y-6">
