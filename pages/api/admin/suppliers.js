@@ -115,60 +115,82 @@ export default async function handler(req, res) {
 
     if (action === "link") {
       const { stub_product_id, target_product_id } = req.body;
-      if (!stub_product_id || !target_product_id || stub_product_id === target_product_id) {
+      // Accept single id or array of ids (multi-supplier merge)
+      const stubIds = Array.isArray(stub_product_id)
+        ? stub_product_id
+        : stub_product_id
+        ? [stub_product_id]
+        : [];
+      if (stubIds.length === 0 || !target_product_id) {
         return res.status(400).json({ success: false, error: "invalid_request" });
       }
+      if (stubIds.includes(target_product_id)) {
+        return res.status(400).json({ success: false, error: "invalid_request" });
+      }
+
+      // Load all involved products in one query
       const { data: rows } = await supabaseAdmin
         .from("products")
         .select("id, provider, requires_email")
-        .in("id", [stub_product_id, target_product_id]);
-      const stub = rows?.find((r) => r.id === stub_product_id);
+        .in("id", [...stubIds, target_product_id]);
       const target = rows?.find((r) => r.id === target_product_id);
-      if (!stub || !target || stub.provider === "manual" || target.provider === "manual") {
+      const stubs = stubIds.map((id) => rows?.find((r) => r.id === id)).filter(Boolean);
+      if (!target || stubs.length !== stubIds.length) {
         return res.status(400).json({ success: false, error: "invalid_products" });
       }
-      if (stub.provider === "digitrust") {
+      if (stubs.some((s) => s.provider === "manual") || target.provider === "manual") {
+        return res.status(400).json({ success: false, error: "invalid_products" });
+      }
+      if (stubs.some((s) => s.provider === "digitrust")) {
         return res.status(400).json({ success: false, error: "digitrust_products_cant_be_merged" });
       }
 
-      const { data: stubSources } = await supabaseAdmin
-        .from("product_sources")
-        .select("id, supplier")
-        .eq("product_id", stub.id);
-      if (!stubSources || stubSources.length === 0) {
-        return res.status(400).json({ success: false, error: "stub_has_no_source" });
-      }
+      // Check each stub's sources against target's existing sources
       const { data: targetSources } = await supabaseAdmin
         .from("product_sources")
         .select("supplier")
         .eq("product_id", target.id);
-      if (stubSources.some((s) => (targetSources || []).some((t) => t.supplier === s.supplier))) {
-        return res.status(409).json({ success: false, error: "target_already_has_this_supplier" });
-      }
-      const stubSuppliers = await Promise.all(stubSources.map((s) => getSupplier(s.supplier)));
-      if (target.requires_email && stubSuppliers.some((x) => x && x.supportsEmail === false)) {
-        return res.status(409).json({ success: false, error: "target_requires_email_supplier_cant_deliver" });
-      }
 
-      const { error: moveErr } = await supabaseAdmin
-        .from("product_sources")
-        .update({ product_id: target.id })
-        .eq("product_id", stub.id);
-      if (moveErr) return res.status(500).json({ success: false, error: moveErr.message });
+      // Process each stub sequentially
+      for (const stub of stubs) {
+        const { data: stubSources } = await supabaseAdmin
+          .from("product_sources")
+          .select("id, supplier")
+          .eq("product_id", stub.id);
+        if (!stubSources || stubSources.length === 0) {
+          return res.status(400).json({ success: false, error: `stub_has_no_source:${stub.id}` });
+        }
+        const alreadyLinked = stubSources.some((s) =>
+          (targetSources || []).some((t) => t.supplier === s.supplier)
+        );
+        if (alreadyLinked) {
+          return res.status(409).json({ success: false, error: "target_already_has_this_supplier" });
+        }
+        const stubSuppliers = await Promise.all(stubSources.map((s) => getSupplier(s.supplier)));
+        if (target.requires_email && stubSuppliers.some((x) => x && x.supportsEmail === false)) {
+          return res.status(409).json({ success: false, error: "target_requires_email_supplier_cant_deliver" });
+        }
 
-      // Remove the now-empty stub if no order ever used it; otherwise
-      // keep it hidden so order history stays intact.
-      const { count } = await supabaseAdmin
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("product_id", stub.id);
-      if (!count) {
-        await supabaseAdmin.from("products").delete().eq("id", stub.id);
-      } else {
-        await supabaseAdmin
-          .from("products")
-          .update({ selected: false, available_stock: 0, supplier_status: "out_of_stock" })
-          .eq("id", stub.id);
+        // Move all sources from stub → target
+        const { error: moveErr } = await supabaseAdmin
+          .from("product_sources")
+          .update({ product_id: target.id })
+          .eq("product_id", stub.id);
+        if (moveErr) return res.status(500).json({ success: false, error: moveErr.message });
+
+        // Remove the now-empty stub if no order used it
+        const { count } = await supabaseAdmin
+          .from("orders")
+          .select("id", { count: "exact", head: true })
+          .eq("product_id", stub.id);
+        if (!count) {
+          await supabaseAdmin.from("products").delete().eq("id", stub.id);
+        } else {
+          await supabaseAdmin
+            .from("products")
+            .update({ selected: false, available_stock: 0, supplier_status: "out_of_stock" })
+            .eq("id", stub.id);
+        }
       }
 
       await recomputeProduct(target.id);

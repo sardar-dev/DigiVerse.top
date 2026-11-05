@@ -373,12 +373,27 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
     .map((t) => ({ t, score: anySupplierSel ? similarity(anySupplierSel.product.title, t.title) : 0 }))
     .sort((a, b) => b.score - a.score || a.t.title.localeCompare(b.t.title));
 
+  // Link one supplier product → DigiTrust
   async function link(u, t) {
     await act(
       { action: "link", stub_product_id: u.product.id, target_product_id: t.id },
       "Linked. These are now one product; the cheaper eligible supplier is used."
     );
     setSelBySupplier((prev) => ({ ...prev, [u.product.provider]: null }));
+    setDSel(null);
+  }
+
+  // Link ALL currently selected supplier products → DigiTrust at once
+  async function linkAll(items, t) {
+    await act(
+      {
+        action: "link",
+        stub_product_id: items.map((x) => x.product.id),
+        target_product_id: t.id,
+      },
+      `Linked ${items.length} suppliers → DigiTrust. One product, best source used automatically.`
+    );
+    setSelBySupplier({});
     setDSel(null);
   }
 
@@ -474,23 +489,41 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
         <div className="rounded-xl border border-border bg-surface p-4 shadow-card space-y-3">
           {selectedSupplierItems.length > 0 && dItem ? (
             <>
+              {/* Selected items preview */}
               <div className="grid gap-3 text-sm" style={{ gridTemplateColumns: `repeat(${selectedSupplierItems.length + 1}, minmax(0,1fr))` }}>
                 {selectedSupplierItems.map((sItem) => (
-                  <div key={sItem.product.id}>
-                    <div className="text-xs text-muted">{lbl(sItem.product.provider)}</div>
+                  <div key={sItem.product.id} className="rounded-lg border border-border bg-bg p-2">
+                    <div className="text-xs font-medium text-brand">{lbl(sItem.product.provider)}</div>
                     <div className="text-ink truncate">{sItem.product.title}</div>
                     <div className="font-mono text-xs text-muted">cost {money(sItem.source?.cost ?? 0)}</div>
                   </div>
                 ))}
-                <div>
-                  <div className="text-xs text-muted">DigiTrust (store product)</div>
+                <div className="rounded-lg border border-border bg-bg p-2">
+                  <div className="text-xs font-medium text-muted">DigiTrust (store product)</div>
                   <div className="text-ink truncate">{dItem.title}</div>
                   <div className="font-mono text-xs text-muted">
                     cost {dItem.sources.find((s) => s.supplier === "digitrust") ? money(dItem.sources.find((s) => s.supplier === "digitrust").cost) : "—"} · price {money(dItem.sell_price)}
                   </div>
                 </div>
               </div>
+
               <div className="flex flex-wrap gap-2">
+                {/* Link All button — shown when 2+ suppliers selected */}
+                {selectedSupplierItems.length >= 2 && (
+                  <SecondaryButton
+                    onClick={() => {
+                      const names = selectedSupplierItems.map((x) => lbl(x.product.provider)).join(" + ");
+                      window.confirm(
+                        `Merge ALL selected:\n${selectedSupplierItems.map((x) => `• ${lbl(x.product.provider)}: ${x.product.title}`).join("\n")}\n\n→ DigiTrust: ${dItem.title}\n\nAll 3 sources will be linked to one product.`
+                      ) && linkAll(selectedSupplierItems, dItem);
+                    }}
+                    className="border-brand text-brand font-semibold"
+                  >
+                    🔗 Link All ({selectedSupplierItems.length} suppliers) ↔ DigiTrust
+                  </SecondaryButton>
+                )}
+
+                {/* Individual link buttons */}
                 {selectedSupplierItems.map((sItem) => (
                   <SecondaryButton
                     key={sItem.product.id}
