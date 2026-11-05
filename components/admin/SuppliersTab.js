@@ -8,7 +8,12 @@ const LABEL = { digitrust: "DigiTrust", xpro: "XPro" };
 // buildLabelMap merges built-in labels with any configured custom suppliers
 const buildLabelMap = (configured = []) => {
   const map = { ...LABEL };
-  for (const s of configured) if (s.id && s.label) map[s.id] = s.label;
+  for (const s of configured) {
+    if (!s.id) continue;
+    // If DB label is the placeholder word "custom", derive a better name from the id
+    const label = s.label && s.label.toLowerCase() !== "custom" ? s.label : autoLabel(s.id);
+    map[s.id] = label;
+  }
   return map;
 };
 const labelOf = (id) => LABEL[id] || id;
@@ -289,14 +294,15 @@ function similarity(a, b) {
 
 const includesText = (q, text) => !q.trim() || String(text).toLowerCase().includes(q.trim().toLowerCase());
 
-// One supplier column — shows its own unlinked products, tracks its own
-// selection, highlights matches with whatever DigiTrust item is selected.
-function SupplierColumn({ supplierId, unlinked, dSel, targets, onSelect, selId, lbl }) {
+// One supplier column — shows its own unlinked products, highlights matches.
+// globalQ: shared search from the global bar above all columns
+function SupplierColumn({ supplierId, unlinked, dSel, targets, onSelect, selId, lbl, globalQ }) {
   const [q, setQ] = useState("");
+  const activeQ = globalQ || q; // global takes priority when set
   const dItem = targets.find((t) => t.id === dSel) || null;
 
   const list = unlinked
-    .filter((u) => u.product.provider === supplierId && includesText(q, u.product.title))
+    .filter((u) => u.product.provider === supplierId && includesText(activeQ, u.product.title))
     .map((u) => ({
       u,
       score: dItem ? similarity(u.product.title, dItem.title) : 0,
@@ -306,8 +312,10 @@ function SupplierColumn({ supplierId, unlinked, dSel, targets, onSelect, selId, 
   return (
     <MatchColumn
       title={`${lbl(supplierId)} (${list.length})`}
-      query={q}
-      setQuery={setQ}
+      query={globalQ ? "" : q}           // hide local query when global is active
+      setQuery={globalQ ? () => {} : setQ} // disable local input when global active
+      queryPlaceholder={globalQ ? `Filtered by global search…` : `Search in ${lbl(supplierId)}…`}
+      queryDisabled={Boolean(globalQ)}
       empty={`No ${lbl(supplierId)} products.`}
     >
       {list.map(({ u, score }) => (
@@ -331,6 +339,7 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
   const [selBySupplier, setSelBySupplier] = useState({}); // { xpro: 123, c_shotix: 456 }
   const [dSel, setDSel] = useState(null); // DigiTrust product id
   const [dq, setDq] = useState("");
+  const [globalQ, setGlobalQ] = useState(""); // searches ALL columns at once
 
   // All unique non-DigiTrust suppliers present in unlinked list
   const supplierIds = useMemo(() => {
@@ -368,8 +377,9 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlinked, targets]);
 
+  const activeDq = globalQ || dq; // global overrides per-column search
   const dList = targets
-    .filter((t) => includesText(dq, t.title))
+    .filter((t) => includesText(activeDq, t.title))
     .map((t) => ({ t, score: anySupplierSel ? similarity(anySupplierSel.product.title, t.title) : 0 }))
     .sort((a, b) => b.score - a.score || a.t.title.localeCompare(b.t.title));
 
@@ -433,6 +443,26 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
         </div>
       )}
 
+      {/* Global search — searches ALL columns at once */}
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">🔍</span>
+        <input
+          type="search"
+          value={globalQ}
+          onChange={(e) => setGlobalQ(e.target.value)}
+          placeholder="Search all suppliers at once…"
+          className="w-full rounded-xl border border-border bg-surface py-2.5 pl-9 pr-4 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+        />
+        {globalQ && (
+          <button
+            onClick={() => setGlobalQ("")}
+            className="absolute inset-y-0 right-3 flex items-center text-xs text-muted hover:text-ink"
+          >
+            ✕ Clear
+          </button>
+        )}
+      </div>
+
       {/* One column per supplier + DigiTrust column on the right */}
       <div
         className="grid gap-3"
@@ -448,14 +478,17 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
             selId={selBySupplier[supplierId] || null}
             onSelect={(id) => setSelBySupplier((prev) => ({ ...prev, [supplierId]: id }))}
             lbl={lbl}
+            globalQ={globalQ}
           />
         ))}
 
         {/* DigiTrust column — always last */}
         <MatchColumn
           title={`DigiTrust (${dList.length})`}
-          query={dq}
-          setQuery={setDq}
+          query={globalQ ? "" : dq}
+          setQuery={globalQ ? () => {} : setDq}
+          queryPlaceholder={globalQ ? "Filtered by global search…" : "Search in DigiTrust…"}
+          queryDisabled={Boolean(globalQ)}
           empty="No DigiTrust products match."
         >
           {dList.map(({ t, score }) => {
@@ -554,7 +587,7 @@ function ProductMatcher({ unlinked, targets, act, labelMap = LABEL }) {
   );
 }
 
-function MatchColumn({ title, query, setQuery, empty, children }) {
+function MatchColumn({ title, query, setQuery, queryPlaceholder, queryDisabled, empty, children }) {
   const rows = Array.isArray(children) ? children : [children];
   return (
     <div className="rounded-xl border border-border bg-surface shadow-card">
@@ -564,8 +597,13 @@ function MatchColumn({ title, query, setQuery, empty, children }) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search…"
-          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          disabled={queryDisabled}
+          placeholder={queryPlaceholder || "Search…"}
+          className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 ${
+            queryDisabled
+              ? "border-brand/30 bg-brand-soft text-brand placeholder-brand/60 cursor-not-allowed"
+              : "border-border focus:border-brand"
+          }`}
         />
       </div>
       <div className="max-h-80 overflow-y-auto p-2">
