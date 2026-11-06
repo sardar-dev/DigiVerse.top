@@ -52,9 +52,11 @@ export default function SettingsTab({
           hint="This text scrolls across the top of the buy popup. Leave empty to hide the ticker."
         />
         {buyModalTicker && (
-          <div className="overflow-hidden rounded-lg bg-amber-50 dark:bg-amber-900/20">
-            <div className="animate-marquee whitespace-nowrap py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-              {buyModalTicker}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{buyModalTicker}
+          <div className="overflow-hidden rounded-lg bg-brand">
+            <div className="animate-marquee whitespace-nowrap py-1.5 text-xs font-semibold text-white">
+              <span className="inline-block px-4">📢 {buyModalTicker}</span>
+              <span className="inline-block px-4" aria-hidden="true">📢 {buyModalTicker}</span>
+              <span className="inline-block px-4" aria-hidden="true">📢 {buyModalTicker}</span>
             </div>
           </div>
         )}

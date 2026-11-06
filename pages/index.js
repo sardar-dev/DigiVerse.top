@@ -494,14 +494,14 @@ function BuyModal({ product, onClose, ticker }) {
     <Modal title={product.title} onClose={onClose}>
       {/* Scrolling ticker — shown when admin has set text */}
       {ticker && (
-        <div className="mb-3 overflow-hidden rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-900/20">
+        <div className="mb-3 overflow-hidden rounded-lg bg-brand">
           <div
-            className="flex whitespace-nowrap py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300"
+            className="flex whitespace-nowrap py-1.5 text-xs font-semibold text-white"
             style={{ animation: "marquee 18s linear infinite" }}
           >
-            <span className="inline-block px-4">{ticker}</span>
-            <span className="inline-block px-4" aria-hidden="true">{ticker}</span>
-            <span className="inline-block px-4" aria-hidden="true">{ticker}</span>
+            <span className="inline-block px-4">📢 {ticker}</span>
+            <span className="inline-block px-4" aria-hidden="true">📢 {ticker}</span>
+            <span className="inline-block px-4" aria-hidden="true">📢 {ticker}</span>
           </div>
         </div>
       )}
