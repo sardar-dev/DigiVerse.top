@@ -14,17 +14,18 @@ export default async function handler(req, res) {
     const { data } = await supabaseAdmin
       .from("app_meta")
       .select("key, value")
-      .in("key", ["whatsapp_link", "channel_type"]);
+      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker"]);
     const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
     return res.status(200).json({
       success: true,
       whatsapp_link: m.whatsapp_link || "",
       channel_type: m.channel_type === "telegram" ? "telegram" : "whatsapp",
+      buy_modal_ticker: m.buy_modal_ticker || "",
     });
   }
 
   if (req.method === "POST") {
-    const { whatsapp_link, channel_type } = req.body || {};
+    const { whatsapp_link, channel_type, buy_modal_ticker } = req.body || {};
     const type = channel_type === "telegram" ? "telegram" : "whatsapp";
     const link = String(whatsapp_link || "").trim();
     if (link) {
@@ -41,10 +42,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: `link_not_${type}` });
       }
     }
+    const ticker = String(buy_modal_ticker || "").slice(0, 300).trim();
     const now = new Date().toISOString();
     const { error } = await supabaseAdmin.from("app_meta").upsert([
       { key: "whatsapp_link", value: link, updated_at: now },
       { key: "channel_type", value: type, updated_at: now },
+      { key: "buy_modal_ticker", value: ticker, updated_at: now },
     ]);
     if (error) return res.status(500).json({ success: false, error: error.message });
     return res.status(200).json({ success: true });

@@ -80,6 +80,7 @@ export default function Admin() {
   // Site settings
   const [whatsappLink, setWhatsappLink] = useState("");
   const [channelType, setChannelType] = useState("whatsapp");
+  const [buyModalTicker, setBuyModalTicker] = useState("");
   const [settingsMessage, setSettingsMessage] = useState("");
 
   async function loadSettings() {
@@ -88,6 +89,7 @@ export default function Admin() {
     if (data.success) {
       setWhatsappLink(data.whatsapp_link || "");
       setChannelType(data.channel_type === "telegram" ? "telegram" : "whatsapp");
+      setBuyModalTicker(data.buy_modal_ticker || "");
     }
   }
 
@@ -96,7 +98,7 @@ export default function Admin() {
     const res = await fetch("/api/admin/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ whatsapp_link: whatsappLink, channel_type: channelType }),
+      body: JSON.stringify({ whatsapp_link: whatsappLink, channel_type: channelType, buy_modal_ticker: buyModalTicker }),
     });
     const data = await res.json();
     setSettingsMessage(
@@ -631,6 +633,8 @@ export default function Admin() {
           channelType={channelType}
           setChannelType={setChannelType}
           setWhatsappLink={setWhatsappLink}
+          buyModalTicker={buyModalTicker}
+          setBuyModalTicker={setBuyModalTicker}
           saveSettings={saveSettings}
           settingsMessage={settingsMessage}
         />

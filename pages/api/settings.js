@@ -7,12 +7,13 @@ export default async function handler(req, res) {
   const { data } = await supabaseAdmin
     .from("app_meta")
     .select("key, value")
-    .in("key", ["whatsapp_link", "channel_type"]);
+    .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker"]);
   const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
 
   res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
   return res.status(200).json({
     whatsapp_link: m.whatsapp_link || "",
     channel_type: m.channel_type === "telegram" ? "telegram" : "whatsapp",
+    buy_modal_ticker: m.buy_modal_ticker || "",
   });
 }

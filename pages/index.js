@@ -61,6 +61,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
   const [category, setCategory] = useState(""); // "" = all
   const [sharedNotFound, setSharedNotFound] = useState(false);
   const [adminMessages, setAdminMessages] = useState([]);
+  const [buyModalTicker, setBuyModalTicker] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -70,6 +71,11 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     // flash. Falls back to a visible error only if we truly have
     // nothing to show.
     loadProducts(products.length === 0);
+    // Load buy modal ticker text (cached 60s — no DB hit per visitor)
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => { if (d.buy_modal_ticker) setBuyModalTicker(d.buy_modal_ticker); })
+      .catch(() => {});
     return () => sub.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -337,6 +343,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       {active && (
         <BuyModal
           product={active}
+          ticker={buyModalTicker}
           onClose={() => {
             setActive(null);
             // Drop ?product= so closing the popup doesn't reopen it
@@ -364,7 +371,7 @@ function shareProduct(product, notify) {
     .catch(() => window.prompt("Copy this link:", url));
 }
 
-function BuyModal({ product, onClose }) {
+function BuyModal({ product, onClose, ticker }) {
   const [step, setStep] = useState("form"); // form | summary | order | done
   const [quantity, setQuantity] = useState("1"); // string so input can be cleared while typing
   const [email, setEmail] = useState("");
@@ -485,6 +492,20 @@ function BuyModal({ product, onClose }) {
 
   return (
     <Modal title={product.title} onClose={onClose}>
+      {/* Scrolling ticker — shown when admin has set text */}
+      {ticker && (
+        <div className="mb-3 overflow-hidden rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-900/20">
+          <div
+            className="flex whitespace-nowrap py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300"
+            style={{ animation: "marquee 18s linear infinite" }}
+          >
+            <span className="inline-block px-4">{ticker}</span>
+            <span className="inline-block px-4" aria-hidden="true">{ticker}</span>
+            <span className="inline-block px-4" aria-hidden="true">{ticker}</span>
+          </div>
+        </div>
+      )}
+
       {step !== "done" && (
         <p className="mb-4 text-xs font-medium uppercase tracking-wide text-muted">
           {stepLabels[step]}

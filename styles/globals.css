@@ -108,6 +108,18 @@ select:focus-visible,
   50%       { opacity: 1; }
 }
 
+/* Buy modal ticker */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+.animate-marquee {
+  animation: marquee 14s linear infinite;
+  display: inline-block;
+  /* triple the text so the loop is seamless */
+  white-space: nowrap;
+}
+
 .dv-live-dot { position: relative; }
 .dv-live-dot::after {
   content: "";
