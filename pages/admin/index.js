@@ -56,6 +56,7 @@ export default function Admin() {
   const [dashboard, setDashboard] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
+  const [refreshingBalances, setRefreshingBalances] = useState(false);
 
   // Wallet adjustment form
   const [adjEmail, setAdjEmail] = useState("");
@@ -302,6 +303,17 @@ export default function Admin() {
     if (data.success) setDashboard(data);
   }
 
+  async function refreshBalances() {
+    setRefreshingBalances(true);
+    try {
+      const res = await fetch("/api/admin/dashboard?fresh=1");
+      const data = await res.json();
+      if (data.success) setDashboard(data);
+    } finally {
+      setRefreshingBalances(false);
+    }
+  }
+
   async function runManualSync() {
     setSyncing(true);
     setSyncMessage("");
@@ -541,6 +553,8 @@ export default function Admin() {
           adjMessage={adjMessage}
           adjResult={adjResult}
           submitAdjustment={submitAdjustment}
+          onRefreshBalances={refreshBalances}
+          refreshingBalances={refreshingBalances}
         />
       )}
 

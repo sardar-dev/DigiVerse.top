@@ -2,6 +2,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { getBalance } from "../../../lib/digitrust";
 import * as xpro from "../../../lib/suppliers/xpro";
+import * as emstore from "../../../lib/suppliers/emstore";
 
 const LOW_BALANCE_THRESHOLD = Number(process.env.LOW_BALANCE_THRESHOLD || 5);
 
@@ -14,6 +15,7 @@ async function supplierBalances() {
   let digitrustBalance = null;
   let digitrustBalanceError = null;
   let xproInfo = null;
+  let emstoreInfo = null;
   await Promise.all([
     (async () => {
       try {
@@ -33,6 +35,16 @@ async function supplierBalances() {
         xproInfo.error = e.message;
       }
     })(),
+    (async () => {
+      if (!emstore.configured()) return;
+      emstoreInfo = { balance: null, error: null, low: false };
+      try {
+        emstoreInfo.balance = (await emstore.getBalance()).balance;
+        emstoreInfo.low = emstoreInfo.balance !== null && emstoreInfo.balance < LOW_BALANCE_THRESHOLD;
+      } catch (e) {
+        emstoreInfo.error = e.message;
+      }
+    })(),
   ]);
   return {
     digitrust: {
@@ -42,6 +54,7 @@ async function supplierBalances() {
       threshold: LOW_BALANCE_THRESHOLD,
     },
     xpro: xproInfo,
+    emstore: emstoreInfo,
   };
 }
 
@@ -111,6 +124,7 @@ export default async function handler(req, res) {
     pendingWithdrawals: sum.pendingWithdrawals,
     digitrust: balances.digitrust,
     xpro: balances.xpro,
+    emstore: balances.emstore,
     lastSync: meta?.value || null,
     sales: {
       ordersDelivered: sum.delivered,

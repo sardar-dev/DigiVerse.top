@@ -1,8 +1,78 @@
 import StatCard from "./StatCard";
 
-const SUPPLIER_NAMES = { digitrust: "DigiTrust", xpro: "XPro" };
+const SUPPLIER_NAMES = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store" };
 function supplierName(id) {
   return SUPPLIER_NAMES[id] || (id.startsWith("c_") ? id.slice(2).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : id);
+}
+
+const SUPPLIER_ICONS = { digitrust: "🔵", xpro: "🟣", emstore: "🟠" };
+
+function SupplierBalanceCard({ dashboard, onRefresh, refreshing }) {
+  // Collect only suppliers that are configured (non-null in response)
+  const suppliers = [
+    dashboard.digitrust && { id: "digitrust", ...dashboard.digitrust },
+    dashboard.xpro      && { id: "xpro",      ...dashboard.xpro },
+    dashboard.emstore   && { id: "emstore",    ...dashboard.emstore },
+  ].filter(Boolean);
+
+  if (suppliers.length === 0) return null;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <SectionHeading title="Supplier Balances" />
+        <button
+          onClick={onRefresh}
+          disabled={refreshing}
+          className="mb-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface-hover disabled:opacity-50"
+          title="Refresh balances"
+        >
+          <span className={refreshing ? "animate-spin" : ""}>↻</span>
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {suppliers.map((s) => {
+          const icon = SUPPLIER_ICONS[s.id] || "⚪";
+          const name = supplierName(s.id);
+          const hasBalance = s.balance !== null && s.balance !== undefined;
+          return (
+            <div
+              key={s.id}
+              className={`flex items-center gap-4 rounded-xl border p-4 shadow-card ${
+                s.low
+                  ? "border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-950/40"
+                  : "border-border bg-surface"
+              }`}
+            >
+              <span className="text-2xl">{icon}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">{name}</p>
+                {s.error ? (
+                  <p className="mt-0.5 truncate text-sm font-medium text-red-600 dark:text-red-400">
+                    Error
+                  </p>
+                ) : hasBalance ? (
+                  <p className={`mt-0.5 font-mono text-lg font-bold ${s.low ? "text-red-600 dark:text-red-400" : "text-heading"}`}>
+                    ${Number(s.balance).toFixed(2)}
+                    <span className="ml-1 text-xs font-normal text-muted">USDT</span>
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-sm text-muted">—</p>
+                )}
+                {s.low && !s.error && (
+                  <p className="mt-0.5 text-xs font-medium text-red-500">⚠ Low balance</p>
+                )}
+                {s.error && (
+                  <p className="mt-0.5 truncate text-xs text-red-500" title={s.error}>{s.error}</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function SyncResult({ result }) {
@@ -67,6 +137,8 @@ export default function DashboardTab({
   adjMessage,
   adjResult,
   submitAdjustment,
+  onRefreshBalances,
+  refreshingBalances,
 }) {
   return (
     <div className="max-w-3xl space-y-10">
@@ -77,6 +149,14 @@ export default function DashboardTab({
         </PrimaryButton>
         {syncMessage && <SyncResult result={syncMessage} />}
       </div>
+
+      {dashboard && (
+        <SupplierBalanceCard
+          dashboard={dashboard}
+          onRefresh={onRefreshBalances}
+          refreshing={refreshingBalances}
+        />
+      )}
 
       {dashboard && (
         <div>
