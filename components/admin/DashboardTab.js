@@ -1,11 +1,11 @@
 import StatCard from "./StatCard";
 
-const SUPPLIER_NAMES = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store" };
+const SUPPLIER_NAMES = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store", shotix: "Shotix" };
 function supplierName(id) {
   return SUPPLIER_NAMES[id] || (id.startsWith("c_") ? id.slice(2).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : id);
 }
 
-const SUPPLIER_ICONS = { digitrust: "🔵", xpro: "🟣", emstore: "🟠" };
+const SUPPLIER_ICONS = { digitrust: "🔵", xpro: "🟣", emstore: "🟠", shotix: "🟢" };
 
 function SupplierBalanceCard({ dashboard, onRefresh, refreshing }) {
   // Collect only suppliers that are configured (non-null in response)
@@ -13,6 +13,7 @@ function SupplierBalanceCard({ dashboard, onRefresh, refreshing }) {
     dashboard.digitrust && { id: "digitrust", ...dashboard.digitrust },
     dashboard.xpro      && { id: "xpro",      ...dashboard.xpro },
     dashboard.emstore   && { id: "emstore",    ...dashboard.emstore },
+    dashboard.shotix    && { id: "shotix",     ...dashboard.shotix },
   ].filter(Boolean);
 
   if (suppliers.length === 0) return null;

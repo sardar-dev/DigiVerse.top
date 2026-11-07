@@ -3,6 +3,7 @@ import { requireAdmin } from "../../../lib/requireAdmin";
 import { getBalance } from "../../../lib/digitrust";
 import * as xpro from "../../../lib/suppliers/xpro";
 import * as emstore from "../../../lib/suppliers/emstore";
+import * as shotix from "../../../lib/suppliers/shotix";
 
 const LOW_BALANCE_THRESHOLD = Number(process.env.LOW_BALANCE_THRESHOLD || 5);
 
@@ -16,6 +17,7 @@ async function supplierBalances() {
   let digitrustBalanceError = null;
   let xproInfo = null;
   let emstoreInfo = null;
+  let shotixInfo = null;
   await Promise.all([
     (async () => {
       try {
@@ -45,6 +47,16 @@ async function supplierBalances() {
         emstoreInfo.error = e.message;
       }
     })(),
+    (async () => {
+      if (!shotix.configured()) return;
+      shotixInfo = { balance: null, error: null, low: false };
+      try {
+        shotixInfo.balance = (await shotix.getBalance()).balance;
+        shotixInfo.low = shotixInfo.balance !== null && shotixInfo.balance < LOW_BALANCE_THRESHOLD;
+      } catch (e) {
+        shotixInfo.error = e.message;
+      }
+    })(),
   ]);
   return {
     digitrust: {
@@ -55,6 +67,7 @@ async function supplierBalances() {
     },
     xpro: xproInfo,
     emstore: emstoreInfo,
+    shotix: shotixInfo,
   };
 }
 
@@ -125,6 +138,7 @@ export default async function handler(req, res) {
     digitrust: balances.digitrust,
     xpro: balances.xpro,
     emstore: balances.emstore,
+    shotix: balances.shotix,
     lastSync: meta?.value || null,
     sales: {
       ordersDelivered: sum.delivered,
