@@ -65,7 +65,13 @@ export default async function handler(req, res) {
     return res.status(402).json({ success: false, error: "insufficient_balance" });
   }
 
-  const result = await fulfillOrder(claimedOrder);
+  let result;
+  try {
+    result = await fulfillOrder(claimedOrder);
+  } catch (e) {
+    console.error("[pay-with-balance] fulfillOrder threw:", e?.message);
+    return res.status(500).json({ success: false, error: "fulfillment_failed_refund_pending" });
+  }
   if (!result.success) {
     return res.status(502).json({ success: false, error: result.error });
   }

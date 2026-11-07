@@ -59,34 +59,44 @@ export default function PaymentPanel({ order, onDone }) {
   async function payWithBalance() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/orders/pay-with-balance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id: order.id }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    if (data.success) {
-      onDone({ items: data.items, manual: data.manual });
-    } else {
-      setError(describeError(data.error, data));
+    try {
+      const res = await fetch("/api/orders/pay-with-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: order.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success) {
+        onDone({ items: data.items, manual: data.manual });
+      } else {
+        setError(describeError(data.error, data) || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Network error — please check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function submitPayment() {
     setError("");
     setBusy(true);
-    const res = await fetch("/api/orders/verify-payment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id: order.id, tx_hash: txHash }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    if (data.success) {
-      onDone({ items: data.items, manual: data.manual });
-    } else {
-      setError(describeError(data.error, data));
+    try {
+      const res = await fetch("/api/orders/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: order.id, tx_hash: txHash }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success) {
+        onDone({ items: data.items, manual: data.manual });
+      } else {
+        setError(describeError(data.error, data) || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Network error — please check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -272,7 +282,11 @@ function describeError(code, data) {
       return "Sold out at the last moment — your payment will be refunded manually, sorry.";
     case "fulfillment_uncertain_pending_review":
       return "Payment received — we're double-checking delivery, this may take a few minutes.";
+    case "fulfillment_failed_refund_pending":
+      return "Order placed but delivery failed — your payment will be refunded. Please contact support.";
+    case "order_not_available":
+      return "This order is no longer available for payment. Please refresh and try again.";
     default:
-      return code ? code.replaceAll("_", " ") : "";
+      return code ? code.replaceAll("_", " ") : "Something went wrong. Please try again.";
   }
 }

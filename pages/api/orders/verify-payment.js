@@ -112,7 +112,13 @@ export default async function handler(req, res) {
     .update({ status: "paid", updated_at: new Date().toISOString() })
     .eq("id", order.id);
 
-  const result = await fulfillOrder(claimedOrder);
+  let result;
+  try {
+    result = await fulfillOrder(claimedOrder);
+  } catch (e) {
+    console.error("[verify-payment] fulfillOrder threw:", e?.message);
+    return res.status(500).json({ success: false, error: "fulfillment_failed_refund_pending" });
+  }
   if (!result.success) {
     return res.status(502).json({ success: false, error: result.error });
   }
