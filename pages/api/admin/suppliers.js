@@ -30,15 +30,28 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, suppliers: out });
     }
 
-    const [{ data: products, error: pErr }, { data: sources, error: sErr }] = await Promise.all([
-      supabaseAdmin
+    let products, pErr, sources, sErr;
+    // Try with all columns first; fall back gracefully if a column doesn't exist yet.
+    ({ data: products, error: pErr } = await supabaseAdmin
+      .from("products")
+      .select("id, title, sell_price, selected, provider, active_supplier, supplier_status, requires_email, available_stock")
+      .neq("provider", "manual"));
+    if (pErr && /active_supplier|supplier_status|available_stock/i.test(pErr.message)) {
+      ({ data: products, error: pErr } = await supabaseAdmin
         .from("products")
-        .select("id, title, sell_price, selected, provider, active_supplier, supplier_status, requires_email, available_stock")
-        .neq("provider", "manual"),
-      supabaseAdmin
+        .select("id, title, sell_price, selected, provider, requires_email")
+        .neq("provider", "manual"));
+    }
+
+    ({ data: sources, error: sErr } = await supabaseAdmin
+      .from("product_sources")
+      .select("id, product_id, supplier, supplier_product_id, supplier_title, cost, stock, available_stock, approved"));
+    if (sErr && /available_stock/i.test(sErr.message)) {
+      ({ data: sources, error: sErr } = await supabaseAdmin
         .from("product_sources")
-        .select("id, product_id, supplier, supplier_product_id, supplier_title, cost, stock, available_stock, approved"),
-    ]);
+        .select("id, product_id, supplier, supplier_product_id, supplier_title, cost, stock, approved"));
+    }
+
     if (pErr || sErr) {
       return res.status(500).json({
         success: false,
