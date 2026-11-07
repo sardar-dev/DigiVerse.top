@@ -15,7 +15,7 @@ function supplierLabel(id) {
   if (!id) return "";
   const map = { digitrust: "DigiTrust", xpro: "XPro" };
   if (map[id]) return map[id];
-  // c_shotix → "Shotix", c_canboso → "Canboso"
+  // c_shotix → "Shotix" (Canboso is the same store — built-in shotix is used instead)
   if (id.startsWith("c_")) return id.slice(2).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   return id;
 }

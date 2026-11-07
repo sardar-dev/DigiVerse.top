@@ -50,7 +50,7 @@ export default function Admin() {
   const [productSearch, setProductSearch] = useState("");
   // all | live | hidden
   const [productView, setProductView] = useState("all");
-  // "all" | supplier id e.g. "digitrust" | "c_canboso"
+  // "all" | supplier id e.g. "digitrust" | "shotix"
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [orderSearch, setOrderSearch] = useState("");
   const [dashboard, setDashboard] = useState(null);
