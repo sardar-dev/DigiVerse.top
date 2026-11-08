@@ -98,9 +98,19 @@ export default async function handler(req, res) {
       )
       .map((p) => ({ product: p, sources: srcByProduct.get(p.id) || [] }));
 
+    // enabledSuppliers() calls configured() on each supplier — if any
+    // supplier module throws at import or config-check time, catch it so
+    // the whole tab doesn't crash into "Couldn't load suppliers".
+    let configuredSuppliers = [];
+    try {
+      configuredSuppliers = (await enabledSuppliers()).map((s) => ({ id: s.id, label: s.label }));
+    } catch (csErr) {
+      console.error("[suppliers] enabledSuppliers failed (non-fatal):", csErr?.message);
+    }
+
     return res.status(200).json({
       success: true,
-      configured: (await enabledSuppliers()).map((s) => ({ id: s.id, label: s.label })),
+      configured: configuredSuppliers,
       unlinked,
       multi,
       needsPrice,
