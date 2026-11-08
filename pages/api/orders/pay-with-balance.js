@@ -70,9 +70,39 @@ export default async function handler(req, res) {
     result = await fulfillOrder(claimedOrder);
   } catch (e) {
     console.error("[pay-with-balance] fulfillOrder threw:", e?.message);
-    return res.status(500).json({ success: false, error: "fulfillment_failed_refund_pending" });
+    // Unexpected crash — refund the balance immediately so user isn't stuck
+    try {
+      await supabaseAdmin.rpc("increment_balance", {
+        p_user_id: session.user.id,
+        p_amount: claimedOrder.total,
+      });
+    } catch (refundErr) {
+      console.error("[pay-with-balance] auto-refund failed:", refundErr?.message);
+    }
+    await supabaseAdmin
+      .from("orders")
+      .update({ status: "failed", failure_reason: "fulfillment_crashed: " + (e?.message || "unknown"), updated_at: new Date().toISOString() })
+      .eq("id", claimedOrder.id);
+    return res.status(500).json({ success: false, error: "fulfillment_failed_please_contact_support" });
   }
   if (!result.success) {
+    // fulfillOrder itself returned failure — check if it's a refundable failure
+    const refundableErrors = ["out_of_stock_refund_pending", "fulfillment_failed_refund_pending"];
+    if (refundableErrors.includes(result.error)) {
+      try {
+        await supabaseAdmin.rpc("increment_balance", {
+          p_user_id: session.user.id,
+          p_amount: claimedOrder.total,
+        });
+        await supabaseAdmin
+          .from("orders")
+          .update({ status: "refunded", updated_at: new Date().toISOString() })
+          .eq("id", claimedOrder.id);
+        return res.status(409).json({ success: false, error: result.error + "_refunded" });
+      } catch (refundErr) {
+        console.error("[pay-with-balance] refund on failure failed:", refundErr?.message);
+      }
+    }
     return res.status(502).json({ success: false, error: result.error });
   }
   return res.status(200).json({ success: true, items: result.items, manual: result.manual || false });

@@ -284,6 +284,12 @@ function describeError(code, data) {
       return "Payment received — we're double-checking delivery, this may take a few minutes.";
     case "fulfillment_failed_refund_pending":
       return "Order placed but delivery failed — your payment will be refunded. Please contact support.";
+    case "fulfillment_failed_please_contact_support":
+      return "An unexpected error occurred. Your balance has been refunded automatically. Please contact support if it doesn't appear.";
+    case "out_of_stock_refund_pending_refunded":
+      return "Sold out at the last moment — your wallet balance has been refunded automatically.";
+    case "fulfillment_failed_refund_pending_refunded":
+      return "Delivery failed — your wallet balance has been refunded automatically.";
     case "order_not_available":
       return "This order is no longer available for payment. Please refresh and try again.";
     default:

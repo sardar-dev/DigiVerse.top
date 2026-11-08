@@ -51,13 +51,24 @@ export default async function handler(req, res) {
         .from("product_sources")
         .select("id, product_id, supplier, supplier_product_id, supplier_title, cost, stock, approved"));
     }
+    // If product_sources table doesn't exist at all, treat as empty (no sources yet)
+    if (sErr && /relation.*product_sources.*does not exist|does not exist/i.test(sErr.message)) {
+      sources = [];
+      sErr = null;
+    }
 
-    if (pErr || sErr) {
+    if (pErr) {
+      console.error("[suppliers] products query failed:", pErr.message);
       return res.status(500).json({
         success: false,
-        error: (pErr || sErr).message,
+        error: pErr.message,
         hint: "Run supabase/migration_013_multi_supplier.sql first.",
       });
+    }
+    if (sErr) {
+      console.error("[suppliers] product_sources query failed:", sErr.message);
+      // Degrade gracefully — show products without source detail rather than a blank error page
+      sources = [];
     }
 
     const srcByProduct = new Map();
