@@ -123,7 +123,7 @@ export default async function handler(req, res) {
           error: "supplier_balance_limit",
           max_qty: maxAffordable,
           message: maxAffordable > 0
-            ? `You can order up to ${maxAffordable} tokens right now. Please lower the quantity.`
+            ? `You can order up to ${maxAffordable}B tokens right now. Please lower the quantity.`
             : `This product is temporarily unavailable. Please try again later.`,
         });
       }

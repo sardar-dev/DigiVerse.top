@@ -461,7 +461,7 @@ function BuyModal({ product, onClose, ticker }) {
             return;
           }
           if (parsedQty > buffInfo.max_qty) {
-            setError(t("You can order up to {n} tokens right now. Please lower the quantity.", { n: buffInfo.max_qty }));
+            setError(t("You can order up to {n}B tokens right now. Please lower the quantity.", { n: buffInfo.max_qty }));
             setQuantity(String(buffInfo.max_qty));
             return;
           }
@@ -605,7 +605,7 @@ function BuyModal({ product, onClose, ticker }) {
             }}
             hint={
               product.tunvn_buff && buffInfo?.max_qty !== undefined
-                ? t("Max {n} tokens right now", { n: buffInfo.max_qty })
+                ? t("Max {n}B tokens right now", { n: buffInfo.max_qty })
                 : product.provider === "manual" && product.max_order_qty
                 ? `${t("Max {n} per order", { n: product.max_order_qty })}${product.min_order_qty > 1 ? ` · ${t("Min {n}", { n: product.min_order_qty })}` : ""}`
                 : product.provider === "manual" && product.min_order_qty > 1
@@ -618,7 +618,7 @@ function BuyModal({ product, onClose, ticker }) {
               buffInfo.max_qty > 0 ? "border border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300" : "border border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
             }`}>
               {buffInfo.max_qty > 0
-                ? t("You can order up to {n} tokens right now.", { n: buffInfo.max_qty })
+                ? t("You can order up to {n}B tokens right now.", { n: buffInfo.max_qty })
                 : t("Temporarily unavailable. Please check back soon.")}
             </div>
           )}
@@ -804,7 +804,7 @@ function describeError(t, code, available, minOrder, maxQty, minQty) {
       return t("You've already used this coupon.");
     case "supplier_balance_limit":
       return Number(maxQty) > 0
-        ? t("You can order up to {n} tokens right now. Please lower the quantity.", { n: maxQty })
+        ? t("You can order up to {n}B tokens right now. Please lower the quantity.", { n: maxQty })
         : t("This product is temporarily unavailable. Please try again later.");
     case "buff_check_failed":
       return t("Invalid invite code or service is currently unavailable. Please verify your invite code.");
