@@ -683,7 +683,9 @@ function BuyModal({ product, onClose, ticker }) {
         <div className="space-y-3 text-sm">
           <p className="font-mono text-xs text-muted" dir="ltr">{t("Order #{n}", { n: order?.order_number })}</p>
           <Alert variant="success">
-            {t("Payment confirmed. This product is delivered manually — estimated delivery {delivery}.", { delivery: product.delivery || t("soon") })}{" "}
+            {product.tunvn_buff
+              ? t("Payment confirmed! Tokens are being credited to your invite code via TunVN. This usually takes 1–2 minutes.")
+              : t("Payment confirmed. This product is delivered manually — estimated delivery {delivery}.", { delivery: product.delivery || t("soon") })}{" "}
             {checkParts[0]}
             <Link href="/account/orders" className="underline">
               {t("My Orders")}

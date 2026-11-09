@@ -137,6 +137,12 @@ export default function Orders() {
                   </p>
                 )}
 
+                {o.status === "fulfilling" && o.supplier === "tunvn" && (
+                  <p className="mt-2 text-xs font-medium text-brand animate-pulse">
+                    ⚡ {t("Crediting tokens to your invite code via TunVN… this usually takes 1–2 minutes.")}
+                  </p>
+                )}
+
                 {o.status === "pending_payment" && resuming !== o.id && (
                   <div className="mt-3 flex gap-3">
                     <PrimaryButton onClick={() => setResuming(o.id)} className="px-3 py-1.5 text-xs">

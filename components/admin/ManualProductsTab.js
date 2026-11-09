@@ -45,7 +45,37 @@ export default function ManualProductsTab({
   return (
     <div className="max-w-3xl space-y-10">
       <div>
-        <SectionHeading title={manualForm.id !== null ? "Edit product" : "Add a manual product"} />
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <SectionHeading title={manualForm.id !== null ? "Edit product" : "Add a manual product"} />
+          {manualForm.id === null && (
+            <button
+              type="button"
+              onClick={() => {
+                setManualForm({
+                  ...manualForm,
+                  title: "Muse AI Buff Tokens (Invite Code)",
+                  short_description: "Top up Muse AI tokens on your account (1B - 30B). Automatically credited via invite code.",
+                  description: "Top up Muse AI tokens directly to your own account via invite code. Delivered automatically via TunVN API within 1–2 minutes after payment.",
+                  sell_price: "0.20",
+                  cost_price: "0.10",
+                  available_stock: "9999",
+                  min_order_qty: "1",
+                  max_order_qty: "30",
+                  delivery: "Instant (1-2 mins)",
+                  selected: true,
+                  activation_field: "Invite code",
+                  activation_placeholder: "Enter your Muse AI invite code (e.g. ABBADJ)",
+                  tunvn_buff: true,
+                  auto_delivery: false,
+                  category: "AI Tools",
+                });
+              }}
+              className="rounded-lg border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand hover:text-white"
+            >
+              ✨ Pre-fill Muse AI Buff Token (TunVN)
+            </button>
+          )}
+        </div>
         <div className="space-y-4 rounded-xl border border-border bg-surface p-5 shadow-card">
           <FormInput
             label="Title"
