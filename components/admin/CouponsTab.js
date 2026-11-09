@@ -31,6 +31,7 @@ const ERRORS = {
   invalid_limit: "Limits must be whole numbers above 0 (minimum order can be 0).",
   invalid_expiry: "That expiry date isn't valid.",
   run_migration_016: "Run supabase/migration_016 in the Supabase SQL editor first (needed for multi-product coupons).",
+  run_migration_035: "Run supabase/migration_035_coupon_at_cost.sql in the Supabase SQL editor first (needed for Supplier Cost coupons).",
 };
 
 export default function CouponsTab({ products }) {
@@ -109,6 +110,8 @@ export default function CouponsTab({ products }) {
   const describe = (c) =>
     c.discount_type === "percent"
       ? `${Number(c.discount_value)}% off`
+      : c.discount_type === "cost_plus"
+      ? `Supplier Cost + $${Number(c.discount_value || 0.01).toFixed(2)}`
       : `$${Number(c.discount_value).toFixed(2)} off each item`;
 
   const state = (c) => {
@@ -145,17 +148,41 @@ export default function CouponsTab({ products }) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormSelect label="Discount type" value={form.discount_type} onChange={set("discount_type")}>
+            <FormSelect
+              label="Discount type"
+              value={form.discount_type}
+              onChange={(e) => {
+                const dt = e.target.value;
+                setForm((f) => ({
+                  ...f,
+                  discount_type: dt,
+                  discount_value: dt === "cost_plus" ? (f.discount_value || "0.01") : f.discount_value,
+                }));
+              }}
+            >
               <option value="percent">Percentage (%)</option>
               <option value="fixed">Fixed amount ($)</option>
+              <option value="cost_plus">Supplier Cost + $0.01 (At Cost)</option>
             </FormSelect>
             <FormInput
-              label={form.discount_type === "percent" ? "Percent off" : "Dollars off"}
+              label={
+                form.discount_type === "percent"
+                  ? "Percent off"
+                  : form.discount_type === "cost_plus"
+                  ? "Margin above cost ($)"
+                  : "Dollars off"
+              }
               type="number"
               min="0"
               step="0.01"
               value={form.discount_value}
               onChange={set("discount_value")}
+              placeholder={form.discount_type === "cost_plus" ? "0.01" : undefined}
+              hint={
+                form.discount_type === "cost_plus"
+                  ? "Customer pays: [ Supplier Cost + Margin ]. Default $0.01 margin."
+                  : undefined
+              }
               className="font-mono"
             />
           </div>

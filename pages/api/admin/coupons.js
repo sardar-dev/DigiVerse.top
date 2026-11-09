@@ -54,10 +54,11 @@ export default async function handler(req, res) {
     if (!CODE_RE.test(code)) {
       return res.status(400).json({ success: false, error: "invalid_code_format" });
     }
-    if (!["percent", "fixed"].includes(type)) {
+    if (!["percent", "fixed", "cost_plus"].includes(type)) {
       return res.status(400).json({ success: false, error: "invalid_type" });
     }
-    if (!Number.isFinite(value) || value <= 0 || (type === "percent" && value > 100)) {
+    const finalValue = type === "cost_plus" ? (Number.isFinite(value) && value > 0 ? value : 0.01) : value;
+    if (type !== "cost_plus" && (!Number.isFinite(finalValue) || finalValue <= 0 || (type === "percent" && finalValue > 100))) {
       return res.status(400).json({ success: false, error: "invalid_value" });
     }
     const maxUses = num(b.max_uses);
@@ -88,7 +89,7 @@ export default async function handler(req, res) {
     const row = {
         code,
         discount_type: type,
-        discount_value: value,
+        discount_value: finalValue,
         product_id: null,
         ...(ids.length ? { product_ids: ids } : {}),
         max_uses: maxUses,
@@ -98,6 +99,9 @@ export default async function handler(req, res) {
     };
     const { data, error } = await supabaseAdmin.from("coupons").insert(row).select().single();
     if (error) {
+      if (/coupons_type_check/.test(error.message || "")) {
+        return res.status(500).json({ success: false, error: "run_migration_035" });
+      }
       if (/product_ids/.test(error.message || "")) {
         return res.status(500).json({ success: false, error: "run_migration_016" });
       }

@@ -43,6 +43,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     success: true,
     code: result.coupon.code,
+    discount_type: result.coupon.discount_type,
     base,
     discount: result.discount,
     final: Number((base - result.discount).toFixed(2)),
