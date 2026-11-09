@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getSupplier, resolveSource, applyBuffer } from "../../../lib/suppliers";
 import { refreshSourceFromLive } from "../../../lib/syncProducts";
 import { checkCoupon, orderFitsCouponLimits } from "../../../lib/coupons";
+import * as tunvn from "../../../lib/suppliers/tunvn";
 
 // Step 1 of checkout: customer picks a product + quantity. We
 // re-check LIVE stock on DigiTrust (not just our cache) before we
@@ -53,6 +54,79 @@ export default async function handler(req, res) {
     }
     if (localProduct.activation_field && !String(activation_info || "").trim()) {
       return res.status(400).json({ success: false, error: "activation_info_required" });
+    }
+
+    // TunVN Buff Token (Muse AI) live balance and invite code check
+    if (localProduct.tunvn_buff) {
+      if (!tunvn.configured()) {
+        return res.status(503).json({ success: false, error: "supplier_unavailable" });
+      }
+
+      const inviteCode = String(activation_info || "").trim().toUpperCase();
+      if (!/^[A-Za-z0-9_-]{4,20}$/.test(inviteCode)) {
+        return res.status(400).json({
+          success: false,
+          error: "invalid_invite_code",
+          message: "Please enter a valid Muse AI invite code (4–20 alphanumeric characters).",
+        });
+      }
+
+      // Check live TunVN balance
+      let currentBal = null;
+      try {
+        const balRes = await tunvn.getBalance();
+        currentBal = balRes?.balance;
+      } catch (balErr) {
+        console.warn("[orders/create] tunvn getBalance failed:", balErr?.message);
+      }
+
+      const bal = Number.isFinite(currentBal) ? Math.max(0, currentBal) : 0;
+      if (bal <= 0) {
+        return res.status(409).json({
+          success: false,
+          error: "supplier_balance_limit",
+          max_qty: 0,
+          message: "This product is temporarily unavailable (insufficient API balance). Please try again later.",
+        });
+      }
+
+      // Validate invite code and get live quote from TunVN /api/buff/check
+      let livePrice = null;
+      try {
+        livePrice = await tunvn.buffCheck(inviteCode, quantity);
+      } catch (checkErr) {
+        console.warn("[orders/create] tunvn buffCheck failed:", checkErr?.message);
+        return res.status(400).json({
+          success: false,
+          error: "buff_check_failed",
+          message: checkErr?.message || "Invalid invite code or TunVN Buff service unavailable.",
+        });
+      }
+
+      const costPerUnit = livePrice !== null && quantity > 0
+        ? (livePrice / quantity)
+        : (Number(localProduct.cost_price) || 0.06);
+
+      const maxAffordable = costPerUnit > 0 ? Math.floor(bal / costPerUnit) : 0;
+
+      if ((livePrice !== null && bal < livePrice) || quantity > maxAffordable) {
+        console.warn("[orders/create] TunVN buff balance limit exceeded", {
+          inviteCode,
+          quantity,
+          balance: bal,
+          livePrice,
+          costPerUnit,
+          maxAffordable,
+        });
+        return res.status(409).json({
+          success: false,
+          error: "supplier_balance_limit",
+          max_qty: maxAffordable,
+          message: maxAffordable > 0
+            ? `API balance limit: You can currently order up to ${maxAffordable} token(s) right now. Please lower the quantity.`
+            : `This product is temporarily unavailable (insufficient API balance). Please try again later.`,
+        });
+      }
     }
   } else if (localProduct.requires_email && !email) {
     return res.status(400).json({ success: false, error: "email_required" });

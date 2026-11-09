@@ -59,7 +59,19 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, http_status: r.status, data });
     }
 
-    return res.status(400).json({ success: false, error: "unknown action. Use: balance, products, buy_dry, order_detail" });
+    if (action === "buff_check") {
+      const { code = "TEST", qty = 1 } = req.body || {};
+      const r = await fetch(`${BASE}/api/buff/check`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ orders_text: `${code} ${qty}` }),
+        signal: AbortSignal.timeout(8000),
+      });
+      const data = await r.json().catch(() => null);
+      return res.status(200).json({ success: true, http_status: r.status, data });
+    }
+
+    return res.status(400).json({ success: false, error: "unknown action. Use: balance, products, buy_dry, order_detail, buff_check" });
   } catch (e) {
     return res.status(500).json({ success: false, error: e.message });
   }

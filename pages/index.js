@@ -388,6 +388,18 @@ function BuyModal({ product, onClose, ticker }) {
   const [coupon, setCoupon] = useState(null); // { code, discount, final } once applied
   const [couponError, setCouponError] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
+  const [buffInfo, setBuffInfo] = useState(null); // { max_qty, balance, unit_cost }
+
+  useEffect(() => {
+    if (product.tunvn_buff) {
+      fetch(`/api/products/buff-info?product_id=${encodeURIComponent(product.id)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.success) setBuffInfo(d);
+        })
+        .catch(() => {});
+    }
+  }, [product.id, product.tunvn_buff]);
 
   const isManualDelivery = product.provider === "manual" && !product.auto_delivery;
 
@@ -436,6 +448,24 @@ function BuyModal({ product, onClose, ticker }) {
       if (product.activation_field && !activationInfo.trim()) {
         setError(describeError(t, "activation_info_required"));
         return;
+      }
+      if (product.tunvn_buff) {
+        const code = activationInfo.trim().toUpperCase();
+        if (!/^[A-Za-z0-9_-]{4,20}$/.test(code)) {
+          setError(t("Please enter a valid Muse AI invite code (4–20 characters)."));
+          return;
+        }
+        if (buffInfo && typeof buffInfo.max_qty === "number") {
+          if (buffInfo.max_qty === 0) {
+            setError(t("This product is temporarily unavailable (insufficient API balance). Please try again later."));
+            return;
+          }
+          if (parsedQty > buffInfo.max_qty) {
+            setError(t("You can only order up to {n} tokens right now with current API balance. (Aap abhi ziyada se ziyada {n} tokens buy kar sakte hain).", { n: buffInfo.max_qty }));
+            setQuantity(String(buffInfo.max_qty));
+            return;
+          }
+        }
       }
     }
     setStep("summary");
@@ -487,7 +517,13 @@ function BuyModal({ product, onClose, ticker }) {
     const data = await res.json();
     setCreating(false);
     if (!data.success) {
-      setError(describeError(t, data.error, data.available, data.min_order, data.max_qty));
+      const errMsg = data.message || describeError(t, data.error, data.available, data.min_order, data.max_qty);
+      setError(errMsg);
+      if (data.max_qty !== undefined && Number(data.max_qty) >= 0) {
+        if (Number(data.max_qty) > 0) {
+          setQuantity(String(data.max_qty));
+        }
+      }
       setCoupon(null);
       setStep("form");
       return;
@@ -568,13 +604,24 @@ function BuyModal({ product, onClose, ticker }) {
               }
             }}
             hint={
-              product.provider === "manual" && product.max_order_qty
+              product.tunvn_buff && buffInfo?.max_qty !== undefined
+                ? t("Current API balance limit: max {n} tokens", { n: buffInfo.max_qty })
+                : product.provider === "manual" && product.max_order_qty
                 ? `${t("Max {n} per order", { n: product.max_order_qty })}${product.min_order_qty > 1 ? ` · ${t("Min {n}", { n: product.min_order_qty })}` : ""}`
                 : product.provider === "manual" && product.min_order_qty > 1
                 ? t("Min {n} per order", { n: product.min_order_qty })
                 : undefined
             }
           />
+          {product.tunvn_buff && buffInfo && (
+            <div className={`-mt-2 rounded-lg px-3 py-2 text-xs font-medium ${
+              buffInfo.max_qty > 0 ? "border border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300" : "border border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
+            }`}>
+              {buffInfo.max_qty > 0
+                ? `⚡ ${t("Live API balance limit: You can order up to {n} tokens right now.", { n: buffInfo.max_qty })}`
+                : `⚠ ${t("Temporarily unavailable (insufficient API balance). Please check back soon.")}`}
+            </div>
+          )}
           {product.requires_email && product.provider !== "manual" && (
             <FormInput
               label={t("Email for delivery")}
@@ -757,8 +804,12 @@ function describeError(t, code, available, minOrder, maxQty, minQty) {
       return t("You've already used this coupon.");
     case "supplier_balance_limit":
       return Number(maxQty) > 0
-        ? t("You can only order up to {n} of this product right now. Please lower the quantity.", { n: maxQty })
-        : t("This product is temporarily unavailable. Please try again later.");
+        ? t("API balance limit: You can only order up to {n} tokens right now. Please lower the quantity.", { n: maxQty })
+        : t("This product is temporarily unavailable (insufficient API balance). Please try again later.");
+    case "buff_check_failed":
+      return t("Invalid invite code or TunVN Buff service is currently unavailable. Please verify your invite code.");
+    case "invalid_invite_code":
+      return t("Please enter a valid Muse AI invite code (4–20 alphanumeric characters).");
     default:
       return code ? code.replaceAll("_", " ") : "";
   }
