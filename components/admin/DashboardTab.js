@@ -55,7 +55,7 @@ function SupplierBalanceCard({ dashboard, onRefresh, refreshing }) {
                     Error
                   </p>
                 ) : hasBalance ? (
-                  <p className={`mt-0.5 font-mono text-lg font-bold ${s.low ? "text-red-600 dark:text-red-400" : "text-heading"}`}>
+                  <p className="mt-0.5 font-mono text-lg font-bold text-ink dark:text-white">
                     ${Number(s.balance).toFixed(2)}
                     <span className="ml-1 text-xs font-normal text-muted">USDT</span>
                   </p>
