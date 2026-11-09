@@ -14,10 +14,15 @@ export default async function handler(req, res) {
     const { data } = await supabaseAdmin
       .from("app_meta")
       .select("key, value")
-      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker"]);
+      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker", "site_notice"]);
     const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
+    let notice = { enabled: false, title: "", message: "", button_label: "", button_url: "", v: "1" };
+    try {
+      notice = { ...notice, ...JSON.parse(m.site_notice || "{}") };
+    } catch {}
     return res.status(200).json({
       success: true,
+      notice,
       whatsapp_link: m.whatsapp_link || "",
       channel_type: m.channel_type === "telegram" ? "telegram" : "whatsapp",
       buy_modal_ticker: m.buy_modal_ticker || "",
@@ -25,7 +30,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    const { whatsapp_link, channel_type, buy_modal_ticker } = req.body || {};
+    const { whatsapp_link, channel_type, buy_modal_ticker, notice } = req.body || {};
     const type = channel_type === "telegram" ? "telegram" : "whatsapp";
     const link = String(whatsapp_link || "").trim();
     if (link) {
@@ -44,7 +49,35 @@ export default async function handler(req, res) {
     }
     const ticker = String(buy_modal_ticker || "").slice(0, 300).trim();
     const now = new Date().toISOString();
+
+    // Notice popup. `v` changes whenever the text changes, so visitors who
+    // closed an older notice see the new one.
+    const nt = notice && typeof notice === "object" ? notice : {};
+    const btnUrl = String(nt.button_url || "").trim();
+    if (btnUrl) {
+      try {
+        if (!/^https?:$/.test(new URL(btnUrl).protocol)) throw new Error("bad protocol");
+      } catch {
+        return res.status(400).json({ success: false, error: "invalid_notice_url" });
+      }
+    }
+    const noticeClean = {
+      enabled: Boolean(nt.enabled),
+      title: String(nt.title || "").slice(0, 120).trim(),
+      message: String(nt.message || "").slice(0, 1500).trim(),
+      button_label: String(nt.button_label || "").slice(0, 40).trim(),
+      button_url: btnUrl,
+    };
+    let prev = {};
+    try {
+      const { data: row } = await supabaseAdmin.from("app_meta").select("value").eq("key", "site_notice").maybeSingle();
+      prev = JSON.parse(row?.value || "{}");
+    } catch {}
+    const changed = ["title", "message", "button_label", "button_url"].some((k) => prev[k] !== noticeClean[k]);
+    noticeClean.v = changed || !prev.v ? String(Date.now()) : prev.v;
+
     const { error } = await supabaseAdmin.from("app_meta").upsert([
+      { key: "site_notice", value: JSON.stringify(noticeClean), updated_at: now },
       { key: "whatsapp_link", value: link, updated_at: now },
       { key: "channel_type", value: type, updated_at: now },
       { key: "buy_modal_ticker", value: ticker, updated_at: now },

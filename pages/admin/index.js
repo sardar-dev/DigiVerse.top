@@ -82,6 +82,7 @@ export default function Admin() {
   const [whatsappLink, setWhatsappLink] = useState("");
   const [channelType, setChannelType] = useState("whatsapp");
   const [buyModalTicker, setBuyModalTicker] = useState("");
+  const [notice, setNotice] = useState({ enabled: false, title: "", message: "", button_label: "", button_url: "" });
   const [settingsMessage, setSettingsMessage] = useState("");
 
   async function loadSettings() {
@@ -91,6 +92,7 @@ export default function Admin() {
       setWhatsappLink(data.whatsapp_link || "");
       setChannelType(data.channel_type === "telegram" ? "telegram" : "whatsapp");
       setBuyModalTicker(data.buy_modal_ticker || "");
+      if (data.notice) setNotice(data.notice);
     }
   }
 
@@ -99,7 +101,7 @@ export default function Admin() {
     const res = await fetch("/api/admin/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ whatsapp_link: whatsappLink, channel_type: channelType, buy_modal_ticker: buyModalTicker }),
+      body: JSON.stringify({ whatsapp_link: whatsappLink, channel_type: channelType, buy_modal_ticker: buyModalTicker, notice }),
     });
     const data = await res.json();
     setSettingsMessage(
@@ -108,6 +110,7 @@ export default function Admin() {
         : {
             invalid_url: "Failed: that isn't a valid link (it must start with https://).",
             link_not_telegram: "Failed: this is not a Telegram link — use a t.me link, or switch the dropdown to WhatsApp.",
+            invalid_notice_url: "Failed: the notice button link must start with https://",
             link_not_whatsapp: "Failed: this is not a WhatsApp link — use a chat.whatsapp.com / wa.me link, or switch the dropdown to Telegram.",
           }[data.error] || `Failed: ${data.error}`
     );
@@ -649,6 +652,8 @@ export default function Admin() {
           setWhatsappLink={setWhatsappLink}
           buyModalTicker={buyModalTicker}
           setBuyModalTicker={setBuyModalTicker}
+          notice={notice}
+          setNotice={setNotice}
           saveSettings={saveSettings}
           settingsMessage={settingsMessage}
         />

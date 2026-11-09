@@ -1,6 +1,7 @@
 import "../styles/globals.css";
 import { useRouter } from "next/router";
 import WhatsAppButton from "../components/WhatsAppButton";
+import NoticePopup from "../components/NoticePopup";
 import ToastContainer from "../components/ui/Toast";
 
 export default function App({ Component, pageProps }) {
@@ -10,6 +11,7 @@ export default function App({ Component, pageProps }) {
     <>
       <Component {...pageProps} />
       {!isAdmin && <WhatsAppButton />}
+      {!isAdmin && <NoticePopup />}
       <ToastContainer />
     </>
   );

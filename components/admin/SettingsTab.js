@@ -1,4 +1,4 @@
-import { FormInput, FormSelect } from "../ui/FormInput";
+import { FormInput, FormSelect, FormTextarea } from "../ui/FormInput";
 import { PrimaryButton } from "../ui/Button";
 import SectionHeading from "../ui/SectionHeading";
 
@@ -14,6 +14,8 @@ export default function SettingsTab({
   setChannelType,
   buyModalTicker,
   setBuyModalTicker,
+  notice,
+  setNotice,
   saveSettings,
   settingsMessage,
 }) {
@@ -60,6 +62,61 @@ export default function SettingsTab({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Notice popup */}
+      <div className="space-y-3 rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Notice popup</p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={notice.enabled}
+            aria-label="Show notice popup"
+            onClick={() => setNotice({ ...notice, enabled: !notice.enabled })}
+            className={`relative h-6 w-11 rounded-full transition ${notice.enabled ? "bg-brand" : "bg-border"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                notice.enabled ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        <p className="text-xs text-muted">
+          {notice.enabled ? "ON — visitors see this popup." : "OFF — popup is hidden."} Visitors can close it; it
+          shows again only when you change the text.
+        </p>
+        <FormInput
+          label="Title"
+          value={notice.title}
+          maxLength={120}
+          onChange={(e) => setNotice({ ...notice, title: e.target.value })}
+          placeholder="e.g. Important notice"
+        />
+        <FormTextarea
+          label="Message"
+          rows={4}
+          value={notice.message}
+          maxLength={1500}
+          onChange={(e) => setNotice({ ...notice, message: e.target.value })}
+          placeholder="Write the notice for your customers…"
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <FormInput
+            label="Button text (optional)"
+            value={notice.button_label}
+            maxLength={40}
+            onChange={(e) => setNotice({ ...notice, button_label: e.target.value })}
+            placeholder="Learn more"
+          />
+          <FormInput
+            label="Button link (optional)"
+            value={notice.button_url}
+            onChange={(e) => setNotice({ ...notice, button_url: e.target.value })}
+            placeholder="https://…"
+          />
+        </div>
       </div>
 
       <PrimaryButton onClick={saveSettings}>Save settings</PrimaryButton>
