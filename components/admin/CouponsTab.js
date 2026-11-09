@@ -198,7 +198,7 @@ export default function CouponsTab({ products }) {
       <div>
         <SectionHeading
           title="Create coupon"
-          description="Discount codes customers enter in the buy popup. Orders can't drop below $0.10, so a 100% coupon still leaves that minimum."
+          description="Discount codes customers enter in the buy popup. Orders can't drop below $0.01, so a 100% coupon still leaves that minimum."
         />
         <div className="max-w-2xl space-y-4 rounded-xl border border-border bg-surface p-5 shadow-card">
           <div className="flex items-end gap-2">
