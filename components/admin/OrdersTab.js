@@ -195,7 +195,9 @@ export default function OrdersTab({
                     {o.can_retry ? (
                       <LinkButton onClick={() => onRetrySupplier(o)}>Retry (safe)</LinkButton>
                     ) : (
-                      <LinkButton onClick={onCheckDigitrust}>Check DigiTrust</LinkButton>
+                      (!o.supplier || o.supplier === "digitrust") && (
+                        <LinkButton onClick={onCheckDigitrust}>Check DigiTrust</LinkButton>
+                      )
                     )}
                     <LinkButton onClick={() => onReconcileDelivered(o)}>Mark delivered</LinkButton>
                     <LinkButton onClick={() => setOrderStatus(o.id, "failed")} className="text-danger">
