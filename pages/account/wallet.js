@@ -11,8 +11,10 @@ import { PrimaryButton, SecondaryButton, LinkButton } from "../../components/ui/
 import { EmptyState } from "../../components/ui/States";
 import CopyButton, { StepBadge } from "../../components/ui/CopyButton";
 import Link from "next/link";
+import { useT, intlLocale } from "../../lib/i18n";
 
 export default function Wallet() {
+  const { t, locale } = useT();
   const [session, setSession] = useState(null);
   const [balance, setBalance] = useState(null);
   const [ledger, setLedger] = useState([]);
@@ -48,7 +50,7 @@ export default function Wallet() {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session) {
-      window.location.href = "/login";
+      window.location.href = locale === "en" ? "/login" : `/${locale}/login`;
       return;
     }
     setSession(session);
@@ -79,24 +81,24 @@ export default function Wallet() {
     ]);
 
     const entries = [
-      ...(topups || []).map((t) => ({
-        id: `topup-${t.id}`,
-        date: t.created_at,
-        label: "Funds added",
+      ...(topups || []).map((tp) => ({
+        id: `topup-${tp.id}`,
+        date: tp.created_at,
+        label: t("Funds added"),
         kind: "topup",
-        amount: Number(t.amount),
+        amount: Number(tp.amount),
       })),
       ...(adjustments || []).map((a) => ({
         id: `adj-${a.id}`,
         date: a.created_at,
-        label: /^Withdrawal/i.test(a.reason) ? a.reason : `Adjustment: ${a.reason}`,
+        label: /^Withdrawal/i.test(a.reason) ? a.reason : t("Adjustment: {reason}", { reason: a.reason }),
         kind: /^Withdrawal/i.test(a.reason) ? "withdraw" : "adjust",
         amount: Number(a.amount),
       })),
       ...(spentOrders || []).map((o) => ({
         id: `order-${o.id}`,
         date: o.created_at,
-        label: o.products?.title || "Purchase",
+        label: o.products?.title || t("Purchase"),
         kind: "order",
         amount: -Number(o.total),
       })),
@@ -116,7 +118,7 @@ export default function Wallet() {
     const data = await res.json();
     setStatus("idle");
     if (!data.success) {
-      setMessage(describeInvoiceError(data.error));
+      setMessage(describeInvoiceError(data.error, t));
       return;
     }
     setInvoice({ ...data.invoice, payout_wallet: data.payout_wallet });
@@ -144,14 +146,14 @@ export default function Wallet() {
     const data = await res.json();
     if (data.success) {
       setStatus("done");
-      setMessage(`Credited $${data.credited.toFixed(2)}.`);
+      setMessage(t("Credited ${amount}.", { amount: data.credited.toFixed(2) }));
       setTxHash("");
       setInvoice(null);
       setQrDataUrl("");
       load();
     } else {
       setStatus("error");
-      setMessage(describeError(data.error, data));
+      setMessage(describeError(data.error, data, t));
     }
   }
 
@@ -159,18 +161,18 @@ export default function Wallet() {
 
   return (
     <div className="flex min-h-screen flex-col bg-bg font-body text-ink">
-      <SEO title="Wallet" path="/account/wallet" noindex />
+      <SEO title={t("Wallet")} path="/account/wallet" noindex />
       <SiteHeader session={session} balance={balance} onSignOut={() => supabase.auth.signOut()} />
 
       <main className="flex-1">
         <PageContainer className="space-y-6 py-8 sm:py-10" width="max-w-3xl">
           {/* Balance hero */}
           <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand-dark p-6 text-white shadow-card-hover sm:p-8">
-            <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10" />
-            <div className="pointer-events-none absolute -bottom-16 right-16 h-40 w-40 rounded-full bg-white/5" />
+            <div className="pointer-events-none absolute -end-10 -top-10 h-44 w-44 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-16 end-16 h-40 w-40 rounded-full bg-white/5" />
             <div className="relative">
-              <div className="text-sm font-medium text-white/80">Available balance</div>
-              <div className="mt-1 text-4xl font-semibold tracking-tight sm:text-5xl">
+              <div className="text-sm font-medium text-white/80">{t("Available balance")}</div>
+              <div className="mt-1 text-4xl font-semibold tracking-tight sm:text-5xl" dir="ltr">
                 {balance === null ? "…" : `$${balance.toFixed(2)}`}
               </div>
               <div className="mt-5 grid grid-cols-3 gap-2 sm:max-w-md sm:gap-3">
@@ -179,22 +181,22 @@ export default function Wallet() {
                   onClick={() => setTab("add")}
                   className="flex flex-col items-center gap-0.5 rounded-xl bg-white px-2 py-2.5 text-sm font-semibold text-brand shadow-card hover:bg-white/90"
                 >
-                  <span aria-hidden="true">＋</span>Add funds
+                  <span aria-hidden="true">＋</span>{t("Add funds")}
                 </button>
                 <Link
                   href="/account/withdraw"
                   className="flex flex-col items-center gap-0.5 rounded-xl bg-white/15 px-2 py-2.5 text-sm font-semibold text-white hover:bg-white/25"
                 >
-                  <span aria-hidden="true">↗</span>Withdraw
+                  <span aria-hidden="true">↗</span>{t("Withdraw")}
                 </Link>
                 <Link
                   href="/account/orders"
                   className="flex flex-col items-center gap-0.5 rounded-xl bg-white/15 px-2 py-2.5 text-sm font-semibold text-white hover:bg-white/25"
                 >
-                  <span aria-hidden="true">📦</span>My orders
+                  <span aria-hidden="true">📦</span>{t("My orders")}
                 </Link>
               </div>
-              <div className="mt-4 text-xs text-white/75">USDT · BEP20 · Use your balance on any product, instantly</div>
+              <div className="mt-4 text-xs text-white/75">{t("USDT · BEP20 · Use your balance on any product, instantly")}</div>
             </div>
           </section>
 
@@ -202,13 +204,13 @@ export default function Wallet() {
           {ledger.length > 0 && (
             <section className="grid grid-cols-3 gap-3">
               {[
-                ["Added", ledger.filter((e) => e.kind === "topup").reduce((n, e) => n + e.amount, 0), "text-success"],
-                ["Spent", -ledger.filter((e) => e.kind === "order").reduce((n, e) => n + e.amount, 0), "text-ink"],
-                ["Withdrawn", -ledger.filter((e) => e.kind === "withdraw" && e.amount < 0).reduce((n, e) => n + e.amount, 0), "text-ink"],
+                [t("Added"), ledger.filter((e) => e.kind === "topup").reduce((n, e) => n + e.amount, 0), "text-success"],
+                [t("Spent"), -ledger.filter((e) => e.kind === "order").reduce((n, e) => n + e.amount, 0), "text-ink"],
+                [t("Withdrawn"), -ledger.filter((e) => e.kind === "withdraw" && e.amount < 0).reduce((n, e) => n + e.amount, 0), "text-ink"],
               ].map(([label, v, cls]) => (
                 <div key={label} className="rounded-xl border border-border bg-surface px-3 py-3 text-center shadow-card">
                   <div className="text-[11px] uppercase tracking-wide text-muted">{label}</div>
-                  <div className={`mt-0.5 font-mono text-base font-semibold ${cls}`}>${v.toFixed(2)}</div>
+                  <div className={`mt-0.5 font-mono text-base font-semibold ${cls}`} dir="ltr">${v.toFixed(2)}</div>
                 </div>
               ))}
             </section>
@@ -217,8 +219,8 @@ export default function Wallet() {
           {/* Tabs */}
           <div role="tablist" className="grid grid-cols-2 rounded-xl border border-border bg-surface p-1 text-sm font-medium">
             {[
-              ["add", "Add funds"],
-              ["history", `History${ledger.length ? ` (${ledger.length})` : ""}`],
+              ["add", t("Add funds")],
+              ["history", `${t("History")}${ledger.length ? ` (${ledger.length})` : ""}`],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -234,13 +236,12 @@ export default function Wallet() {
 
           {tab === "add" && (
           <section className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
-            <h2 className="text-lg font-semibold text-ink">Add funds</h2>
+            <h2 className="text-lg font-semibold text-ink">{t("Add funds")}</h2>
 
             {!invoice && (
               <>
                 <p className="mt-1 text-sm text-muted">
-                  Choose an amount. We'll give you an exact figure to send, so your deposit is
-                  matched to you automatically.
+                  {t("Choose an amount. We'll give you an exact figure to send, so your deposit is matched to you automatically.")}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {[5, 10, 25, 50].map((v) => (
@@ -260,14 +261,14 @@ export default function Wallet() {
                 </div>
                 <div className="mt-4 max-w-sm space-y-3">
                   <FormInput
-                    label="Amount to add (USD)"
+                    label={t("Amount to add (USD)")}
                     type="number"
                     min="0.1"
                     step="0.1"
                     value={requestAmount}
                     onChange={(e) => setRequestAmount(e.target.value)}
-                    placeholder="e.g. 10"
-                    hint="Minimum $0.10."
+                    placeholder={t("e.g. 10")}
+                    hint={t("Minimum $0.10.")}
                   />
                   <Alert variant="error">{status !== "requesting" ? message : ""}</Alert>
                   <PrimaryButton
@@ -275,7 +276,7 @@ export default function Wallet() {
                     disabled={!requestAmount || Number(requestAmount) < 0.1 || status === "requesting"}
                     className="w-full"
                   >
-                    {status === "requesting" ? "Generating…" : "Get deposit amount"}
+                    {status === "requesting" ? t("Generating…") : t("Get deposit amount")}
                   </PrimaryButton>
                 </div>
               </>
@@ -284,25 +285,24 @@ export default function Wallet() {
             {invoice && (
               <div className="mt-4 space-y-5">
                 <Alert variant="warning">
-                  Send only USDT on <strong>BEP20 (BNB Smart Chain)</strong>. Other tokens or
-                  networks will be lost.
+                  {t("Send only USDT on")} <strong>BEP20 (BNB Smart Chain)</strong>{t(". Other tokens or networks will be lost.")}
                 </Alert>
 
                 {/* Step 1 */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-                    <StepBadge n={1} /> Send the exact amount
+                    <StepBadge n={1} /> {t("Send the exact amount")}
                   </div>
                   <div className="rounded-xl border border-border bg-brand-soft p-4">
-                    <div className="text-xs text-muted">Send exactly</div>
+                    <div className="text-xs text-muted">{t("Send exactly")}</div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-mono text-3xl font-semibold text-ink">
+                      <span className="font-mono text-3xl font-semibold text-ink" dir="ltr">
                         ${invoice.amount.toFixed(4)}
                       </span>
-                      <CopyButton value={String(invoice.amount)} label="Copy amount" />
+                      <CopyButton value={String(invoice.amount)} label={t("Copy amount")} />
                     </div>
                     <p className="mt-2 text-xs text-muted">
-                      Any other amount can't be matched automatically — it must be exact.
+                      {t("Any other amount can't be matched automatically — it must be exact.")}
                     </p>
                   </div>
 
@@ -310,16 +310,16 @@ export default function Wallet() {
                     {qrDataUrl && (
                       <img
                         src={qrDataUrl}
-                        alt="QR code for the payout wallet address"
+                        alt={t("QR code for the payout wallet address")}
                         className="h-32 w-32 flex-shrink-0 rounded-lg border border-border"
                       />
                     )}
                     <div className="w-full flex-1 space-y-2">
-                      <div className="text-xs text-muted">To this address (BEP20)</div>
-                      <p className="break-all rounded-lg bg-bg p-3 font-mono text-xs text-ink">
+                      <div className="text-xs text-muted">{t("To this address (BEP20)")}</div>
+                      <p dir="ltr" className="break-all rounded-lg bg-bg p-3 font-mono text-xs text-ink">
                         {invoice.payout_wallet}
                       </p>
-                      <CopyButton value={invoice.payout_wallet} label="Copy address" />
+                      <CopyButton value={invoice.payout_wallet} label={t("Copy address")} />
                     </div>
                   </div>
 
@@ -329,8 +329,8 @@ export default function Wallet() {
                     }`}
                   >
                     {expired
-                      ? "This amount has expired — request a new one."
-                      : `⏱ Expires in ${formatCountdown(secondsLeft ?? 0)}`}
+                      ? t("This amount has expired — request a new one.")
+                      : t("⏱ Expires in {time}", { time: formatCountdown(secondsLeft ?? 0) })}
                   </p>
                 </div>
 
@@ -338,15 +338,15 @@ export default function Wallet() {
                 {!expired && (
                   <div className="space-y-3 border-t border-border pt-5">
                     <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-                      <StepBadge n={2} /> Paste your transaction hash
+                      <StepBadge n={2} /> {t("Paste your transaction hash")}
                     </div>
                     <div className="max-w-md space-y-3">
                       <FormInput
-                        label="Transaction hash"
+                        label={t("Transaction hash")}
                         value={txHash}
                         onChange={(e) => setTxHash(e.target.value)}
                         placeholder="0x…"
-                        className="font-mono text-xs"
+                        className="font-mono text-xs" dir="ltr"
                       />
                       <Alert variant={status === "error" ? "error" : "success"}>{message}</Alert>
                       <PrimaryButton
@@ -354,14 +354,14 @@ export default function Wallet() {
                         disabled={!txHash || status === "verifying"}
                         className="w-full"
                       >
-                        {status === "verifying" ? "Checking…" : "I've sent it — verify payment"}
+                        {status === "verifying" ? t("Checking…") : t("I've sent it — verify payment")}
                       </PrimaryButton>
                     </div>
                   </div>
                 )}
 
                 <LinkButton onClick={cancelInvoice} className="text-xs">
-                  {expired ? "Request a new amount" : "Cancel and start over"}
+                  {expired ? t("Request a new amount") : t("Cancel and start over")}
                 </LinkButton>
               </div>
             )}
@@ -378,7 +378,7 @@ export default function Wallet() {
           {tab === "history" && (
           <section>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              {[["all", "All"], ["in", "Money in"], ["out", "Money out"]].map(([k, l]) => (
+              {[["all", t("All")], ["in", t("Money in")], ["out", t("Money out")]].map(([k, l]) => (
                 <button
                   key={k}
                   type="button"
@@ -392,7 +392,7 @@ export default function Wallet() {
               ))}
             </div>
             {ledger.length === 0 && (
-              <EmptyState title="No transactions yet" description="Top-ups and wallet purchases will show up here." />
+              <EmptyState title={t("No transactions yet")} description={t("Top-ups and wallet purchases will show up here.")} />
             )}
             {ledger.length > 0 && (
               <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
@@ -411,10 +411,10 @@ export default function Wallet() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-ink">{entry.label}</div>
                         <div className="text-xs text-muted">
-                          {new Date(entry.date).toLocaleString()}
+                          {new Date(entry.date).toLocaleString(intlLocale(locale))}
                         </div>
                       </div>
-                      <span className={`font-mono font-semibold ${debit ? "text-danger" : "text-success"}`}>
+                      <span dir="ltr" className={`font-mono font-semibold ${debit ? "text-danger" : "text-success"}`}>
                         {debit ? "−" : "+"}${Math.abs(entry.amount).toFixed(2)}
                       </span>
                     </li>
@@ -438,45 +438,48 @@ function formatCountdown(totalSeconds) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function describeInvoiceError(code) {
+function describeInvoiceError(code, t) {
   switch (code) {
     case "invalid_amount":
-      return "Enter a valid amount of at least $0.10.";
+      return t("Enter a valid amount of at least $0.10.");
     case "could_not_allocate_amount":
-      return "Couldn't generate a unique amount right now — please try again.";
+      return t("Couldn't generate a unique amount right now — please try again.");
     default:
-      return code ? code.replaceAll("_", " ") : "Something went wrong.";
+      return code ? code.replaceAll("_", " ") : t("Something went wrong.");
   }
 }
 
-function describeError(code, data) {
+function describeError(code, data, t) {
   switch (code) {
     case "too_many_attempts":
-      return `Too many wrong transaction hashes. Please wait ${
-        Math.max(1, Math.ceil(((data && data.retry_after) || 120) / 60))
-      } minute(s) and double-check the hash before trying again.`;
+      return t("Too many wrong transaction hashes. Please wait {n} minute(s) and double-check the hash before trying again.", {
+        n: Math.max(1, Math.ceil(((data && data.retry_after) || 120) / 60)),
+      });
     case "not_found_yet":
-      return "That transaction isn't visible on-chain yet — wait a bit and try again.";
+      return t("That transaction isn't visible on-chain yet — wait a bit and try again.");
     case "chain_lookup_failed":
-      return "Couldn't reach the blockchain right now — try again in a moment.";
+      return t("Couldn't reach the blockchain right now — try again in a moment.");
     case "tx_failed":
-      return "That transaction failed on-chain — it never went through.";
+      return t("That transaction failed on-chain — it never went through.");
     case "wrong_recipient":
-      return "That transaction wasn't a USDT (BEP20) transfer to our wallet.";
+      return t("That transaction wasn't a USDT (BEP20) transfer to our wallet.");
     case "awaiting_confirmations":
-      return "Payment seen, waiting for more confirmations — try again shortly.";
+      return t("Payment seen, waiting for more confirmations — try again shortly.");
     case "tx_already_used":
-      return "That transaction hash was already used.";
+      return t("That transaction hash was already used.");
     case "amount_mismatch":
       return data?.received !== undefined
-        ? `That transaction sent $${Number(data.received).toFixed(4)}, but this invoice needs exactly $${Number(data.expected).toFixed(4)}.`
-        : "That transaction's amount doesn't match this deposit invoice.";
+        ? t("That transaction sent ${received}, but this invoice needs exactly ${expected}.", {
+            received: Number(data.received).toFixed(4),
+            expected: Number(data.expected).toFixed(4),
+          })
+        : t("That transaction's amount doesn't match this deposit invoice.");
     case "invoice_not_found":
-      return "That deposit request wasn't found — please request a new amount.";
+      return t("That deposit request wasn't found — please request a new amount.");
     case "invoice_not_pending":
-      return "That deposit request was already used — please request a new amount.";
+      return t("That deposit request was already used — please request a new amount.");
     case "invoice_expired":
-      return "That deposit amount expired — please request a new one.";
+      return t("That deposit amount expired — please request a new one.");
     default:
       return code ? code.replaceAll("_", " ") : "";
   }

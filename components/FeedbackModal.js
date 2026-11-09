@@ -3,6 +3,7 @@ import Modal from "./ui/Modal";
 import Alert from "./ui/Alert";
 import { FormInput, FormTextarea } from "./ui/FormInput";
 import { PrimaryButton } from "./ui/Button";
+import { useT } from "../lib/i18n";
 
 const ERRORS = {
   invalid_email: "Please enter a valid email address.",
@@ -12,6 +13,7 @@ const ERRORS = {
 };
 
 export default function FeedbackModal({ onClose }) {
+  const { t } = useT();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [website, setWebsite] = useState(""); // honeypot
@@ -31,29 +33,29 @@ export default function FeedbackModal({ onClose }) {
       });
       const data = await res.json();
       if (data.success) setSent(true);
-      else setError(ERRORS[data.error] || "Couldn't send feedback — please try again.");
+      else setError(t(ERRORS[data.error] || "Couldn't send feedback — please try again."));
     } catch {
-      setError("Couldn't send feedback — check your connection and try again.");
+      setError(t("Couldn't send feedback — check your connection and try again."));
     }
     setBusy(false);
   }
 
   return (
-    <Modal title="Give us feedback" onClose={onClose}>
+    <Modal title={t("Give us feedback")} onClose={onClose}>
       {sent ? (
         <div className="space-y-4">
-          <Alert variant="success">Thank you! Your feedback helps us improve.</Alert>
+          <Alert variant="success">{t("Thank you! Your feedback helps us improve.")}</Alert>
           <PrimaryButton onClick={onClose} className="w-full">
-            Close
+            {t("Close")}
           </PrimaryButton>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           <p className="text-sm text-muted">
-            Tell us what we can do better — we read every message.
+            {t("Tell us what we can do better — we read every message.")}
           </p>
           <FormInput
-            label="Your email"
+            label={t("Your email")}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -62,12 +64,12 @@ export default function FeedbackModal({ onClose }) {
             maxLength={200}
           />
           <FormTextarea
-            label="Your feedback"
+            label={t("Your feedback")}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={5}
             maxLength={2000}
-            placeholder="What should we improve?"
+            placeholder={t("What should we improve?")}
             required
           />
           {/* Honeypot — hidden from people, bots tend to fill it */}
@@ -83,7 +85,7 @@ export default function FeedbackModal({ onClose }) {
           />
           <Alert variant="error">{error}</Alert>
           <PrimaryButton type="submit" disabled={busy} className="w-full">
-            {busy ? "Sending…" : "Submit"}
+            {busy ? t("Sending…") : t("Submit")}
           </PrimaryButton>
         </form>
       )}

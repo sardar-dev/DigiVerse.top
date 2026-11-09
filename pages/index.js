@@ -19,6 +19,7 @@ import { FormInput } from "../components/ui/FormInput";
 import { PrimaryButton, SecondaryButton } from "../components/ui/Button";
 import { EmptyState, ErrorState, LoadingState } from "../components/ui/States";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
+import { useT } from "../lib/i18n";
 
 // Server-rendered so search engines (and the first paint) see the
 // actual product list immediately, not an empty page that fills in
@@ -51,6 +52,7 @@ export async function getServerSideProps({ query, res }) {
 
 export default function Storefront({ initialProducts, sharedMeta }) {
   const router = useRouter();
+  const { t, locale } = useT();
   const { notify } = useToast();
   const [session, setSession] = useState(null);
   const [products, setProducts] = useState(initialProducts || []);
@@ -168,7 +170,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       {sharedMeta ? (
         <SEO
           title={sharedMeta.title}
-          description={`${sharedMeta.description ? sharedMeta.description + " — " : ""}$${sharedMeta.price.toFixed(2)} on DigiVerse. Instant delivery and secure checkout.`}
+          description={`${sharedMeta.description ? sharedMeta.description + " — " : ""}${t("{price} on DigiVerse. Instant delivery and secure checkout.", { price: `$${sharedMeta.price.toFixed(2)}` })}`}
           path={`/?product=${toProductCode(sharedMeta.id)}`}
           image={sharedMeta.image || undefined}
         />
@@ -212,16 +214,16 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         <section id="how-it-works" className="border-b border-border bg-surface">
           <PageContainer className="py-10">
             <h2 className="text-center text-xl font-semibold text-ink sm:text-2xl">
-              How it works
+              {t("How it works")}
             </h2>
             <p className="mx-auto mt-1 max-w-md text-center text-sm text-muted">
-              From choosing a product to receiving it, in three simple steps.
+              {t("From choosing a product to receiving it, in three simple steps.")}
             </p>
             <ol className="mt-8 grid gap-4 sm:grid-cols-3">
               {[
-                { n: 1, title: "Choose a product", text: "Browse the catalog and pick what you need. Prices are shown upfront." },
-                { n: 2, title: "Pay with USDT or wallet", text: "Send the exact USDT (BEP20) amount, or pay instantly from your wallet balance." },
-                { n: 3, title: "Receive instantly", text: "Your order details appear right away and stay saved under My Orders." },
+                { n: 1, title: t("Choose a product"), text: t("Browse the catalog and pick what you need. Prices are shown upfront.") },
+                { n: 2, title: t("Pay with USDT or wallet"), text: t("Send the exact USDT (BEP20) amount, or pay instantly from your wallet balance.") },
+                { n: 3, title: t("Receive instantly"), text: t("Your order details appear right away and stay saved under My Orders.") },
               ].map((step) => (
                 <li
                   key={step.n}
@@ -243,11 +245,11 @@ export default function Storefront({ initialProducts, sharedMeta }) {
           <PageContainer className="py-10">
             <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold text-ink sm:text-2xl">Products</h2>
+                <h2 className="text-xl font-semibold text-ink sm:text-2xl">{t("Products")}</h2>
                 <p className="text-sm text-muted">
                   {products.length > 0
-                    ? `${visible.length} of ${products.length} shown · ${inStock.length} in stock`
-                    : "Browse what's available"}
+                    ? t("{shown} of {total} shown · {stock} in stock", { shown: visible.length, total: products.length, stock: inStock.length })
+                    : t("Browse what's available")}
                 </p>
               </div>
               <div className="dv-search flex w-full max-w-sm items-center gap-2 rounded-xl border border-border bg-surface px-3 shadow-card transition-shadow sm:w-auto sm:min-w-[300px]">
@@ -256,12 +258,12 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search products…"
-                  aria-label="Search products"
+                  placeholder={t("Search products…")}
+                  aria-label={t("Search products")}
                   className="min-h-11 min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
                 />
                 {search && (
-                  <button type="button" onClick={() => setSearch("")} aria-label="Clear search" className="text-muted hover:text-ink">
+                  <button type="button" onClick={() => setSearch("")} aria-label={t("Clear search")} className="text-muted hover:text-ink">
                     ✕
                   </button>
                 )}
@@ -269,7 +271,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
             </div>
 
             {categories.length > 1 && (
-              <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+              <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label={t("Filter by category")}>
                 {["", ...categories].map((c) => (
                   <button
                     key={c || "all"}
@@ -280,7 +282,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                         : "bg-brand-soft text-brand hover:bg-brand/10 hover:shadow-[0_0_16px_-4px_rgba(49,105,245,0.4)]"
                     }`}
                   >
-                    {c || "All"}
+                    {c || t("All")}
                   </button>
                 ))}
               </div>
@@ -296,29 +298,28 @@ export default function Storefront({ initialProducts, sharedMeta }) {
 
             {loadError && (
               <ErrorState
-                title="Couldn't load products"
-                description="Something's wrong on our end — please try again."
+                title={t("Couldn't load products")}
+                description={t("Something's wrong on our end — please try again.")}
                 onRetry={() => loadProducts(true)}
               />
             )}
 
             {!loading && !loadError && products.length === 0 && (
               <EmptyState
-                title="Nothing in stock right now"
-                description="Check back soon — new stock is added regularly."
+                title={t("Nothing in stock right now")}
+                description={t("Check back soon — new stock is added regularly.")}
               />
             )}
 
             {!loading && !loadError && products.length > 0 && visible.length === 0 && (
               <EmptyState
-                title={search ? `No products match "${search}"` : "No products in this category"}
+                title={search ? t('No products match "{q}"', { q: search }) : t("No products in this category")}
               />
             )}
 
             {sharedNotFound && (
               <Alert variant="warning" className="mb-4">
-                That shared product link isn't available anymore — it may be out of stock or
-                removed.
+                {t("That shared product link isn't available anymore — it may be out of stock or removed.")}
               </Alert>
             )}
 
@@ -327,8 +328,8 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                 <ProductCard
                   key={p.id}
                   product={p}
-                  onBuy={() => (session ? setActive(p) : (window.location.href = "/login"))}
-                  onShare={() => shareProduct(p, notify)}
+                  onBuy={() => (session ? setActive(p) : router.push("/login"))}
+                  onShare={() => shareProduct(p, notify, t, locale)}
                 />
               ))}
             </div>
@@ -359,19 +360,21 @@ export default function Storefront({ initialProducts, sharedMeta }) {
   );
 }
 
-function shareProduct(product, notify) {
-  const url = `${window.location.origin}/?product=${toProductCode(product.id)}`;
+function shareProduct(product, notify, t, locale) {
+  const prefix = locale && locale !== "en" ? `/${locale}` : "";
+  const url = `${window.location.origin}${prefix}/?product=${toProductCode(product.id)}`;
   if (navigator.share) {
     navigator.share({ title: product.title, url }).catch(() => {});
     return;
   }
   navigator.clipboard
     ?.writeText(url)
-    .then(() => notify?.("Product link copied! 🔗"))
-    .catch(() => window.prompt("Copy this link:", url));
+    .then(() => notify?.(t("Product link copied! 🔗")))
+    .catch(() => window.prompt(t("Copy this link:"), url));
 }
 
 function BuyModal({ product, onClose, ticker }) {
+  const { t } = useT();
   const [step, setStep] = useState("form"); // form | summary | order | done
   const [quantity, setQuantity] = useState("1"); // string so input can be cleared while typing
   const [email, setEmail] = useState("");
@@ -393,9 +396,16 @@ function BuyModal({ product, onClose, ticker }) {
   // are kept working via friendly display names.
   const activationLabel = product.activation_field
     ? product.activation_field === "email"
-      ? "Your email (for activation)"
+      ? t("Your email (for activation)")
       : product.activation_field === "username"
-      ? "Your username (for activation)"
+      ? t("Your username (for activation)")
+      : product.activation_field
+    : null;
+  const activationShort = product.activation_field
+    ? product.activation_field === "email"
+      ? t("Your email")
+      : product.activation_field === "username"
+      ? t("Your username")
       : product.activation_field
     : null;
   const activationPlaceholder = product.activation_placeholder || activationLabel || "";
@@ -405,26 +415,26 @@ function BuyModal({ product, onClose, ticker }) {
     const parsedQty = parseInt(quantity, 10);
     // Validate quantity first — applies to all products
     if (!quantity || isNaN(parsedQty) || parsedQty < 1) {
-      setError("Please enter a quantity of at least 1.");
+      setError(t("Please enter a quantity of at least 1."));
       return;
     }
     if (product.requires_email && product.provider !== "manual" && !email) {
-      setError(describeError("email_required"));
+      setError(describeError(t, "email_required"));
       return;
     }
     if (product.provider === "manual") {
       const minQty = product.min_order_qty ?? 1;
       const maxQty = product.max_order_qty ?? null;
       if (parsedQty < minQty) {
-        setError(describeError("qty_below_minimum", undefined, undefined, undefined, minQty));
+        setError(describeError(t, "qty_below_minimum", undefined, undefined, undefined, minQty));
         return;
       }
       if (maxQty !== null && parsedQty > maxQty) {
-        setError(describeError("qty_exceeds_maximum", undefined, undefined, maxQty));
+        setError(describeError(t, "qty_exceeds_maximum", undefined, undefined, maxQty));
         return;
       }
       if (product.activation_field && !activationInfo.trim()) {
-        setError(describeError("activation_info_required"));
+        setError(describeError(t, "activation_info_required"));
         return;
       }
     }
@@ -446,10 +456,10 @@ function BuyModal({ product, onClose, ticker }) {
         setCoupon(data);
       } else {
         setCoupon(null);
-        setCouponError(describeError(data.error, undefined, data.min_order));
+        setCouponError(describeError(t, data.error, undefined, data.min_order));
       }
     } catch {
-      setCouponError("Couldn't check that code — try again.");
+      setCouponError(t("Couldn't check that code — try again."));
     }
     setCouponBusy(false);
   }
@@ -477,7 +487,7 @@ function BuyModal({ product, onClose, ticker }) {
     const data = await res.json();
     setCreating(false);
     if (!data.success) {
-      setError(describeError(data.error, data.available, data.min_order, data.max_qty));
+      setError(describeError(t, data.error, data.available, data.min_order, data.max_qty));
       setCoupon(null);
       setStep("form");
       return;
@@ -488,7 +498,8 @@ function BuyModal({ product, onClose, ticker }) {
 
   const subtotal = Number(product.sell_price) * (parseInt(quantity, 10) || 0);
   const total = (coupon ? coupon.final : subtotal).toFixed(2);
-  const stepLabels = { form: "1. Details", summary: "2. Review", order: "3. Payment", done: "4. Done" };
+  const checkParts = t("Check {link} once it's ready. If you need support, just quote your order number above.").split("{link}");
+  const stepLabels = { form: t("1. Details"), summary: t("2. Review"), order: t("3. Payment"), done: t("4. Done") };
 
   return (
     <Modal title={product.title} onClose={onClose}>
@@ -522,7 +533,7 @@ function BuyModal({ product, onClose, ticker }) {
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-success/20 bg-success-soft px-3.5 py-2.5 text-sm text-success">
           <span aria-hidden="true">🛡️</span>
           <span>
-            <strong>Warranty:</strong> {product.warranty}
+            <strong>{t("Warranty:")}</strong> {product.warranty}
           </span>
         </div>
       )}
@@ -531,13 +542,13 @@ function BuyModal({ product, onClose, ticker }) {
         <div className="space-y-4">
           {isManualDelivery && (
             <Alert variant="warning">
-              This product is delivered manually. Estimated delivery:{" "}
-              <strong>{product.delivery || "see details"}</strong>. You'll find it in{" "}
-              <strong>My Orders</strong> once it's ready.
+              {t("This product is delivered manually. Estimated delivery: {delivery}. You'll find it in My Orders once it's ready.", {
+                delivery: product.delivery || t("see details"),
+              })}
             </Alert>
           )}
           <FormInput
-            label="Quantity"
+            label={t("Quantity")}
             type="number"
             min={product.provider === "manual" && product.min_order_qty ? product.min_order_qty : 1}
             max={product.provider === "manual" && product.max_order_qty ? product.max_order_qty : product.available_stock}
@@ -558,15 +569,15 @@ function BuyModal({ product, onClose, ticker }) {
             }}
             hint={
               product.provider === "manual" && product.max_order_qty
-                ? `Max ${product.max_order_qty} per order${product.min_order_qty > 1 ? ` · Min ${product.min_order_qty}` : ""}`
+                ? `${t("Max {n} per order", { n: product.max_order_qty })}${product.min_order_qty > 1 ? ` · ${t("Min {n}", { n: product.min_order_qty })}` : ""}`
                 : product.provider === "manual" && product.min_order_qty > 1
-                ? `Min ${product.min_order_qty} per order`
+                ? t("Min {n} per order", { n: product.min_order_qty })
                 : undefined
             }
           />
           {product.requires_email && product.provider !== "manual" && (
             <FormInput
-              label="Email for delivery"
+              label={t("Email for delivery")}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -579,12 +590,12 @@ function BuyModal({ product, onClose, ticker }) {
               value={activationInfo}
               onChange={(e) => setActivationInfo(e.target.value)}
               placeholder={activationPlaceholder}
-              hint="We'll use this to activate your subscription after payment."
+              hint={t("We'll use this to activate your subscription after payment.")}
             />
           )}
           <Alert variant="error">{error}</Alert>
           <PrimaryButton onClick={reviewOrder} className="w-full">
-            Review order
+            {t("Review order")}
           </PrimaryButton>
         </div>
       )}
@@ -592,40 +603,40 @@ function BuyModal({ product, onClose, ticker }) {
       {step === "summary" && (
         <div className="space-y-4 text-sm">
           <div className="divide-y divide-border rounded-lg border border-border">
-            <Row label="Product" value={product.title} />
-            <Row label="Quantity" value={quantity} mono />
-            <Row label="Unit price" value={`$${Number(product.sell_price).toFixed(2)}`} mono />
-            {product.requires_email && product.provider !== "manual" && <Row label="Delivery email" value={email} />}
+            <Row label={t("Product")} value={product.title} />
+            <Row label={t("Quantity")} value={quantity} mono />
+            <Row label={t("Unit price")} value={`$${Number(product.sell_price).toFixed(2)}`} mono />
+            {product.requires_email && product.provider !== "manual" && <Row label={t("Delivery email")} value={email} />}
             {activationLabel && (
-              <Row label={activationLabel.replace(" (for activation)", "")} value={activationInfo} />
+              <Row label={activationShort} value={activationInfo} />
             )}
             {isManualDelivery && (
-              <Row label="Delivery" value={`Manual — ${product.delivery || "see details"}`} />
+              <Row label={t("Delivery")} value={t("Manual — {delivery}", { delivery: product.delivery || t("see details") })} />
             )}
             {coupon && (
               <>
-                <Row label="Subtotal" value={`$${subtotal.toFixed(2)}`} mono />
+                <Row label={t("Subtotal")} value={`$${subtotal.toFixed(2)}`} mono />
                 <div className="flex justify-between px-3.5 py-3 text-success">
                   <span>
-                    Coupon {coupon.code}
-                    {coupon.discount_type !== "percent" && quantity > 1 ? ` (per item × ${quantity})` : ""}
+                    {t("Coupon")} {coupon.code}
+                    {coupon.discount_type !== "percent" && quantity > 1 ? ` ${t("(per item × {n})", { n: quantity })}` : ""}
                   </span>
-                  <span className="font-mono">−${Number(coupon.discount).toFixed(2)}</span>
+                  <span className="font-mono" dir="ltr">−${Number(coupon.discount).toFixed(2)}</span>
                 </div>
               </>
             )}
             <div className="flex justify-between px-3.5 py-3 text-base font-semibold text-ink">
-              <span>Total</span>
-              <span>${total}</span>
+              <span>{t("Total")}</span>
+              <span dir="ltr">${total}</span>
             </div>
           </div>
 
           <div className="space-y-2">
             {coupon ? (
               <div className="flex items-center justify-between rounded-lg border border-success/30 bg-success-soft px-3.5 py-2.5 text-success">
-                <span>🎟️ {coupon.code} applied</span>
+                <span>🎟️ {t("{code} applied", { code: coupon.code })}</span>
                 <button type="button" onClick={removeCoupon} className="text-xs font-medium underline">
-                  Remove
+                  {t("Remove")}
                 </button>
               </div>
             ) : (
@@ -633,13 +644,13 @@ function BuyModal({ product, onClose, ticker }) {
                 <FormInput
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                  placeholder="Coupon code"
-                  aria-label="Coupon code"
+                  placeholder={t("Coupon code")}
+                  aria-label={t("Coupon code")}
                   className="font-mono"
                   autoComplete="off"
                 />
                 <SecondaryButton onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()}>
-                  {couponBusy ? "…" : "Apply"}
+                  {couponBusy ? "…" : t("Apply")}
                 </SecondaryButton>
               </div>
             )}
@@ -648,10 +659,10 @@ function BuyModal({ product, onClose, ticker }) {
           <Alert variant="error">{error}</Alert>
           <div className="flex gap-3">
             <SecondaryButton onClick={() => setStep("form")} className="flex-1">
-              Back
+              {t("Back")}
             </SecondaryButton>
             <PrimaryButton onClick={confirmOrder} disabled={creating} className="flex-1">
-              {creating ? "Creating…" : "Confirm & continue"}
+              {creating ? t("Creating…") : t("Confirm & continue")}
             </PrimaryButton>
           </div>
         </div>
@@ -670,30 +681,30 @@ function BuyModal({ product, onClose, ticker }) {
 
       {step === "done" && manual && (
         <div className="space-y-3 text-sm">
-          <p className="font-mono text-xs text-muted">Order #{order?.order_number}</p>
+          <p className="font-mono text-xs text-muted" dir="ltr">{t("Order #{n}", { n: order?.order_number })}</p>
           <Alert variant="success">
-            Payment confirmed. This product is delivered manually — estimated delivery{" "}
-            <strong>{product.delivery || "soon"}</strong>. Check{" "}
+            {t("Payment confirmed. This product is delivered manually — estimated delivery {delivery}.", { delivery: product.delivery || t("soon") })}{" "}
+            {checkParts[0]}
             <Link href="/account/orders" className="underline">
-              My Orders
-            </Link>{" "}
-            once it's ready. If you need support, just quote your order number above.
+              {t("My Orders")}
+            </Link>
+            {checkParts[1]}
           </Alert>
           <PrimaryButton onClick={onClose} className="w-full">
-            Done
+            {t("Done")}
           </PrimaryButton>
         </div>
       )}
 
       {step === "done" && !manual && (
         <div className="space-y-3 text-sm">
-          <p className="font-mono text-xs text-muted">Order #{order?.order_number}</p>
-          <p className="text-ink">Delivered. Save these now:</p>
-          <pre className="whitespace-pre-wrap break-all rounded-lg border border-border bg-brand-soft p-3 font-mono text-xs text-ink">
+          <p className="font-mono text-xs text-muted" dir="ltr">{t("Order #{n}", { n: order?.order_number })}</p>
+          <p className="text-ink">{t("Delivered. Save these now:")}</p>
+          <pre dir="ltr" className="whitespace-pre-wrap break-all rounded-lg border border-border bg-brand-soft p-3 font-mono text-xs text-ink">
             {(items || []).join("\n\n")}
           </pre>
           <PrimaryButton onClick={onClose} className="w-full">
-            Done
+            {t("Done")}
           </PrimaryButton>
         </div>
       )}
@@ -705,47 +716,47 @@ function Row({ label, value, mono }) {
   return (
     <div className="flex justify-between gap-3 px-3.5 py-3">
       <span className="text-muted">{label}</span>
-      <span className={`text-right break-all text-ink ${mono ? "font-mono" : ""}`}>{value}</span>
+      <span className={`text-end break-all text-ink ${mono ? "font-mono" : ""}`}>{value}</span>
     </div>
   );
 }
 
-function describeError(code, available, minOrder, maxQty, minQty) {
+function describeError(t, code, available, minOrder, maxQty, minQty) {
   switch (code) {
     case "qty_below_minimum":
-      return `Minimum order quantity is ${minQty}. Please increase the quantity.`;
+      return t("Minimum order quantity is {n}. Please increase the quantity.", { n: minQty });
     case "qty_exceeds_maximum":
-      return `Maximum order quantity is ${maxQty}. Please lower the quantity.`;
+      return t("Maximum order quantity is {n}. Please lower the quantity.", { n: maxQty });
     case "not_enough_stock":
       return Number(available) > 0
-        ? `Only ${available} left — lower the quantity and try again.`
-        : "Sorry, this product just sold out. Please check back soon.";
+        ? t("Only {n} left — lower the quantity and try again.", { n: available })
+        : t("Sorry, this product just sold out. Please check back soon.");
     case "supplier_unavailable":
-      return "This product is temporarily unavailable. Please try again later.";
+      return t("This product is temporarily unavailable. Please try again later.");
     case "email_required":
-      return "This product needs an email address for delivery.";
+      return t("This product needs an email address for delivery.");
     case "activation_info_required":
-      return "Please enter the info needed to activate your subscription.";
+      return t("Please enter the info needed to activate your subscription.");
     case "invalid_coupon":
-      return "That coupon code isn't valid.";
+      return t("That coupon code isn't valid.");
     case "coupon_inactive":
-      return "That coupon is no longer active.";
+      return t("That coupon is no longer active.");
     case "coupon_expired":
-      return "That coupon has expired.";
+      return t("That coupon has expired.");
     case "coupon_wrong_product":
-      return "That coupon doesn't apply to this product.";
+      return t("That coupon doesn't apply to this product.");
     case "coupon_min_order":
-      return `This coupon needs an order of at least $${Number(minOrder || 0).toFixed(2)}.`;
+      return t("This coupon needs an order of at least {amount}.", { amount: `$${Number(minOrder || 0).toFixed(2)}` });
     case "coupon_used_up":
-      return "That coupon has reached its usage limit.";
+      return t("That coupon has reached its usage limit.");
     case "coupon_unavailable":
-      return "This coupon is temporarily disabled. Please try again later or contact support.";
+      return t("This coupon is temporarily disabled. Please try again later or contact support.");
     case "coupon_already_used":
-      return "You've already used this coupon.";
+      return t("You've already used this coupon.");
     case "supplier_balance_limit":
       return Number(maxQty) > 0
-        ? `You can only order up to ${maxQty} of this product right now. Please lower the quantity.`
-        : "This product is temporarily unavailable. Please try again later.";
+        ? t("You can only order up to {n} of this product right now. Please lower the quantity.", { n: maxQty })
+        : t("This product is temporarily unavailable. Please try again later.");
     default:
       return code ? code.replaceAll("_", " ") : "";
   }
@@ -753,6 +764,7 @@ function describeError(code, available, minOrder, maxQty, minQty) {
 
 // ── Hero section (extracted so mouse-glow useEffect stays isolated) ──────────
 function HeroSection({ inStock, search, setSearch }) {
+  const { t, locale } = useT();
   const sectionRef = useRef(null);
   const glowRef = useRef(null);
 
@@ -824,26 +836,30 @@ function HeroSection({ inStock, search, setSearch }) {
         <div className="grid gap-8 md:grid-cols-[1.15fr_0.85fr] md:items-center md:gap-12">
 
           {/* Left / main content — centered on mobile */}
-          <div className="mx-auto flex w-full max-w-lg flex-col items-center text-center md:mx-0 md:max-w-none md:items-start md:text-left">
+          <div className="mx-auto flex w-full max-w-lg flex-col items-center text-center md:mx-0 md:max-w-none md:items-start md:text-start">
 
             {/* Live badge */}
             <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-surface/90 px-3 py-1.5 text-xs font-medium text-brand shadow-[0_0_22px_-4px_rgba(49,105,245,0.45)] backdrop-blur">
               <span className="dv-live-dot h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
               {inStock.length > 0
-                ? `${inStock.length} product${inStock.length === 1 ? "" : "s"} in stock`
-                : "Digital products store"}
+                ? inStock.length === 1
+                  ? t("1 product in stock")
+                  : locale === "ru" && inStock.length % 10 >= 2 && inStock.length % 10 <= 4 && (inStock.length % 100 < 12 || inStock.length % 100 > 14)
+                  ? t("{n} products in stock (few)", { n: inStock.length })
+                  : t("{n} products in stock", { n: inStock.length })
+                : t("Digital products store")}
             </span>
 
             {/* Headline */}
             <h1 className="mt-4 text-[2rem] font-bold leading-tight tracking-tight text-ink sm:text-4xl lg:text-5xl">
-              Digital subscriptions,{" "}
-              <span className="dv-gradient-text">delivered instantly.</span>
+              {t("Digital subscriptions,")}{" "}
+              <span className="dv-gradient-text">{t("delivered instantly.")}</span>
             </h1>
 
             {/* Sub-copy */}
             <p className="mt-3 text-sm text-muted sm:text-base">
-              Fair prices, instant delivery, real support.{" "}
-              <span className="whitespace-nowrap">Pay with USDT or wallet balance.</span>
+              {t("Fair prices, instant delivery, real support.")}{" "}
+              <span className="whitespace-nowrap">{t("Pay with USDT or wallet balance.")}</span>
             </p>
 
             {/* Search bar */}
@@ -855,34 +871,34 @@ function HeroSection({ inStock, search, setSearch }) {
                 document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              <span className="flex items-center pl-3 text-muted" aria-hidden="true">🔍</span>
+              <span className="flex items-center ps-3 text-muted" aria-hidden="true">🔍</span>
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search, e.g. Gemini, Muse AI…"
-                aria-label="Search products"
+                placeholder={t("Search, e.g. Gemini, Muse AI…")}
+                aria-label={t("Search products")}
                 className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm text-ink placeholder:text-muted focus:outline-none"
               />
-              <PrimaryButton type="submit" className="px-4 text-sm">Search</PrimaryButton>
+              <PrimaryButton type="submit" className="px-4 text-sm">{t("Search")}</PrimaryButton>
             </form>
 
             {/* CTA buttons — stacked on mobile, row on sm+ */}
             <div className="mt-4 grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2 md:flex md:w-auto">
               <a href="#catalog">
-                <PrimaryButton className="w-full px-7 py-2.5">Browse products</PrimaryButton>
+                <PrimaryButton className="w-full px-7 py-2.5">{t("Browse products")}</PrimaryButton>
               </a>
               <a href="#how-it-works">
-                <SecondaryButton className="w-full px-7 py-2.5">How it works</SecondaryButton>
+                <SecondaryButton className="w-full px-7 py-2.5">{t("How it works")}</SecondaryButton>
               </a>
             </div>
 
             {/* Feature pills */}
             <ul className="mt-5 flex flex-wrap justify-center gap-2 md:justify-start">
               {[
-                { icon: "⚡", label: "Instant delivery" },
-                { icon: "🔒", label: "Secure USDT" },
-                { icon: "💬", label: "Real support" },
+                { icon: "⚡", label: t("Instant delivery") },
+                { icon: "🔒", label: t("Secure USDT") },
+                { icon: "💬", label: t("Real support") },
               ].map((f) => (
                 <li
                   key={f.label}
@@ -903,7 +919,7 @@ function HeroSection({ inStock, search, setSearch }) {
                   key={p.id}
                   href="#catalog"
                   className="dv-float flex items-center gap-3 rounded-xl border border-brand/15 bg-surface/95 p-3.5 shadow-[0_0_0_1px_rgba(49,105,245,0.05),0_18px_36px_-14px_rgba(49,105,245,0.45)] backdrop-blur transition-shadow hover:shadow-[0_0_0_1px_rgba(49,105,245,0.35),0_22px_44px_-12px_rgba(49,105,245,0.6)]"
-                  style={{ marginLeft: `${i * 14}px`, animationDelay: `${i * 0.9}s` }}
+                  style={{ marginInlineStart: `${i * 14}px`, animationDelay: `${i * 0.9}s` }}
                 >
                   {p.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -918,15 +934,15 @@ function HeroSection({ inStock, search, setSearch }) {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-ink">{p.title}</span>
                     <span className="block text-xs text-success">
-                      {p.provider === "manual" && !p.auto_delivery ? "Manual delivery" : "Instant delivery"}
+                      {p.provider === "manual" && !p.auto_delivery ? t("Manual delivery") : t("Instant delivery")}
                     </span>
                   </span>
-                  <span className="text-sm font-bold text-ink">${Number(p.sell_price).toFixed(2)}</span>
+                  <span className="text-sm font-bold text-ink" dir="ltr">${Number(p.sell_price).toFixed(2)}</span>
                 </a>
               ))}
               {inStock.length === 0 && (
                 <div className="rounded-xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-muted">
-                  New stock added regularly — check back soon.
+                  {t("New stock added regularly — check back soon.")}
                 </div>
               )}
             </div>
@@ -935,7 +951,7 @@ function HeroSection({ inStock, search, setSearch }) {
           {/* Mobile product strip — below text, hidden on desktop */}
           {inStock.length > 0 && (
             <div className="md:hidden">
-              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted">In stock now</p>
+              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted">{t("In stock now")}</p>
               <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {inStock.slice(0, 6).map((p) => (
                   <a
@@ -954,7 +970,7 @@ function HeroSection({ inStock, search, setSearch }) {
                       </span>
                     )}
                     <span className="line-clamp-2 text-xs font-semibold leading-tight text-ink">{p.title}</span>
-                    <span className="text-xs font-bold text-brand">${Number(p.sell_price).toFixed(2)}</span>
+                    <span className="text-xs font-bold text-brand" dir="ltr">${Number(p.sell_price).toFixed(2)}</span>
                   </a>
                 ))}
               </div>
@@ -988,6 +1004,7 @@ function AdminMessageBanner({ messages, onDismiss, onReply }) {
 }
 
 function AdminMessageItem({ msg, onDismiss, onReply }) {
+  const { t } = useT();
   const [expanded, setExpanded] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
@@ -1014,13 +1031,13 @@ function AdminMessageItem({ msg, onDismiss, onReply }) {
       });
       const data = await res.json();
       if (!data.success) {
-        setReplyError(data.error === "already_replied" ? "You've already replied to this message." : "Failed to send reply. Please try again.");
+        setReplyError(data.error === "already_replied" ? t("You've already replied to this message.") : t("Failed to send reply. Please try again."));
         setSending(false);
         return;
       }
       onReply(msg.id);
     } catch {
-      setReplyError("Failed to send reply. Please try again.");
+      setReplyError(t("Failed to send reply. Please try again."));
       setSending(false);
     }
   }
@@ -1045,12 +1062,12 @@ function AdminMessageItem({ msg, onDismiss, onReply }) {
                 onClick={() => setExpanded((v) => !v)}
                 className="text-xs text-amber-700 underline-offset-2 hover:underline dark:text-amber-300"
               >
-                {expanded ? "Hide" : "View"}
+                {expanded ? t("Hide") : t("View")}
               </button>
               <button
                 onClick={dismiss}
                 className="text-xs text-amber-500 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-200"
-                aria-label="Dismiss"
+                aria-label={t("Dismiss")}
               >
                 ✕
               </button>
@@ -1068,7 +1085,7 @@ function AdminMessageItem({ msg, onDismiss, onReply }) {
                     rows={2}
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Type a reply… (optional)"
+                    placeholder={t("Type a reply… (optional)")}
                     maxLength={2000}
                     className="w-full rounded border border-amber-300 bg-white px-3 py-1.5 text-sm text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-amber-700 dark:bg-surface"
                   />
@@ -1079,13 +1096,13 @@ function AdminMessageItem({ msg, onDismiss, onReply }) {
                       disabled={sending || !replyText.trim()}
                       className="rounded bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
                     >
-                      {sending ? "Sending…" : "Send reply"}
+                      {sending ? t("Sending…") : t("Send reply")}
                     </button>
                     <button
                       onClick={dismiss}
                       className="rounded border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/40"
                     >
-                      Dismiss without reply
+                      {t("Dismiss without reply")}
                     </button>
                   </div>
                 </div>

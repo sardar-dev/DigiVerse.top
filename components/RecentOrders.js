@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import PageContainer from "./layout/PageContainer";
+import { useT } from "../lib/i18n";
 
-function ago(iso) {
+function ago(iso, t) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
-  return `${Math.floor(s / 86400)} d ago`;
+  if (s < 60) return t("just now");
+  if (s < 3600) return t("{n} min ago", { n: Math.floor(s / 60) });
+  if (s < 86400) return t("{n} h ago", { n: Math.floor(s / 3600) });
+  return t("{n} d ago", { n: Math.floor(s / 86400) });
 }
 
 // Public social-proof list: newest 15 deliveries, masked emails.
 // Fetched after first paint so it never slows the page down.
 export default function RecentOrders() {
+  const { t } = useT();
   const [orders, setOrders] = useState(null);
 
   useEffect(() => {
@@ -32,18 +34,18 @@ export default function RecentOrders() {
       <PageContainer className="py-10">
         <div className="flex items-center justify-center gap-2">
           <h2 id="recent-orders-title" className="text-xl font-semibold text-ink sm:text-2xl">
-            Recent orders
+            {t("Recent orders")}
           </h2>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-xs font-medium text-success">
             <span className="relative flex h-2 w-2" aria-hidden="true">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
             </span>
-            Live
+            {t("Live")}
           </span>
         </div>
         <p className="mx-auto mt-1 max-w-md text-center text-sm text-muted">
-          Real purchases from our customers, delivered instantly.
+          {t("Real purchases from our customers, delivered instantly.")}
         </p>
         <ul className="mx-auto mt-6 max-w-2xl divide-y divide-border overflow-hidden rounded-2xl border border-border bg-bg shadow-card">
           {orders.map((o) => (
@@ -53,14 +55,14 @@ export default function RecentOrders() {
                   ✓
                 </span>
                 <span className="min-w-0 text-ink">
-                  <span className="break-all font-medium">{o.email_masked}</span>{" "}
-                  <span className="text-muted">just purchased</span>{" "}
+                  <span className="break-all font-medium" dir="ltr">{o.email_masked}</span>{" "}
+                  <span className="text-muted">{t("just purchased")}</span>{" "}
                   <span className="font-medium">
                     {o.quantity}x {o.product_title}
                   </span>
                 </span>
               </span>
-              <span className="flex-shrink-0 text-xs text-muted">{ago(o.created_at)}</span>
+              <span className="flex-shrink-0 text-xs text-muted">{ago(o.created_at, t)}</span>
             </li>
           ))}
         </ul>

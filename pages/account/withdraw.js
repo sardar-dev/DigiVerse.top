@@ -9,30 +9,11 @@ import Alert from "../../components/ui/Alert";
 import { FormInput } from "../../components/ui/FormInput";
 import { PrimaryButton } from "../../components/ui/Button";
 import { LoadingState } from "../../components/ui/States";
+import { useT, intlLocale } from "../../lib/i18n";
 
-const when = (d) => new Date(d).toLocaleString();
+const when = (d, locale) => new Date(d).toLocaleString(intlLocale(locale));
 const BADGE = { pending: "bg-warning-soft text-warning", approved: "bg-success-soft text-success", rejected: "bg-danger-soft text-danger" };
-const LABEL = { pending: "Waiting", approved: "Paid", rejected: "Rejected, refunded" };
 
-const METHODS = [
-  { id: "usdt_bep20", icon: "🪙", name: "USDT", sub: "BEP20 network" },
-  { id: "pkr_iban", icon: "🏦", name: "PKR bank", sub: "IBAN account" },
-  { id: "binance", icon: "🟡", name: "Binance", sub: "Binance ID" },
-];
-const NAME = { usdt_bep20: "USDT (BEP20)", pkr_iban: "PKR bank (IBAN)", binance: "Binance ID" };
-
-const ERR = {
-  invalid_amount: "Enter an amount of at least $0.01.",
-  invalid_address: "That does not look like a BEP20 address (0x… with 42 characters).",
-  invalid_iban: "Enter a Pakistani IBAN: PK + 22 characters, for example PK36SCBL0000001123456702.",
-  title_required: "Enter the account title (the name on the account).",
-  invalid_binance: "Enter your Binance ID: digits only, 5 to 15 characters (Profile → Binance ID / Pay ID).",
-  invalid_method: "Choose how you want to be paid.",
-  insufficient_balance: "You do not have that much balance.",
-  below_minimum: "That amount is too small.",
-  too_many_pending: "You already have 3 requests waiting. Please wait for them to be processed.",
-  run_migration_022: "Withdrawals are not available yet. Please try again later.",
-};
 
 const KEY = "dv_payout";
 const readSaved = () => {
@@ -44,6 +25,26 @@ const readSaved = () => {
 };
 
 export default function Withdraw() {
+  const { t, locale } = useT();
+  const LABEL = { pending: t("Waiting"), approved: t("Paid"), rejected: t("Rejected, refunded") };
+  const METHODS = [
+    { id: "usdt_bep20", icon: "🪙", name: "USDT", sub: t("BEP20 network") },
+    { id: "pkr_iban", icon: "🏦", name: t("PKR bank"), sub: t("IBAN account") },
+    { id: "binance", icon: "🟡", name: "Binance", sub: t("Binance ID") },
+  ];
+  const NAME = { usdt_bep20: "USDT (BEP20)", pkr_iban: t("PKR bank (IBAN)"), binance: t("Binance ID") };
+  const ERR = {
+    invalid_amount: t("Enter an amount of at least $0.01."),
+    invalid_address: t("That does not look like a BEP20 address (0x… with 42 characters)."),
+    invalid_iban: t("Enter a Pakistani IBAN: PK + 22 characters, for example PK36SCBL0000001123456702."),
+    title_required: t("Enter the account title (the name on the account)."),
+    invalid_binance: t("Enter your Binance ID: digits only, 5 to 15 characters (Profile → Binance ID / Pay ID)."),
+    invalid_method: t("Choose how you want to be paid."),
+    insufficient_balance: t("You do not have that much balance."),
+    below_minimum: t("That amount is too small."),
+    too_many_pending: t("You already have 3 requests waiting. Please wait for them to be processed."),
+    run_migration_022: t("Withdrawals are not available yet. Please try again later."),
+  };
   const [session, setSession] = useState(null);
   const [balance, setBalance] = useState(null);
   const [info, setInfo] = useState(null);
@@ -65,7 +66,7 @@ export default function Withdraw() {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session) {
-      window.location.href = "/login";
+      window.location.href = locale === "en" ? "/login" : `/${locale}/login`;
       return;
     }
     setSession(session);
@@ -75,7 +76,7 @@ export default function Withdraw() {
     ]);
     setBalance(Number(prof?.balance || 0));
     if (list.success) setInfo(list);
-    else setMsg({ type: "error", text: ERR[list.error] || "Could not load your requests." });
+    else setMsg({ type: "error", text: ERR[list.error] || t("Could not load your requests.") });
   }
 
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
@@ -101,12 +102,12 @@ export default function Withdraw() {
       try {
         localStorage.setItem(KEY, JSON.stringify({ method, f }));
       } catch {}
-      setMsg({ type: "success", text: `Request #${d.request_number} sent. You'll be paid once it is approved.` });
+      setMsg({ type: "success", text: t("Request #{n} sent. You'll be paid once it is approved.", { n: d.request_number }) });
       setAmount("");
       setBalance(d.balance);
       load();
     } else {
-      setMsg({ type: "error", text: ERR[d.error] || "Something went wrong." });
+      setMsg({ type: "error", text: ERR[d.error] || t("Something went wrong.") });
     }
   }
 
@@ -114,32 +115,32 @@ export default function Withdraw() {
 
   return (
     <div className="flex min-h-screen flex-col bg-bg font-body text-ink">
-      <SEO title="Withdraw" path="/account/withdraw" noindex />
+      <SEO title={t("Withdraw")} path="/account/withdraw" noindex />
       <SiteHeader session={session} balance={balance} onSignOut={() => supabase.auth.signOut()} />
       <main className="flex-1">
         <PageContainer className="space-y-6 py-8 sm:py-10" width="max-w-2xl">
-          <Link href="/account/wallet" className="text-sm text-brand hover:underline">← Back to wallet</Link>
+          <Link href="/account/wallet" className="text-sm text-brand hover:underline">{locale === "ar" ? "→" : "←"} {t("Back to wallet")}</Link>
 
           <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand-dark p-6 text-white shadow-card-hover">
-            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -end-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
             <div className="relative flex flex-wrap items-end justify-between gap-3">
               <div>
-                <div className="text-sm text-white/80">Available to withdraw</div>
-                <div className="mt-1 text-4xl font-semibold tracking-tight">{balance === null ? "…" : `$${balance.toFixed(2)}`}</div>
+                <div className="text-sm text-white/80">{t("Available to withdraw")}</div>
+                <div className="mt-1 text-4xl font-semibold tracking-tight" dir="ltr">{balance === null ? "…" : `$${balance.toFixed(2)}`}</div>
               </div>
               {waiting.length > 0 && (
                 <span className="rounded-full bg-white/15 px-3 py-1 text-xs">
-                  {waiting.length} request{waiting.length > 1 ? "s" : ""} waiting
+                  {waiting.length > 1 ? t("{n} requests waiting", { n: waiting.length }) : t("1 request waiting")}
                 </span>
               )}
             </div>
           </section>
 
-          {!info && !msg.text && <LoadingState label="Loading…" />}
+          {!info && !msg.text && <LoadingState label={t("Loading…")} />}
 
           <form onSubmit={submit} className="space-y-6 rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
             <div>
-              <div className="mb-2 text-sm font-medium">1. How do you want to be paid?</div>
+              <div className="mb-2 text-sm font-medium">{t("1. How do you want to be paid?")}</div>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {METHODS.map((m) => (
                   <button
@@ -147,7 +148,7 @@ export default function Withdraw() {
                     type="button"
                     onClick={() => setMethod(m.id)}
                     aria-pressed={method === m.id}
-                    className={`rounded-xl border p-3 text-left transition-colors ${
+                    className={`rounded-xl border p-3 text-start transition-colors ${
                       method === m.id ? "border-brand bg-brand-soft ring-2 ring-brand/20" : "border-border hover:bg-brand-soft/60"
                     }`}
                   >
@@ -160,16 +161,17 @@ export default function Withdraw() {
             </div>
 
             <div className="space-y-4">
-              <div className="text-sm font-medium">2. Where should we send it?</div>
+              <div className="text-sm font-medium">{t("2. Where should we send it?")}</div>
               {method === "usdt_bep20" && (
                 <FormInput
-                  label="USDT address (BEP20 / BNB Smart Chain)"
+                  label={t("USDT address (BEP20 / BNB Smart Chain)")}
                   value={f.usdt_bep20}
                   onChange={set("usdt_bep20")}
                   placeholder="0x…"
                   className="font-mono text-xs"
+                  dir="ltr"
                   autoComplete="off"
-                  hint="Only BEP20. Funds sent to a wrong address or network cannot be recovered."
+                  hint={t("Only BEP20. Funds sent to a wrong address or network cannot be recovered.")}
                 />
               )}
               {method === "pkr_iban" && (
@@ -180,32 +182,34 @@ export default function Withdraw() {
                     onChange={(e) => setF((x) => ({ ...x, pkr_iban: e.target.value.toUpperCase() }))}
                     placeholder="PK36SCBL0000001123456702"
                     className="font-mono text-sm"
+                    dir="ltr"
                     autoComplete="off"
-                    hint="Put your IBAN. Pakistani accounts only."
+                    hint={t("Put your IBAN. Pakistani accounts only.")}
                   />
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <FormInput label="Account title" value={f.account_title} onChange={set("account_title")} placeholder="Name on the account" maxLength={60} />
-                    <FormInput label="Bank name (optional)" value={f.bank_name} onChange={set("bank_name")} placeholder="e.g. HBL, Meezan, JazzCash" maxLength={40} />
+                    <FormInput label={t("Account title")} value={f.account_title} onChange={set("account_title")} placeholder={t("Name on the account")} maxLength={60} />
+                    <FormInput label={t("Bank name (optional)")} value={f.bank_name} onChange={set("bank_name")} placeholder={t("e.g. HBL, Meezan, JazzCash")} maxLength={40} />
                   </div>
-                  <p className="text-xs text-muted">PKR is paid at the current exchange rate on the day it is processed.</p>
+                  <p className="text-xs text-muted">{t("PKR is paid at the current exchange rate on the day it is processed.")}</p>
                 </>
               )}
               {method === "binance" && (
                 <FormInput
-                  label="Binance ID (Pay ID)"
+                  label={t("Binance ID (Pay ID)")}
                   value={f.binance}
                   onChange={(e) => setF((x) => ({ ...x, binance: e.target.value.replace(/\D/g, "") }))}
-                  placeholder="e.g. 123456789"
+                  placeholder={t("e.g. 123456789")}
                   inputMode="numeric"
                   className="font-mono"
+                  dir="ltr"
                   autoComplete="off"
-                  hint="Binance app → Profile → Binance ID / Pay ID."
+                  hint={t("Binance app → Profile → Binance ID / Pay ID.")}
                 />
               )}
             </div>
 
             <div className="space-y-3">
-              <div className="text-sm font-medium">3. How much?</div>
+              <div className="text-sm font-medium">{t("3. How much?")}</div>
               <div className="flex gap-2">
                 <div className="flex-1">
                   <FormInput
@@ -215,9 +219,9 @@ export default function Withdraw() {
                     inputMode="decimal"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Amount in USD"
-                    aria-label="Amount in USD"
-                    error={tooMuch ? "More than your balance" : undefined}
+                    placeholder={t("Amount in USD")}
+                    aria-label={t("Amount in USD")}
+                    error={tooMuch ? t("More than your balance") : undefined}
                   />
                 </div>
                 <button
@@ -226,48 +230,48 @@ export default function Withdraw() {
                   disabled={!balance}
                   className="h-[42px] rounded-lg border border-border px-4 text-sm font-medium text-brand hover:bg-brand-soft disabled:opacity-50"
                 >
-                  Max
+                  {t("Max")}
                 </button>
               </div>
-              <p className="text-xs text-muted">No minimum. The amount leaves your balance now and returns if the request is rejected.</p>
+              <p className="text-xs text-muted">{t("No minimum. The amount leaves your balance now and returns if the request is rejected.")}</p>
             </div>
 
             {ready && (
               <div className="rounded-xl bg-brand-soft p-3 text-sm">
-                You are withdrawing <b>${amt.toFixed(2)}</b> to <b>{NAME[method]}</b>
-                <div className="mt-0.5 break-all font-mono text-xs text-muted">{value}</div>
+                {t("You are withdrawing")} <b dir="ltr">${amt.toFixed(2)}</b> {t("to")} <b>{NAME[method]}</b>
+                <div dir="ltr" className="mt-0.5 break-all font-mono text-xs text-muted text-start">{value}</div>
               </div>
             )}
 
             <Alert variant={msg.type === "success" ? "success" : "error"}>{msg.text}</Alert>
             <PrimaryButton type="submit" disabled={busy || !ready} className="w-full">
-              {busy ? "Sending…" : "Request withdrawal"}
+              {busy ? t("Sending…") : t("Request withdrawal")}
             </PrimaryButton>
           </form>
 
           {info && info.requests.length > 0 && (
             <section>
-              <h2 className="mb-3 text-sm font-semibold">Your requests</h2>
+              <h2 className="mb-3 text-sm font-semibold">{t("Your requests")}</h2>
               <div className="mb-4 rounded-lg border border-warning/20 bg-warning-soft p-3 text-sm text-warning">
-                ⏱️ <span className="font-medium">Withdrawal processing time:</span> Up to 24 hours. If not received within 24 hours, please contact our support team.
+                ⏱️ <span className="font-medium">{t("Withdrawal processing time:")}</span> {t("Up to 24 hours. If not received within 24 hours, please contact our support team.")}
               </div>
               <ul className="space-y-2">
                 {info.requests.map((w) => (
                   <li key={w.id} className="rounded-xl border border-border bg-surface px-4 py-3 text-sm shadow-card">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span>
-                        <span className="font-mono font-semibold">${Number(w.amount).toFixed(2)}</span>{" "}
+                        <span className="font-mono font-semibold" dir="ltr">${Number(w.amount).toFixed(2)}</span>{" "}
                         <span className="text-xs text-muted">· {NAME[w.method] || "USDT (BEP20)"} · #{w.request_number}</span>
                       </span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${BADGE[w.status]}`}>{LABEL[w.status]}</span>
                     </div>
-                    <div className="mt-1 break-all font-mono text-xs text-muted">
+                    <div dir="ltr" className="mt-1 break-all font-mono text-xs text-muted text-start">
                       {w.address}
                       {w.details?.account_title ? ` · ${w.details.account_title}` : ""}
                     </div>
-                    <div className="mt-0.5 text-xs text-muted">{when(w.created_at)}</div>
-                    {w.payout_tx && <div className="mt-1 break-all text-xs text-muted">Reference: {w.payout_tx}</div>}
-                    {w.admin_note && <div className="mt-1 text-xs text-muted">Note: {w.admin_note}</div>}
+                    <div className="mt-0.5 text-xs text-muted">{when(w.created_at, locale)}</div>
+                    {w.payout_tx && <div className="mt-1 break-all text-xs text-muted">{t("Reference:")} {w.payout_tx}</div>}
+                    {w.admin_note && <div className="mt-1 text-xs text-muted">{t("Note:")} {w.admin_note}</div>}
                   </li>
                 ))}
               </ul>

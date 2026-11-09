@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PrimaryButton } from "./Button";
+import { useT } from "../../lib/i18n";
 
 // Storefront product card. Shows provider-neutral labels only —
 // never exposes cost price or internal DigiTrust/manual plumbing to
@@ -10,6 +11,7 @@ import { PrimaryButton } from "./Button";
 // rest), and softens — lifts slightly, tilt relaxes, shadow spreads —
 // on hover. Pure CSS transform/perspective, no JS and no library.
 export default function ProductCard({ product, onBuy, onShare, disabled }) {
+  const { t } = useT();
   const isManual = product.provider === "manual" && !product.auto_delivery;
   const threshold =
     product.low_stock_threshold != null ? Number(product.low_stock_threshold) : 3;
@@ -30,8 +32,8 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
       aria-disabled={outOfStock || undefined}
     >
       {outOfStock && (
-        <span className="absolute -top-2.5 left-5 z-10 rounded-full bg-danger px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
-          Sold out
+        <span className="absolute -top-2.5 start-5 z-10 rounded-full bg-danger px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+          {t("Sold out")}
         </span>
       )}
       <div className={outOfStock ? "flex flex-1 flex-col opacity-60 grayscale" : "flex flex-1 flex-col"}>
@@ -54,14 +56,14 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
               isManual ? "bg-warning-soft text-warning" : "bg-success-soft text-success"
             }`}
           >
-            {isManual ? "Manual delivery" : "Automatic delivery"}
+            {isManual ? t("Manual delivery") : t("Automatic delivery")}
           </span>
           {onShare && (
             <button
               type="button"
               onClick={onShare}
-              title="Copy shareable link to this product"
-              aria-label="Share this product"
+              title={t("Copy shareable link to this product")}
+              aria-label={t("Share this product")}
               className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-brand hover:text-brand"
             >
               <span aria-hidden="true">🔗</span>
@@ -76,8 +78,8 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
           <span
             className="flex-shrink-0 text-base"
             role="img"
-            aria-label="Featured product"
-            title="Featured"
+            aria-label={t("Featured product")}
+            title={t("Featured")}
           >
             ⭐
           </span>
@@ -87,7 +89,7 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
 
       <div className="mb-4 mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
         {outOfStock ? (
-          <span className="font-medium text-danger">Out of stock</span>
+          <span className="font-medium text-danger">{t("Out of stock")}</span>
         ) : (
           <span className={`inline-flex items-center gap-1.5 ${lowStock ? "font-medium text-warning" : ""}`}>
             {lowStock ? (
@@ -95,12 +97,12 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
             ) : (
               <span className="dv-live-dot h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
             )}
-            {product.available_stock} available
+            {t("{n} available", { n: product.available_stock })}
           </span>
         )}
         {isManual && (
-          <span className="before:mr-2 before:content-['·']">
-            {product.delivery || "Delivery within 1–6 hours"}
+          <span className="before:me-2 before:content-['·']">
+            {product.delivery || t("Delivery within 1–6 hours")}
           </span>
         )}
       </div>
@@ -108,16 +110,16 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
       </div>
 
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
-        <span className="text-xl font-bold tracking-tight text-ink">
+        <span className="text-xl font-bold tracking-tight text-ink" dir="ltr">
           ${Number(product.sell_price).toFixed(2)}
         </span>
         <PrimaryButton
           onClick={onBuy}
           disabled={disabled || outOfStock}
           className={`px-4 py-2 ${outOfStock ? "pointer-events-none cursor-not-allowed opacity-40 blur-[1px]" : ""}`}
-          aria-label={outOfStock ? `${product.title} is out of stock` : undefined}
+          aria-label={outOfStock ? t("{title} is out of stock", { title: product.title }) : undefined}
         >
-          {outOfStock ? "Out of stock" : "Buy now"}
+          {outOfStock ? t("Out of stock") : t("Buy now")}
         </PrimaryButton>
       </div>
     </div>

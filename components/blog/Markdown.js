@@ -51,7 +51,7 @@ export default function Markdown({ source }) {
     if (list) {
       const Tag = list.ordered ? "ol" : "ul";
       out.push(
-        <Tag key={`l${n++}`} className={`space-y-1.5 pl-5 text-ink/90 ${list.ordered ? "list-decimal" : "list-disc"}`}>
+        <Tag key={`l${n++}`} className={`space-y-1.5 ps-5 text-ink/90 ${list.ordered ? "list-decimal" : "list-disc"}`}>
           {list.items.map((it, i) => (
             <li key={i} className="leading-relaxed">{inline(it, `li${n}-${i}`)}</li>
           ))}

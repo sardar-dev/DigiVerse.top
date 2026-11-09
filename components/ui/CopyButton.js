@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { SecondaryButton } from "./Button";
+import { useT } from "../../lib/i18n";
 
 // Copies `value` and flashes "Copied!". Falls back to a hidden textarea
 // for browsers/webviews where the async clipboard API is unavailable.
 export default function CopyButton({ value, label, className = "" }) {
   const [copied, setCopied] = useState(false);
+  const { t } = useT();
 
   async function copy() {
     try {
@@ -31,7 +33,7 @@ export default function CopyButton({ value, label, className = "" }) {
       onClick={copy}
       className={`px-3.5 py-1.5 text-xs ${copied ? "!border-success !text-success" : ""} ${className}`}
     >
-      {copied ? "✓ Copied!" : `📋 ${label}`}
+      {copied ? t("✓ Copied!") : `📋 ${label}`}
     </SecondaryButton>
   );
 }

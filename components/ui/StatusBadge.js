@@ -1,6 +1,8 @@
 // Consistent status pill used on My Orders, admin Orders, and manual
 // delivery queues. Never relies on color alone — always paired with a
 // text label — for accessibility.
+import { useT } from "../../lib/i18n";
+
 const STATUS_STYLES = {
   pending_payment: { label: "Awaiting payment", cls: "bg-warning-soft text-warning" },
   payment_submitted: { label: "Verifying payment", cls: "bg-brand-soft text-brand" },
@@ -15,12 +17,13 @@ const STATUS_STYLES = {
 };
 
 export default function StatusBadge({ status, label }) {
+  const { t } = useT();
   const def = STATUS_STYLES[status] || { label: label || status, cls: "bg-border text-muted" };
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${def.cls}`}
     >
-      {label || def.label}
+      {label || t(def.label)}
     </span>
   );
 }
