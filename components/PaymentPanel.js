@@ -20,6 +20,25 @@ export default function PaymentPanel({ order, onDone }) {
   const [error, setError] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
+  const [buffCheck, setBuffCheck] = useState(null); // { is_buff, max_qty, affordable }
+
+  useEffect(() => {
+    if (order?.product_id) {
+      fetch(`/api/products/buff-info?product_id=${encodeURIComponent(order.product_id)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.is_buff) {
+            const reqQty = Number(order.quantity) || 1;
+            setBuffCheck({
+              is_buff: true,
+              max_qty: d.max_qty,
+              affordable: d.max_qty >= reqQty,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [order?.product_id, order?.quantity]);
 
   useEffect(() => {
     (async () => {
@@ -52,7 +71,8 @@ export default function PaymentPanel({ order, onDone }) {
     return () => clearInterval(interval);
   }, []);
 
-  const canPayWithBalance = balance !== null && balance >= Number(order.total);
+  const canPayWithBalance =
+    balance !== null && balance >= Number(order.total) && (!buffCheck?.is_buff || buffCheck.affordable);
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
@@ -71,7 +91,8 @@ export default function PaymentPanel({ order, onDone }) {
       if (data.success) {
         onDone({ items: data.items, manual: data.manual });
       } else {
-        setError(describeError(t, data.error, data) || t("Something went wrong. Please try again."));
+        const msg = data.message || describeError(t, data.error, data) || t("Something went wrong. Please try again.");
+        setError(msg);
       }
     } catch {
       setError(t("Network error — please check your connection and try again."));
@@ -93,7 +114,8 @@ export default function PaymentPanel({ order, onDone }) {
       if (data.success) {
         onDone({ items: data.items, manual: data.manual });
       } else {
-        setError(describeError(t, data.error, data) || t("Something went wrong. Please try again."));
+        const msg = data.message || describeError(t, data.error, data) || t("Something went wrong. Please try again.");
+        setError(msg);
       }
     } catch {
       setError(t("Network error — please check your connection and try again."));
@@ -113,6 +135,28 @@ export default function PaymentPanel({ order, onDone }) {
         {!timeExpired && (
           <div className="text-xs text-center text-muted">
             ⏱️ {t("Payment expires in {time}", { time: `${minutes}:${seconds.toString().padStart(2, "0")}` })}
+          </div>
+        )}
+        {buffCheck?.is_buff && (
+          <div
+            className={`flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-xs font-semibold ${
+              buffCheck.affordable
+                ? "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-200"
+                : "border-red-200 bg-red-50 text-red-900 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-200"
+            }`}
+          >
+            <span
+              className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${
+                buffCheck.affordable ? "bg-blue-600 dark:bg-blue-400" : "bg-red-500"
+              }`}
+            />
+            <span>
+              {buffCheck.affordable
+                ? t("You can order up to {n}B tokens right now.", { n: buffCheck.max_qty })
+                : buffCheck.max_qty > 0
+                ? t("You can order up to {n}B tokens right now. Please lower your quantity.", { n: buffCheck.max_qty })
+                : t("Temporarily unavailable right now. Please check back soon.")}
+            </span>
           </div>
         )}
         <p className="text-sm font-medium text-ink">{t("Choose how to pay")}</p>
@@ -148,7 +192,14 @@ export default function PaymentPanel({ order, onDone }) {
             <span className="font-mono text-ink" dir="ltr">${Number(order.total).toFixed(2)}</span>
           </div>
         </div>
-        {!canPayWithBalance && (
+        {buffCheck?.is_buff && !buffCheck.affordable && (
+          <Alert variant="error">
+            {buffCheck.max_qty > 0
+              ? t("You can order up to {n}B tokens right now. Please lower your quantity.", { n: buffCheck.max_qty })
+              : t("Temporarily unavailable right now. Please check back soon.")}
+          </Alert>
+        )}
+        {!canPayWithBalance && (!buffCheck?.is_buff || buffCheck.affordable) && (
           <Alert variant="warning">{t("Insufficient wallet balance for this order.")}</Alert>
         )}
         <Alert variant="error">{error}</Alert>
@@ -173,6 +224,14 @@ export default function PaymentPanel({ order, onDone }) {
   return (
     <div className="space-y-5 text-sm">
       <LinkButton onClick={() => setMethod(null)}>{t("← Change payment method")}</LinkButton>
+
+      {buffCheck?.is_buff && !buffCheck.affordable && (
+        <Alert variant="error">
+          {buffCheck.max_qty > 0
+            ? t("You can order up to {n}B tokens right now. Please lower your quantity.", { n: buffCheck.max_qty })
+            : t("Temporarily unavailable right now. Please check back soon.")}
+        </Alert>
+      )}
 
       {/* Step 1 — send */}
       <section className="rounded-xl border border-border bg-surface shadow-card">
@@ -291,6 +350,10 @@ function describeError(t, code, data) {
       return t("Delivery failed — your wallet balance has been refunded automatically.");
     case "order_not_available":
       return t("This order is no longer available for payment. Please refresh and try again.");
+    case "supplier_balance_limit":
+      return data?.message || (data?.max_qty > 0
+        ? t("You can order up to {n}B tokens right now. Please lower your quantity.", { n: data.max_qty })
+        : t("This product is temporarily unavailable. Please try again later."));
     default:
       return code ? code.replaceAll("_", " ") : t("Something went wrong. Please try again.");
   }

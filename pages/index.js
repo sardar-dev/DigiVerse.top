@@ -388,18 +388,6 @@ function BuyModal({ product, onClose, ticker }) {
   const [coupon, setCoupon] = useState(null); // { code, discount, final } once applied
   const [couponError, setCouponError] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
-  const [buffInfo, setBuffInfo] = useState(null); // { max_qty, balance, unit_cost }
-
-  useEffect(() => {
-    if (product.tunvn_buff) {
-      fetch(`/api/products/buff-info?product_id=${encodeURIComponent(product.id)}`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (d?.success) setBuffInfo(d);
-        })
-        .catch(() => {});
-    }
-  }, [product.id, product.tunvn_buff]);
 
   const isManualDelivery = product.provider === "manual" && !product.auto_delivery;
 
@@ -454,17 +442,6 @@ function BuyModal({ product, onClose, ticker }) {
         if (!/^[A-Za-z0-9_-]{4,20}$/.test(code)) {
           setError(t("Please enter a valid Muse AI invite code (4–20 characters)."));
           return;
-        }
-        if (buffInfo && typeof buffInfo.max_qty === "number") {
-          if (buffInfo.max_qty === 0) {
-            setError(t("This product is temporarily unavailable. Please try again later."));
-            return;
-          }
-          if (parsedQty > buffInfo.max_qty) {
-            setError(t("You can order up to {n}B tokens right now. Please lower the quantity.", { n: buffInfo.max_qty }));
-            setQuantity(String(buffInfo.max_qty));
-            return;
-          }
         }
       }
     }
@@ -604,35 +581,13 @@ function BuyModal({ product, onClose, ticker }) {
               }
             }}
             hint={
-              product.tunvn_buff && buffInfo?.max_qty !== undefined
-                ? t("Max {n}B tokens right now", { n: buffInfo.max_qty })
-                : product.provider === "manual" && product.max_order_qty
+              product.provider === "manual" && product.max_order_qty
                 ? `${t("Max {n} per order", { n: product.max_order_qty })}${product.min_order_qty > 1 ? ` · ${t("Min {n}", { n: product.min_order_qty })}` : ""}`
                 : product.provider === "manual" && product.min_order_qty > 1
                 ? t("Min {n} per order", { n: product.min_order_qty })
                 : undefined
             }
           />
-          {product.tunvn_buff && buffInfo && (
-            <div
-              className={`-mt-2 flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold ${
-                buffInfo.max_qty > 0
-                  ? "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-200"
-                  : "border-red-200 bg-red-50 text-red-900 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${
-                  buffInfo.max_qty > 0 ? "bg-blue-600 dark:bg-blue-400" : "bg-red-500"
-                }`}
-              />
-              <span>
-                {buffInfo.max_qty > 0
-                  ? t("You can order up to {n}B tokens right now.", { n: buffInfo.max_qty })
-                  : t("Temporarily unavailable. Please check back soon.")}
-              </span>
-            </div>
-          )}
           {product.requires_email && product.provider !== "manual" && (
             <FormInput
               label={t("Email for delivery")}
