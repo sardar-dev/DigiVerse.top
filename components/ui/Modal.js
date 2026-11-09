@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
+import { useT } from "../../lib/i18n";
 
 // Accessible dialog: traps Escape to close, focuses itself on open,
 // and marks itself up for assistive tech. Used by the Buy modal and
 // the admin manual-delivery modal.
 export default function Modal({ title, onClose, children, maxWidth = "max-w-md" }) {
   const panelRef = useRef(null);
+  const { t } = useT();
 
   useEffect(() => {
     function onKeyDown(e) {
@@ -29,7 +31,7 @@ export default function Modal({ title, onClose, children, maxWidth = "max-w-md" 
           {title && <h2 className="text-lg font-semibold text-ink">{title}</h2>}
           <button
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t("Close dialog")}
             className="-m-1 rounded-md p-2.5 text-muted hover:bg-brand-soft hover:text-ink"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">

@@ -33,9 +33,9 @@ module.exports = {
         signal: "#DC2626",
       },
       fontFamily: {
-        display: ["'Inter'", "sans-serif"],
+        display: ["'Inter'", "'Noto Sans Arabic'", "sans-serif"],
         mono: ["'IBM Plex Mono'", "monospace"],
-        body: ["'Inter'", "sans-serif"],
+        body: ["'Inter'", "'Noto Sans Arabic'", "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "12px",

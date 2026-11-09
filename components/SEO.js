@@ -1,4 +1,5 @@
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
 
 // One shared component so every page gets consistent, correct SEO
@@ -11,10 +12,12 @@ export default function SEO({
   image,
   type = "website",
 }) {
+  const { locale = "en" } = useRouter();
   const fullTitle = title
     ? `${title} — ${SITE_NAME}`
     : "DigiVerse — Instant Digital Products & Subscriptions";
-  const url = `${SITE_URL}${path}`;
+  const prefix = (l) => (l === "en" ? "" : `/${l}`);
+  const url = `${SITE_URL}${prefix(locale)}${path}`;
   // Share previews need an absolute image URL. Defaults to the static
   // branded card in /public (served by Vercel CDN, no function cost).
   const img = image
@@ -27,6 +30,11 @@ export default function SEO({
       <title>{fullTitle}</title>
       <meta name="description" content={desc} />
       <link rel="canonical" href={url} />
+      {/* Tell search engines about the Arabic / Russian versions of this page */}
+      {["en", "ar", "ru"].map((l) => (
+        <link key={l} rel="alternate" hrefLang={l} href={`${SITE_URL}${prefix(l)}${path}`} />
+      ))}
+      <link rel="alternate" hrefLang="x-default" href={`${SITE_URL}${path}`} />
       {noindex && <meta name="robots" content="noindex, nofollow" />}
 
       {/* Open Graph */}
@@ -35,6 +43,7 @@ export default function SEO({
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />
       <meta property="og:url" content={url} />
+      <meta property="og:locale" content={{ en: "en_US", ar: "ar_AR", ru: "ru_RU" }[locale] || "en_US"} />
       <meta property="og:image" content={img} />
       <meta property="og:image:alt" content={fullTitle} />
 

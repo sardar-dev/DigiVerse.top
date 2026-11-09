@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useT } from "../lib/i18n";
 
 export default function WhatsAppButton() {
+  const { t } = useT();
   const [links, setLinks] = useState({ telegram: "", whatsapp: "" });
   const [open, setOpen] = useState(false);
 
@@ -32,8 +34,8 @@ export default function WhatsAppButton() {
         href={link}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={isTg ? "Join our Telegram channel" : "Join our WhatsApp channel"}
-        className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-5 z-40 flex items-center gap-2 rounded-full ${
+        aria-label={isTg ? t("Join our Telegram channel") : t("Join our WhatsApp channel")}
+        className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] end-5 z-40 flex items-center gap-2 rounded-full ${
           isTg ? "bg-[#229ED9]" : "bg-[#25D366]"
         } px-4 py-3 text-white shadow-card-hover transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
           isTg ? "focus-visible:outline-[#229ED9]" : "focus-visible:outline-[#25D366]"
@@ -49,26 +51,26 @@ export default function WhatsAppButton() {
             <path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.6 1.4 5.1L2 22l5.1-1.3C8.5 21.5 10.2 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3C4 15 3.5 13.5 3.5 12 3.5 7.3 7.3 3.5 12 3.5S20.5 7.3 20.5 12 16.7 20.2 12 20.2z" />
           </svg>
         )}
-        <span className="hidden text-sm font-medium sm:inline">Join our {isTg ? "Telegram" : "WhatsApp"}</span>
+        <span className="hidden text-sm font-medium sm:inline">{isTg ? t("Join our Telegram") : t("Join our WhatsApp")}</span>
       </a>
     );
   }
 
   // Both channels, show dropdown
   return (
-    <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-5 z-40">
+    <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] end-5 z-40">
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 rounded-full bg-brand px-4 py-3 text-white shadow-card-hover transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-        aria-label="Join our channels"
+        aria-label={t("Join our channels")}
         aria-expanded={open}
       >
         <span aria-hidden="true">💬</span>
-        <span className="hidden text-sm font-medium sm:inline">Join us</span>
+        <span className="hidden text-sm font-medium sm:inline">{t("Join us")}</span>
       </button>
 
       {open && (
-        <div className="absolute bottom-16 right-0 w-48 rounded-lg border border-border bg-surface shadow-card">
+        <div className="absolute bottom-16 end-0 w-48 rounded-lg border border-border bg-surface shadow-card">
           <a
             href={links.telegram}
             target="_blank"
@@ -79,7 +81,7 @@ export default function WhatsAppButton() {
             <svg viewBox="0 0 24 24" width="20" height="20" fill="#229ED9" aria-hidden="true">
               <path d="M21.9 4.6 18.7 19.7c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.4-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.6 13.5 1.9 12c-1-.3-1-1 .2-1.5L20.4 3.4c.9-.3 1.6.2 1.5 1.2z" />
             </svg>
-            <span>Telegram Channel</span>
+            <span>{t("Telegram Channel")}</span>
           </a>
           <a
             href={links.whatsapp}
@@ -92,7 +94,7 @@ export default function WhatsAppButton() {
               <path d="M17.5 14.4c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.2.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.4.1-.2 0-.4 0-.5C11 9.2 10.5 8 10.3 7.5c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1 0 1.2.9 2.4 1 2.6.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.4.5.6.2 1.2.2 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z" />
               <path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.6 1.4 5.1L2 22l5.1-1.3C8.5 21.5 10.2 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3C4 15 3.5 13.5 3.5 12 3.5 7.3 7.3 3.5 12 3.5S20.5 7.3 20.5 12 16.7 20.2 12 20.2z" />
             </svg>
-            <span>WhatsApp Channel</span>
+            <span>{t("WhatsApp Channel")}</span>
           </a>
         </div>
       )}

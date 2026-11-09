@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 :root {
   --radius: 12px;
@@ -142,4 +142,11 @@ select:focus-visible,
 
 @media (prefers-reduced-motion: reduce) {
   .dv-orb, .dv-float, .dv-gradient-text, .dv-live-dot::after, .dv-skeleton { animation: none !important; }
+}
+
+/* Arabic is right-to-left. Prices, hashes and codes stay left-to-right. */
+html[dir="rtl"] .font-mono,
+html[dir="rtl"] code {
+  direction: ltr;
+  unicode-bidi: embed;
 }

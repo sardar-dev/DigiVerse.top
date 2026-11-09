@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { SITE_NAME } from "../../lib/siteConfig";
 import { supabase } from "../../lib/supabaseClient";
+import { useT } from "../../lib/i18n";
+import LanguageSwitcher from "../LanguageSwitcher";
 
 // Shared storefront/account header. Pages that already track auth pass
 // `session` / `balance` / `onSignOut` in (no extra requests). If a prop
@@ -14,6 +16,7 @@ export default function SiteHeader({
   onSignOut: onSignOutProp,
 }) {
   const router = useRouter();
+  const { t, locale } = useT();
   const [open, setOpen] = useState(false); // mobile drawer
   const [menu, setMenu] = useState(false); // account dropdown
   const menuRef = useRef(null);
@@ -51,17 +54,17 @@ export default function SiteHeader({
     onSignOutProp ||
     (async () => {
       await supabase.auth.signOut();
-      window.location.href = "/";
+      window.location.href = locale === "en" ? "/" : `/${locale}`;
     });
 
   const links = session
     ? [
-        { href: "/", label: "Store" },
-        { href: "/account/wallet", label: "Wallet" },
-        { href: "/account/orders", label: "My Orders" },
-        { href: "/account/support", label: "Support" },
+        { href: "/", label: t("Store") },
+        { href: "/account/wallet", label: t("Wallet") },
+        { href: "/account/orders", label: t("My Orders") },
+        { href: "/account/support", label: t("Support") },
       ]
-    : [{ href: "/", label: "Store" }];
+    : [{ href: "/", label: t("Store") }];
 
   const isActive = (href) => router.pathname === href;
   const email = session?.user?.email || "";
@@ -127,13 +130,14 @@ export default function SiteHeader({
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <LanguageSwitcher />
           {session ? (
             <>
               {hasBalance && (
                 <Link
                   href="/account/wallet"
                   className="rounded-full border border-border bg-brand-soft px-3 py-1.5 text-xs font-semibold text-brand transition-colors hover:border-brand/40"
-                  title="Wallet balance"
+                  title={t("Wallet balance")}
                 >
                   ${balance.toFixed(2)}
                 </Link>
@@ -143,7 +147,7 @@ export default function SiteHeader({
                   onClick={() => setMenu((m) => !m)}
                   aria-haspopup="menu"
                   aria-expanded={menu}
-                  aria-label="Account menu"
+                  aria-label={t("Account menu")}
                   className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white ring-2 ring-transparent transition-shadow hover:ring-brand/30 focus:outline-none focus-visible:ring-brand/50"
                 >
                   {initial}
@@ -151,30 +155,30 @@ export default function SiteHeader({
                 {menu && (
                   <div
                     role="menu"
-                    className="absolute right-0 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-surface shadow-card-hover"
+                    className="absolute end-0 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-surface shadow-card-hover"
                   >
                     <div className="border-b border-border px-4 py-3">
-                      <div className="text-xs text-muted">Signed in as</div>
+                      <div className="text-xs text-muted">{t("Signed in as")}</div>
                       <div className="truncate text-sm font-medium text-ink">{email}</div>
                       {hasBalance && (
                         <div className="mt-1 text-xs text-muted">
-                          Balance <span className="font-semibold text-ink">${balance.toFixed(2)}</span>
+                          {t("Balance")} <span className="font-semibold text-ink" dir="ltr">${balance.toFixed(2)}</span>
                         </div>
                       )}
                     </div>
                     <div className="p-1.5 text-sm">
                       <Link role="menuitem" href="/account/wallet" className="block rounded-lg px-3 py-2 text-ink hover:bg-brand-soft">
-                        Wallet &amp; top-up
+                        {t("Wallet & top-up")}
                       </Link>
                       <Link role="menuitem" href="/account/orders" className="block rounded-lg px-3 py-2 text-ink hover:bg-brand-soft">
-                        My orders
+                        {t("My orders")}
                       </Link>
                       <button
                         role="menuitem"
                         onClick={onSignOut}
-                        className="block w-full rounded-lg px-3 py-2 text-left text-danger hover:bg-danger-soft"
+                        className="block w-full rounded-lg px-3 py-2 text-start text-danger hover:bg-danger-soft"
                       >
-                        Sign out
+                        {t("Sign out")}
                       </button>
                     </div>
                   </div>
@@ -184,19 +188,20 @@ export default function SiteHeader({
           ) : (
             <>
               <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-ink">
-                Log in
+                {t("Log in")}
               </Link>
               <Link
                 href="/signup"
                 className="rounded-lg border-b-[3px] border-brand-dark bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90 active:translate-y-[2px] active:border-b"
               >
-                Sign up
+                {t("Sign up")}
               </Link>
             </>
           )}
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
+          <LanguageSwitcher />
           {session && hasBalance && (
             <Link
               href="/account/wallet"
@@ -207,7 +212,7 @@ export default function SiteHeader({
           )}
           <button
             className="flex h-10 w-10 items-center justify-center rounded-lg text-ink hover:bg-brand-soft"
-            aria-label="Toggle menu"
+            aria-label={t("Toggle menu")}
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
           >
@@ -231,7 +236,7 @@ export default function SiteHeader({
               </span>
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-ink">{email}</div>
-                {hasBalance && <div className="text-xs text-muted">Balance ${balance.toFixed(2)}</div>}
+                {hasBalance && <div className="text-xs text-muted">{t("Balance")} <span dir="ltr">${balance.toFixed(2)}</span></div>}
               </div>
             </div>
           )}
@@ -253,9 +258,9 @@ export default function SiteHeader({
               {session ? (
                 <button
                   onClick={onSignOut}
-                  className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-danger hover:bg-danger-soft"
+                  className="block w-full rounded-lg px-3 py-2.5 text-start text-sm font-medium text-danger hover:bg-danger-soft"
                 >
-                  Sign out
+                  {t("Sign out")}
                 </button>
               ) : (
                 <div className="flex gap-2 py-1">
@@ -264,14 +269,14 @@ export default function SiteHeader({
                     onClick={() => setOpen(false)}
                     className="flex-1 rounded-lg border border-border px-3 py-2.5 text-center text-sm font-medium text-ink"
                   >
-                    Log in
+                    {t("Log in")}
                   </Link>
                   <Link
                     href="/signup"
                     onClick={() => setOpen(false)}
                     className="flex-1 rounded-lg bg-brand px-3 py-2.5 text-center text-sm font-medium text-white"
                   >
-                    Sign up
+                    {t("Sign up")}
                   </Link>
                 </div>
               )}

@@ -2,6 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Customer-facing languages. English stays the default (served at "/"),
+  // Arabic at /ar and Russian at /ru. Translations live in /locales.
+  i18n: {
+    locales: ["en", "ar", "ru"],
+    defaultLocale: "en",
+    localeDetection: false, // never auto-switch; visitors pick from the dropdown
+  },
+
   // The sitemap lists blog posts by reading /content/blog at request time.
   experimental: {
     outputFileTracingIncludes: { "/sitemap.xml": ["./content/blog/**/*"] },
