@@ -3,7 +3,7 @@ import SectionHeading from "../ui/SectionHeading";
 import { SecondaryButton, LinkButton } from "../ui/Button";
 import { ErrorState, LoadingState } from "../ui/States";
 
-const LABEL = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store", shotix: "Shotix" };
+const LABEL = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store", shotix: "Shotix", tunvn: "TunVN" };
 // admin-added APIs show their saved name (see custom_suppliers)
 // buildLabelMap merges built-in labels with any configured custom suppliers
 const buildLabelMap = (configured = []) => {

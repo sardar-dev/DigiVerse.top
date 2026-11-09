@@ -13,7 +13,7 @@ const DEFAULT_COLOR = "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:
 
 function supplierLabel(id) {
   if (!id) return "";
-  const map = { digitrust: "DigiTrust", xpro: "XPro" };
+  const map = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store", shotix: "Shotix", tunvn: "TunVN" };
   if (map[id]) return map[id];
   // c_shotix → "Shotix" (Canboso is the same store — built-in shotix is used instead)
   if (id.startsWith("c_")) return id.slice(2).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
