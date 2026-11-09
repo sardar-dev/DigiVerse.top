@@ -731,7 +731,7 @@ function BuyModal({ product, onClose, ticker }) {
           <p className="font-mono text-xs text-muted" dir="ltr">{t("Order #{n}", { n: order?.order_number })}</p>
           <Alert variant="success">
             {product.tunvn_buff
-              ? t("Payment confirmed! Tokens are being credited to your invite code via TunVN. This usually takes 1–2 minutes.")
+              ? t("Payment confirmed! Crediting tokens to your invite code … this usually takes 10 to 15 minutes.")
               : t("Payment confirmed. This product is delivered manually — estimated delivery {delivery}.", { delivery: product.delivery || t("soon") })}{" "}
             {checkParts[0]}
             <Link href="/account/orders" className="underline">
@@ -807,7 +807,7 @@ function describeError(t, code, available, minOrder, maxQty, minQty) {
         ? t("API balance limit: You can only order up to {n} tokens right now. Please lower the quantity.", { n: maxQty })
         : t("This product is temporarily unavailable (insufficient API balance). Please try again later.");
     case "buff_check_failed":
-      return t("Invalid invite code or TunVN Buff service is currently unavailable. Please verify your invite code.");
+      return t("Invalid invite code or service is currently unavailable. Please verify your invite code.");
     case "invalid_invite_code":
       return t("Please enter a valid Muse AI invite code (4–20 alphanumeric characters).");
     default:

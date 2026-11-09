@@ -99,7 +99,7 @@ export default async function handler(req, res) {
         return res.status(400).json({
           success: false,
           error: "buff_check_failed",
-          message: checkErr?.message || "Invalid invite code or TunVN Buff service unavailable.",
+          message: checkErr?.message || "Invalid invite code or service is currently unavailable.",
         });
       }
 

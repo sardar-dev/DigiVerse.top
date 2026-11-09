@@ -139,7 +139,7 @@ export default function Orders() {
 
                 {o.status === "fulfilling" && o.supplier === "tunvn" && (
                   <p className="mt-2 text-xs font-medium text-brand animate-pulse">
-                    ⚡ {t("Crediting tokens to your invite code via TunVN… this usually takes 1–2 minutes.")}
+                    ⚡ {t("Crediting tokens to your invite code … this usually takes 10 to 15 minutes.")}
                   </p>
                 )}
 
