@@ -179,6 +179,25 @@ export default function ManualProductsTab({
             />
           </div>
 
+          <label className="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={Boolean(manualForm.tunvn_buff)}
+              onChange={(e) => setManualForm({ ...manualForm, tunvn_buff: e.target.checked })}
+              className="mt-0.5 h-4 w-4 accent-brand"
+            />
+            <span>
+              <strong>Muse AI buff token (TunVN auto-order)</strong> — place the order on TunVN
+              automatically after payment
+              <span className="block text-xs text-muted">
+                The customer's invite code is read from the activation field below, and the quantity
+                is in billions (set min 1 / max 30). If TunVN can't take the order (bad code, low
+                wallet balance, price above what the customer paid), it drops into the normal manual
+                queue instead. Requires TUNVN_API_KEY.
+              </span>
+            </span>
+          </label>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormInput
               label="Image/logo URL (optional)"

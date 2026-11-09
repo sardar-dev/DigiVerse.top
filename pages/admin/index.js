@@ -137,6 +137,7 @@ export default function Admin() {
       min_order_qty: "",
       max_order_qty: "",
       auto_delivery: false,
+      tunvn_buff: false,
       new_boxes: "",
       box_split: "separator",
     };
@@ -174,6 +175,8 @@ export default function Admin() {
         manualForm.max_order_qty === "" ? null : Math.max(1, Math.floor(Number(manualForm.max_order_qty))),
       // Only sent when on (or when editing a product that has it), so
       // saving ordinary products works before migration_012 is run.
+      // Same idea: only sent when on / was on, so saving works before migration 034.
+      ...(manualForm.tunvn_buff || manualForm._hadBuff ? { tunvn_buff: Boolean(manualForm.tunvn_buff) } : {}),
       ...(manualForm.auto_delivery || manualForm._hadAuto
         ? {
             auto_delivery: Boolean(manualForm.auto_delivery),
@@ -229,6 +232,8 @@ export default function Admin() {
       max_order_qty: p.max_order_qty ?? "",
       auto_delivery: Boolean(p.auto_delivery),
       _hadAuto: Boolean(p.auto_delivery),
+      tunvn_buff: Boolean(p.tunvn_buff),
+      _hadBuff: Boolean(p.tunvn_buff),
       new_boxes: "",
       box_split: "separator",
     });

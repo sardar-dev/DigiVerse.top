@@ -56,6 +56,7 @@ export default async function handler(req, res) {
       selected, // active/inactive
       activation_field, // null | free-text label shown to customer at checkout
       activation_placeholder, // optional placeholder text inside the activation input
+      tunvn_buff, // true = fulfil via TunVN Buff Token API (needs migration 034)
       auto_delivery, // true = customers get stored text "boxes" instantly after payment
       new_boxes, // pasted box text to add in the same save (auto-delivery products)
       box_split, // "separator" (--- lines) | "line" (one box per line)
@@ -162,6 +163,7 @@ export default async function handler(req, res) {
           delivery: delivery || (auto_delivery === true ? "Instant" : "Within 24 hours"),
           // Only sent when on, so normal products work before migration_012.
           ...(auto_delivery === true ? { auto_delivery: true } : {}),
+          ...(tunvn_buff === true ? { tunvn_buff: true } : {}),
           selected: Boolean(selected),
           activation_field: normalizedActivation,
           activation_placeholder: normalizedPlaceholder,
@@ -245,6 +247,7 @@ export default async function handler(req, res) {
       patch.available_stock = stock;
       patch.real_stock = stock;
     }
+    if (typeof tunvn_buff === "boolean") patch.tunvn_buff = tunvn_buff;
     if (requires_email !== undefined) patch.requires_email = Boolean(requires_email);
     if (delivery !== undefined) patch.delivery = delivery;
     if (selected !== undefined) patch.selected = Boolean(selected);

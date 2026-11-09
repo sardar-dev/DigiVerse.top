@@ -49,6 +49,38 @@ export default function Orders() {
     setOrders(data || []);
   }
 
+  // Buff-token orders finish a minute or two after payment (TunVN credits the
+  // invite code asynchronously). While one is open, ask the server to check.
+  useEffect(() => {
+    if (!orders) return;
+    const waiting = orders.filter((o) => o.status === "fulfilling" && o.supplier === "tunvn");
+    if (waiting.length === 0) return;
+    let stop = false;
+    async function tick() {
+      let changed = false;
+      for (const o of waiting) {
+        try {
+          const r = await fetch("/api/orders/buff-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order_id: o.id }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (d.state === "done" || d.state === "failed") changed = true;
+        } catch {}
+      }
+      if (changed && !stop) load();
+    }
+    const first = setTimeout(tick, 4000);
+    const iv = setInterval(tick, 15000);
+    return () => {
+      stop = true;
+      clearTimeout(first);
+      clearInterval(iv);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders]);
+
   async function cancelOrder(id) {
     if (!window.confirm(t("Are you sure you want to cancel this order?"))) return;
     await fetch("/api/orders/cancel", {

@@ -1,5 +1,6 @@
 import { syncProducts } from "../../../lib/syncProducts";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { settleAllBuffOrders } from "../../../lib/tunvnBuff";
 
 // Called on a schedule (see vercel.json cron, or an external
 // scheduler like cron-job.org on Hobby plans) to refresh our local
@@ -23,7 +24,12 @@ export default async function handler(req, res) {
       const { data } = await supabaseAdmin.rpc("purge_stale_pending");
       purged = data || null;
     } catch {}
-    return res.status(200).json({ success: true, ...result, purged });
+    // Finish any TunVN buff orders whose customer never reopened the page.
+    let buff = null;
+    try {
+      buff = await settleAllBuffOrders();
+    } catch {}
+    return res.status(200).json({ success: true, ...result, purged, buff });
   } catch (e) {
     return res.status(502).json({ success: false, error: e.message });
   }
