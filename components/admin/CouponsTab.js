@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import DataTable from "./DataTable";
 import SectionHeading from "../ui/SectionHeading";
 import { FormInput, FormSelect } from "../ui/FormInput";
@@ -34,12 +34,27 @@ const ERRORS = {
   run_migration_035: "Run supabase/migration_035_coupon_at_cost.sql in the Supabase SQL editor first (needed for Supplier Cost coupons).",
 };
 
+function formatSupplier(p) {
+  if (p?.provider === "manual") return "Manual";
+  const s = p?.active_supplier || p?.provider || "DigiTrust";
+  const map = {
+    digitrust: "DigiTrust",
+    tunvn: "TunVN",
+    xpro: "XPro",
+    emstore: "EM Store",
+    shotix: "Shotix",
+    manual: "Manual",
+  };
+  return map[s] || (typeof s === "string" ? s.toUpperCase() : "Supplier");
+}
+
 export default function CouponsTab({ products }) {
   const [coupons, setCoupons] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [busy, setBusy] = useState(false);
   const [pq, setPq] = useState("");
+  const [filterLive, setFilterLive] = useState(true);
 
   async function load() {
     const res = await fetch("/api/admin/coupons");
@@ -51,21 +66,76 @@ export default function CouponsTab({ products }) {
     load();
   }, []);
 
-  const toggleProduct = (id) =>
-    setForm((f) => ({
-      ...f,
-      product_ids: f.product_ids.includes(id)
-        ? f.product_ids.filter((x) => x !== id)
-        : [...f.product_ids, id],
-    }));
-  const titleOf = (id) => products.find((p) => Number(p.id) === Number(id))?.title || `#${id}`;
+  // Deduplicate products by id so no two items ever share the same ID or key.
+  const uniqueProducts = useMemo(() => {
+    const map = new Map();
+    for (const p of products || []) {
+      if (p && p.id != null) {
+        const id = Number(p.id);
+        if (!map.has(id)) {
+          map.set(id, p);
+        } else {
+          // Merge preserving manual or detailed fields
+          map.set(id, { ...map.get(id), ...p });
+        }
+      }
+    }
+    const list = Array.from(map.values());
+    // Live products first, then alphabetical by title
+    return list.sort((a, b) => {
+      if (Boolean(a.selected) !== Boolean(b.selected)) {
+        return a.selected ? -1 : 1;
+      }
+      return (a.title || "").localeCompare(b.title || "");
+    });
+  }, [products]);
+
+  const liveCount = useMemo(
+    () => uniqueProducts.filter((p) => p.selected).length,
+    [uniqueProducts]
+  );
+
+  const shownProducts = useMemo(() => {
+    const q = pq.trim().toLowerCase();
+    return uniqueProducts.filter((p) => {
+      if (filterLive && !p.selected) return false;
+      if (!q) return true;
+      const title = (p.title || "").toLowerCase();
+      const sup = formatSupplier(p).toLowerCase();
+      const id = String(p.id);
+      return title.includes(q) || sup.includes(q) || id.includes(q);
+    });
+  }, [uniqueProducts, pq, filterLive]);
+
+  const toggleProduct = (id) => {
+    const targetId = Number(id);
+    setForm((f) => {
+      const exists = f.product_ids.some((x) => Number(x) === targetId);
+      return {
+        ...f,
+        product_ids: exists
+          ? f.product_ids.filter((x) => Number(x) !== targetId)
+          : [...f.product_ids, targetId],
+      };
+    });
+  };
+
+  const titleOf = (id) => {
+    const targetId = Number(id);
+    const p = uniqueProducts.find((x) => Number(x.id) === targetId);
+    if (!p) return `#${id}`;
+    const sup = formatSupplier(p);
+    return `${p.title} (${sup})`;
+  };
+
   const appliesTo = (c) => {
-    const ids = c.product_ids?.length ? c.product_ids : c.product_id != null ? [c.product_id] : [];
+    const ids = Array.isArray(c.product_ids) && c.product_ids.length > 0
+      ? c.product_ids
+      : c.product_id != null
+      ? [c.product_id]
+      : [];
     return ids.length ? ids.map(titleOf) : null;
   };
-  const shownProducts = products.filter((p) =>
-    (p.title || "").toLowerCase().includes(pq.trim().toLowerCase())
-  );
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -188,53 +258,128 @@ export default function CouponsTab({ products }) {
           </div>
 
           <div>
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-sm font-medium text-ink">Applies to</span>
-              <span className="text-xs text-muted">
-                {form.product_ids.length === 0
-                  ? "All products"
-                  : `${form.product_ids.length} selected`}
-              </span>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="text-sm font-medium text-ink">Applies to</span>
+                <span className="ml-2 text-xs text-muted">
+                  {form.product_ids.length === 0
+                    ? "(All products)"
+                    : `(${form.product_ids.length} selected)`}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 rounded-lg border border-border bg-bg p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setFilterLive(true)}
+                  className={`rounded-md px-2.5 py-1 font-medium transition ${
+                    filterLive
+                      ? "bg-brand text-white shadow-sm"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  Live on site ({liveCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterLive(false)}
+                  className={`rounded-md px-2.5 py-1 font-medium transition ${
+                    !filterLive
+                      ? "bg-brand text-white shadow-sm"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  All ({uniqueProducts.length})
+                </button>
+              </div>
             </div>
+
             <input
               value={pq}
               onChange={(e) => setPq(e.target.value)}
-              placeholder="Search products…"
-              className="mb-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-ink"
+              placeholder="Search products by title, supplier, or #id…"
+              className="mb-2 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none"
             />
-            <div className="max-h-52 overflow-y-auto rounded-lg border border-border bg-bg p-1">
-              {shownProducts.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink hover:bg-brand-soft"
-                >
-                  <input
-                    type="checkbox"
-                    checked={form.product_ids.includes(Number(p.id))}
-                    onChange={() => toggleProduct(Number(p.id))}
-                  />
-                  <span className="min-w-0 break-words">{p.title}</span>
-                </label>
-              ))}
+
+            <div className="max-h-60 overflow-y-auto rounded-lg border border-border bg-bg p-1 space-y-0.5">
+              {shownProducts.map((p) => {
+                const pId = Number(p.id);
+                const isChecked = form.product_ids.some((id) => Number(id) === pId);
+                const sup = formatSupplier(p);
+                const price = Number.isFinite(Number(p.sell_price))
+                  ? `$${Number(p.sell_price).toFixed(2)}`
+                  : null;
+
+                return (
+                  <label
+                    key={`prod-${pId}`}
+                    htmlFor={`coupon-prod-${pId}`}
+                    className={`flex cursor-pointer items-center justify-between gap-3 rounded-md px-2.5 py-2 text-sm transition select-none ${
+                      isChecked
+                        ? "bg-brand/10 text-brand font-medium"
+                        : "text-ink hover:bg-surface"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <input
+                        id={`coupon-prod-${pId}`}
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleProduct(pId)}
+                        className="h-4 w-4 rounded border-border text-brand focus:ring-brand accent-brand cursor-pointer flex-shrink-0"
+                      />
+                      <span className="truncate" title={p.title}>
+                        {p.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 text-xs">
+                      {price && <span className="font-mono text-muted">{price}</span>}
+                      <span className="rounded bg-border/60 px-2 py-0.5 text-[11px] font-semibold text-muted uppercase">
+                        {sup}
+                      </span>
+                      {!p.selected && (
+                        <span className="rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 text-[10px] font-bold uppercase">
+                          Hidden
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
               {shownProducts.length === 0 && (
-                <div className="px-2 py-2 text-sm text-muted">No products found.</div>
+                <div className="px-3 py-4 text-center text-sm text-muted">
+                  No products found.
+                </div>
               )}
             </div>
-            <div className="mt-1 flex items-center gap-3 text-xs">
-              <button
-                type="button"
-                className="text-brand hover:underline"
-                onClick={() => setForm((f) => ({ ...f, product_ids: shownProducts.map((p) => Number(p.id)) }))}
-              >
-                Select shown
-              </button>
-              <button
-                type="button"
-                className="text-muted hover:underline"
-                onClick={() => setForm((f) => ({ ...f, product_ids: [] }))}
-              >
-                Clear (= all products)
-              </button>
+
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="font-medium text-brand hover:underline"
+                  onClick={() => {
+                    const shownIds = shownProducts.map((p) => Number(p.id));
+                    setForm((f) => {
+                      const merged = new Set([...f.product_ids.map(Number), ...shownIds]);
+                      return { ...f, product_ids: Array.from(merged) };
+                    });
+                  }}
+                >
+                  Select shown ({shownProducts.length})
+                </button>
+                <button
+                  type="button"
+                  className="text-muted hover:text-ink hover:underline"
+                  onClick={() => setForm((f) => ({ ...f, product_ids: [] }))}
+                >
+                  Clear (= all products)
+                </button>
+              </div>
+              <span className="text-muted">
+                {form.product_ids.length > 0
+                  ? `${form.product_ids.length} selected`
+                  : "Applies to all products"}
+              </span>
             </div>
           </div>
 

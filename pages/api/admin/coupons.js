@@ -83,7 +83,7 @@ export default async function handler(req, res) {
     }
 
     const ids = [...new Set((Array.isArray(b.product_ids) ? b.product_ids : []).map(Number))];
-    if (ids.some((n) => !Number.isInteger(n) || n <= 0)) {
+    if (ids.some((n) => !Number.isInteger(n) || n === 0)) {
       return res.status(400).json({ success: false, error: "invalid_products" });
     }
     const row = {

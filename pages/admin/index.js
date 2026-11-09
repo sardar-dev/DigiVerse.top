@@ -503,6 +503,17 @@ export default function Admin() {
     return list;
   }, [products, sortAvailableFirst, productSearch, productView, supplierFilter]);
 
+  const allAdminProducts = useMemo(() => {
+    const map = new Map();
+    for (const p of products || []) {
+      if (p?.id != null) map.set(Number(p.id), p);
+    }
+    for (const p of manualProducts || []) {
+      if (p?.id != null) map.set(Number(p.id), p);
+    }
+    return Array.from(map.values());
+  }, [products, manualProducts]);
+
   const visibleOrders = useMemo(() => {
     const q = orderSearch.trim().toLowerCase();
     if (!q) return orders;
@@ -584,7 +595,7 @@ export default function Admin() {
       {tab === "pricing" && <PricingTab onChanged={loadProducts} />}
 
       {tab === "coupons" && (
-        <CouponsTab products={[...products, ...manualProducts]} />
+        <CouponsTab products={allAdminProducts} />
       )}
 
       {tab === "products" && (
