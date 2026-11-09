@@ -86,7 +86,7 @@ export default async function handler(req, res) {
           success: false,
           error: "supplier_balance_limit",
           max_qty: 0,
-          message: "This product is temporarily unavailable (insufficient API balance). Please try again later.",
+          message: "This product is temporarily unavailable. Please try again later.",
         });
       }
 
@@ -123,8 +123,8 @@ export default async function handler(req, res) {
           error: "supplier_balance_limit",
           max_qty: maxAffordable,
           message: maxAffordable > 0
-            ? `API balance limit: You can currently order up to ${maxAffordable} token(s) right now. Please lower the quantity.`
-            : `This product is temporarily unavailable (insufficient API balance). Please try again later.`,
+            ? `You can order up to ${maxAffordable} tokens right now. Please lower the quantity.`
+            : `This product is temporarily unavailable. Please try again later.`,
         });
       }
     }

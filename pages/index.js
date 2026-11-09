@@ -457,11 +457,11 @@ function BuyModal({ product, onClose, ticker }) {
         }
         if (buffInfo && typeof buffInfo.max_qty === "number") {
           if (buffInfo.max_qty === 0) {
-            setError(t("This product is temporarily unavailable (insufficient API balance). Please try again later."));
+            setError(t("This product is temporarily unavailable. Please try again later."));
             return;
           }
           if (parsedQty > buffInfo.max_qty) {
-            setError(t("You can only order up to {n} tokens right now with current API balance. (Aap abhi ziyada se ziyada {n} tokens buy kar sakte hain).", { n: buffInfo.max_qty }));
+            setError(t("You can order up to {n} tokens right now. Please lower the quantity.", { n: buffInfo.max_qty }));
             setQuantity(String(buffInfo.max_qty));
             return;
           }
@@ -605,7 +605,7 @@ function BuyModal({ product, onClose, ticker }) {
             }}
             hint={
               product.tunvn_buff && buffInfo?.max_qty !== undefined
-                ? t("Current API balance limit: max {n} tokens", { n: buffInfo.max_qty })
+                ? t("Max {n} tokens right now", { n: buffInfo.max_qty })
                 : product.provider === "manual" && product.max_order_qty
                 ? `${t("Max {n} per order", { n: product.max_order_qty })}${product.min_order_qty > 1 ? ` · ${t("Min {n}", { n: product.min_order_qty })}` : ""}`
                 : product.provider === "manual" && product.min_order_qty > 1
@@ -618,8 +618,8 @@ function BuyModal({ product, onClose, ticker }) {
               buffInfo.max_qty > 0 ? "border border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300" : "border border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
             }`}>
               {buffInfo.max_qty > 0
-                ? `⚡ ${t("Live API balance limit: You can order up to {n} tokens right now.", { n: buffInfo.max_qty })}`
-                : `⚠ ${t("Temporarily unavailable (insufficient API balance). Please check back soon.")}`}
+                ? t("You can order up to {n} tokens right now.", { n: buffInfo.max_qty })
+                : t("Temporarily unavailable. Please check back soon.")}
             </div>
           )}
           {product.requires_email && product.provider !== "manual" && (
@@ -804,8 +804,8 @@ function describeError(t, code, available, minOrder, maxQty, minQty) {
       return t("You've already used this coupon.");
     case "supplier_balance_limit":
       return Number(maxQty) > 0
-        ? t("API balance limit: You can only order up to {n} tokens right now. Please lower the quantity.", { n: maxQty })
-        : t("This product is temporarily unavailable (insufficient API balance). Please try again later.");
+        ? t("You can order up to {n} tokens right now. Please lower the quantity.", { n: maxQty })
+        : t("This product is temporarily unavailable. Please try again later.");
     case "buff_check_failed":
       return t("Invalid invite code or service is currently unavailable. Please verify your invite code.");
     case "invalid_invite_code":
