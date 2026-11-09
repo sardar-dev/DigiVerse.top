@@ -614,12 +614,23 @@ function BuyModal({ product, onClose, ticker }) {
             }
           />
           {product.tunvn_buff && buffInfo && (
-            <div className={`-mt-2 rounded-lg px-3 py-2 text-xs font-medium ${
-              buffInfo.max_qty > 0 ? "border border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300" : "border border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
-            }`}>
-              {buffInfo.max_qty > 0
-                ? t("You can order up to {n}B tokens right now.", { n: buffInfo.max_qty })
-                : t("Temporarily unavailable. Please check back soon.")}
+            <div
+              className={`-mt-2 flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold ${
+                buffInfo.max_qty > 0
+                  ? "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-200"
+                  : "border-red-200 bg-red-50 text-red-900 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-200"
+              }`}
+            >
+              <span
+                className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${
+                  buffInfo.max_qty > 0 ? "bg-blue-600 dark:bg-blue-400" : "bg-red-500"
+                }`}
+              />
+              <span>
+                {buffInfo.max_qty > 0
+                  ? t("You can order up to {n}B tokens right now.", { n: buffInfo.max_qty })
+                  : t("Temporarily unavailable. Please check back soon.")}
+              </span>
             </div>
           )}
           {product.requires_email && product.provider !== "manual" && (
