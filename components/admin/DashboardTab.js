@@ -5,7 +5,14 @@ function supplierName(id) {
   return SUPPLIER_NAMES[id] || (id.startsWith("c_") ? id.slice(2).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : id);
 }
 
-const SUPPLIER_ICONS = { digitrust: "🔵", xpro: "🟣", emstore: "🟠", shotix: "🟢", tunvn: "🟡" };
+const SUPPLIER_THEMES = {
+  digitrust: { icon: "🏛", card: "border-blue-200 bg-gradient-to-br from-blue-50/70 to-white", circle: "from-blue-500 to-blue-600", text: "text-blue-600", tag: "bg-blue-100 text-blue-700" },
+  xpro:      { icon: "★", card: "border-purple-200 bg-gradient-to-br from-purple-50/70 to-white", circle: "from-purple-500 to-indigo-600", text: "text-purple-600", tag: "bg-purple-100 text-purple-700" },
+  emstore:   { icon: "🛒", card: "border-emerald-300 bg-gradient-to-br from-emerald-50/70 to-white", circle: "from-emerald-500 to-teal-600", text: "text-emerald-700", tag: "bg-emerald-100 text-emerald-700" },
+  shotix:    { icon: "⚡", card: "border-amber-200 bg-gradient-to-br from-amber-50/70 to-white", circle: "from-amber-500 to-orange-500", text: "text-amber-600", tag: "bg-amber-100 text-amber-700" },
+  tunvn:     { icon: "🛡", card: "border-teal-200 bg-gradient-to-br from-teal-50/70 to-white", circle: "from-teal-500 to-cyan-600", text: "text-teal-600", tag: "bg-teal-100 text-teal-700" },
+};
+const DEFAULT_THEME = { icon: "⚪", card: "border-slate-200 bg-white", circle: "from-slate-500 to-slate-600", text: "text-slate-800", tag: "bg-slate-100 text-slate-700" };
 
 function SupplierBalanceCard({ dashboard, onRefresh, refreshing }) {
   // Collect only suppliers that are configured (non-null in response)
@@ -21,12 +28,15 @@ function SupplierBalanceCard({ dashboard, onRefresh, refreshing }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <SectionHeading title="Supplier Balances" />
+      <div className="mb-3 flex items-center justify-between">
+        <div className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-bold text-white shadow-sm">
+          <span>⚖</span>
+          <span>Supplier <span className="text-cyan-400">Balances</span></span>
+        </div>
         <button
           onClick={onRefresh}
           disabled={refreshing}
-          className="mb-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface-hover disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
           title="Refresh balances"
         >
           <span className={refreshing ? "animate-spin" : ""}>↻</span>
@@ -35,38 +45,44 @@ function SupplierBalanceCard({ dashboard, onRefresh, refreshing }) {
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {suppliers.map((s) => {
-          const icon = SUPPLIER_ICONS[s.id] || "⚪";
+          const t = SUPPLIER_THEMES[s.id] || DEFAULT_THEME;
           const name = supplierName(s.id);
           const hasBalance = s.balance !== null && s.balance !== undefined;
           return (
             <div
               key={s.id}
-              className={`flex items-center gap-4 rounded-xl border p-4 shadow-card ${
-                s.low
-                  ? "border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-950/40"
-                  : "border-border bg-surface"
-              }`}
+              className={`flex items-center gap-3.5 rounded-2xl border p-4 shadow-sm transition ${t.card}`}
             >
-              <span className="text-2xl">{icon}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted">{name}</p>
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${t.circle} text-xl text-white shadow`}>
+                {t.icon}
+              </div>
+              <div className="min-w-0 flex-1 border-l border-slate-200/80 pl-3.5">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-800">{name}</p>
                 {s.error ? (
-                  <p className="mt-0.5 truncate text-sm font-medium text-red-600 dark:text-red-400">
-                    Error
-                  </p>
+                  <div className="mt-1">
+                    <span className="rounded-md bg-red-100 px-2 py-0.5 text-xs font-bold text-red-600">Error</span>
+                    <p className="mt-1 truncate text-[11px] font-medium text-blue-600" title={s.error}>ℹ {s.error}</p>
+                  </div>
                 ) : hasBalance ? (
-                  <p className="mt-0.5 font-mono text-lg font-bold text-ink dark:text-white">
-                    ${Number(s.balance).toFixed(2)}
-                    <span className="ml-1 text-xs font-normal text-muted">USDT</span>
-                  </p>
+                  <>
+                    <div className="mt-0.5 flex items-center gap-1.5 font-mono">
+                      <span className={`text-xl font-bold ${t.text}`}>${Number(s.balance).toFixed(2)}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${t.tag}`}>USDT</span>
+                    </div>
+                    <div className="mt-1">
+                      {s.low ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                          ▼ Low balance
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                          ▲ Healthy Balance
+                        </span>
+                      )}
+                    </div>
+                  </>
                 ) : (
-                  <p className="mt-0.5 text-sm text-muted">—</p>
-                )}
-                {s.low && !s.error && (
-                  <p className="mt-0.5 text-xs font-medium text-red-500">⚠ Low balance</p>
-                )}
-                {s.error && (
-                  <p className="mt-0.5 truncate text-xs text-red-500" title={s.error}>{s.error}</p>
+                  <p className="mt-1 text-sm text-slate-400">—</p>
                 )}
               </div>
             </div>
