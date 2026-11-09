@@ -20,13 +20,17 @@ export default function PaymentPanel({ order, onDone }) {
   const [error, setError] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
+  const [buffLoading, setBuffLoading] = useState(true);
   const [buffCheck, setBuffCheck] = useState(null); // { is_buff, max_qty, affordable }
 
   useEffect(() => {
+    let active = true;
     if (order?.product_id) {
+      setBuffLoading(true);
       fetch(`/api/products/buff-info?product_id=${encodeURIComponent(order.product_id)}`)
         .then((r) => r.json())
         .then((d) => {
+          if (!active) return;
           if (d?.is_buff) {
             const reqQty = Number(order.quantity) || 1;
             setBuffCheck({
@@ -34,10 +38,22 @@ export default function PaymentPanel({ order, onDone }) {
               max_qty: d.max_qty,
               affordable: d.max_qty >= reqQty,
             });
+          } else {
+            setBuffCheck({ is_buff: false });
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (active) setBuffCheck({ is_buff: false });
+        })
+        .finally(() => {
+          if (active) setBuffLoading(false);
+        });
+    } else {
+      setBuffLoading(false);
     }
+    return () => {
+      active = false;
+    };
   }, [order?.product_id, order?.quantity]);
 
   useEffect(() => {
@@ -71,8 +87,13 @@ export default function PaymentPanel({ order, onDone }) {
     return () => clearInterval(interval);
   }, []);
 
+  const isPaymentBlocked = buffCheck?.is_buff && !buffCheck.affordable;
+
   const canPayWithBalance =
-    balance !== null && balance >= Number(order.total) && (!buffCheck?.is_buff || buffCheck.affordable);
+    balance !== null &&
+    balance >= Number(order.total) &&
+    !isPaymentBlocked &&
+    !buffLoading;
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
@@ -125,6 +146,8 @@ export default function PaymentPanel({ order, onDone }) {
   }
 
   if (!method) {
+    const isChecking = buffLoading;
+
     return (
       <div className="space-y-3">
         {timeExpired && (
@@ -137,44 +160,54 @@ export default function PaymentPanel({ order, onDone }) {
             ⏱️ {t("Payment expires in {time}", { time: `${minutes}:${seconds.toString().padStart(2, "0")}` })}
           </div>
         )}
-        {buffCheck?.is_buff && (
-          <div
-            className={`flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-xs font-semibold ${
-              buffCheck.affordable
-                ? "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-200"
-                : "border-red-200 bg-red-50 text-red-900 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-200"
-            }`}
-          >
-            <span
-              className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${
-                buffCheck.affordable ? "bg-blue-600 dark:bg-blue-400" : "bg-red-500"
-              }`}
-            />
+
+        {/* Warning is shown ONLY when user quantity > API balance capacity */}
+        {!isChecking && isPaymentBlocked && (
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-900 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-200">
+            <span className="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-red-500" />
             <span>
-              {buffCheck.affordable
-                ? t("You can order up to {n}B tokens right now.", { n: buffCheck.max_qty })
-                : buffCheck.max_qty > 0
+              {buffCheck.max_qty > 0
                 ? t("You can order up to {n}B tokens right now. Please lower your quantity.", { n: buffCheck.max_qty })
                 : t("Temporarily unavailable right now. Please check back soon.")}
             </span>
           </div>
         )}
+
+        {isChecking && (
+          <div className="flex items-center justify-center gap-2 py-1 text-xs text-muted">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+            <span>{t("Verifying availability…")}</span>
+          </div>
+        )}
+
         <p className="text-sm font-medium text-ink">{t("Choose how to pay")}</p>
-        <button
-          onClick={() => setMethod("wallet")}
-          className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"
-          disabled={balance === null}
+
+        <div
+          className={`space-y-3 transition-all duration-300 ${
+            isChecking
+              ? "pointer-events-none opacity-50 blur-[1.5px] select-none"
+              : isPaymentBlocked
+              ? "pointer-events-none opacity-40 blur-[1px] select-none cursor-not-allowed"
+              : "opacity-100 blur-0"
+          }`}
         >
-          <span className="font-medium text-ink">{t("Pay with wallet")}</span>
-          <span className="font-mono text-sm" dir="ltr">{t("{amount} balance", { amount: `$${(balance ?? 0).toFixed(2)}` })}</span>
-        </button>
-        <button
-          onClick={() => setMethod("onchain")}
-          className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"
-        >
-          <span className="font-medium text-ink">{t("USDT (BEP20) deposit")}</span>
-          <span className="text-muted">{t("Pay on-chain")}</span>
-        </button>
+          <button
+            onClick={() => setMethod("wallet")}
+            className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"
+            disabled={balance === null || isChecking || isPaymentBlocked}
+          >
+            <span className="font-medium text-ink">{t("Pay with wallet")}</span>
+            <span className="font-mono text-sm" dir="ltr">{t("{amount} balance", { amount: `$${(balance ?? 0).toFixed(2)}` })}</span>
+          </button>
+          <button
+            onClick={() => setMethod("onchain")}
+            className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"
+            disabled={isChecking || isPaymentBlocked}
+          >
+            <span className="font-medium text-ink">{t("USDT (BEP20) deposit")}</span>
+            <span className="text-muted">{t("Pay on-chain")}</span>
+          </button>
+        </div>
       </div>
     );
   }
