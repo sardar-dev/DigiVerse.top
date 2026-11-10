@@ -20,6 +20,7 @@ import { PrimaryButton, SecondaryButton } from "../components/ui/Button";
 import { EmptyState, ErrorState, LoadingState } from "../components/ui/States";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
+import * as fpixel from "../lib/fpixel";
 
 // Server-rendered so search engines (and the first paint) see the
 // actual product list immediately, not an empty page that fills in
@@ -389,6 +390,18 @@ function BuyModal({ product, onClose, ticker }) {
   const [couponError, setCouponError] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
 
+  useEffect(() => {
+    if (product?.id) {
+      fpixel.event("ViewContent", {
+        content_name: product.title,
+        content_ids: [String(product.id)],
+        content_type: "product",
+        value: Number(product.sell_price) || 0,
+        currency: "USD",
+      });
+    }
+  }, [product?.id, product?.title, product?.sell_price]);
+
   const isManualDelivery = product.provider === "manual" && !product.auto_delivery;
 
   // activation_field is now a free-text label set by the admin
@@ -506,6 +519,14 @@ function BuyModal({ product, onClose, ticker }) {
       return;
     }
     setOrder(data.order);
+    fpixel.event("InitiateCheckout", {
+      content_name: product.title,
+      content_ids: [String(product.id)],
+      content_type: "product",
+      value: Number(data.order?.total) || 0,
+      currency: "USD",
+      num_items: parseInt(quantity, 10) || 1,
+    });
     setStep("order");
   }
 
@@ -685,6 +706,14 @@ function BuyModal({ product, onClose, ticker }) {
         <PaymentPanel
           order={order}
           onDone={(result) => {
+            fpixel.event("Purchase", {
+              content_name: product.title,
+              content_ids: [String(order.product_id)],
+              content_type: "product",
+              value: Number(order.total) || 0,
+              currency: "USD",
+              num_items: Number(order.quantity) || 1,
+            });
             setItems(result.items);
             setManual(result.manual);
             setStep("done");
