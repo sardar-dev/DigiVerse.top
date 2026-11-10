@@ -6,7 +6,12 @@ export default function Document(props) {
   const locale = props.__NEXT_DATA__?.locale || "en";
   return (
     <Html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
-      <Head />
+      <Head>
+        <meta
+          name="facebook-domain-verification"
+          content="4mna49badwlswc1ifefje5z6hdtt69"
+        />
+      </Head>
       <body>
         <noscript>
           <img
