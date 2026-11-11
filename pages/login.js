@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 import SEO from "../components/SEO";
@@ -20,6 +20,18 @@ export default function Login() {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && typeof d.google_auth_enabled === "boolean") {
+          setGoogleAuthEnabled(d.google_auth_enabled);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleGoogleSignIn() {
     setError("");
@@ -99,23 +111,27 @@ export default function Login() {
         </Link>
         <h1 className="mb-5 text-2xl font-semibold text-ink">{t("Log in")}</h1>
 
-        {/* Continue with Google */}
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={googleLoading || loading}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition-all hover:bg-surface-alt hover:border-border/80 active:scale-[0.99] disabled:opacity-50"
-        >
-          <GoogleIcon className="h-4 w-4 shrink-0" />
-          <span>{googleLoading ? t("Connecting to Google…") : t("Continue with Google")}</span>
-        </button>
+        {/* Continue with Google (shown only when enabled in Admin Settings) */}
+        {googleAuthEnabled && (
+          <>
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading || loading}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition-all hover:bg-surface-alt hover:border-border/80 active:scale-[0.99] disabled:opacity-50"
+            >
+              <GoogleIcon className="h-4 w-4 shrink-0" />
+              <span>{googleLoading ? t("Connecting to Google…") : t("Continue with Google")}</span>
+            </button>
 
-        <div className="relative my-4 flex items-center justify-center">
-          <div className="w-full border-t border-border" />
-          <span className="absolute bg-surface px-3 text-xs font-semibold uppercase tracking-wider text-muted">
-            {t("or")}
-          </span>
-        </div>
+            <div className="relative my-4 flex items-center justify-center">
+              <div className="w-full border-t border-border" />
+              <span className="absolute bg-surface px-3 text-xs font-semibold uppercase tracking-wider text-muted">
+                {t("or")}
+              </span>
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <FormInput

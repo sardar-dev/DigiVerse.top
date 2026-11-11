@@ -16,6 +16,8 @@ export default function SettingsTab({
   setBuyModalTicker,
   notice,
   setNotice,
+  googleAuthEnabled,
+  setGoogleAuthEnabled,
   saveSettings,
   settingsMessage,
 }) {
@@ -62,6 +64,44 @@ export default function SettingsTab({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Google OAuth Login & Sign-up */}
+      <div className="space-y-3 rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Authentication</p>
+            <p className="text-sm font-semibold text-ink mt-0.5">Google Sign-in & Sign-up</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(googleAuthEnabled)}
+            aria-label="Toggle Google Sign-in"
+            onClick={() => setGoogleAuthEnabled(!googleAuthEnabled)}
+            className={`relative h-6 w-11 rounded-full transition ${googleAuthEnabled ? "bg-brand" : "bg-border"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                googleAuthEnabled ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+              googleAuthEnabled
+                ? "bg-success-soft text-success border border-success/30"
+                : "bg-surface-alt text-muted border border-border"
+            }`}
+          >
+            {googleAuthEnabled ? "ENABLED (Live on Store)" : "DISABLED (Hidden from Users)"}
+          </span>
+        </div>
+        <p className="text-xs text-muted leading-relaxed">
+          Jab yeh <strong>DISABLED</strong> hoga to login aur signup pages par Continue with Google ka button chhupa rahega. Google Cloud Console credentials set karne ke baad aap ise yahan se <strong>ENABLED</strong> kar sakte hain.
+        </p>
       </div>
 
       {/* Notice popup */}

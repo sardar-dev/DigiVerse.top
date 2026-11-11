@@ -84,6 +84,7 @@ export default function Admin() {
   const [whatsappLink, setWhatsappLink] = useState("");
   const [channelType, setChannelType] = useState("whatsapp");
   const [buyModalTicker, setBuyModalTicker] = useState("");
+  const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
   const [notice, setNotice] = useState({ enabled: false, title: "", message: "", button_label: "", button_url: "" });
   const [settingsMessage, setSettingsMessage] = useState("");
 
@@ -94,6 +95,7 @@ export default function Admin() {
       setWhatsappLink(data.whatsapp_link || "");
       setChannelType(data.channel_type === "telegram" ? "telegram" : "whatsapp");
       setBuyModalTicker(data.buy_modal_ticker || "");
+      setGoogleAuthEnabled(Boolean(data.google_auth_enabled));
       if (data.notice) setNotice(data.notice);
     }
   }
@@ -103,7 +105,13 @@ export default function Admin() {
     const res = await fetch("/api/admin/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ whatsapp_link: whatsappLink, channel_type: channelType, buy_modal_ticker: buyModalTicker, notice }),
+      body: JSON.stringify({
+        whatsapp_link: whatsappLink,
+        channel_type: channelType,
+        buy_modal_ticker: buyModalTicker,
+        google_auth_enabled: googleAuthEnabled,
+        notice,
+      }),
     });
     const data = await res.json();
     setSettingsMessage(
@@ -676,6 +684,8 @@ export default function Admin() {
           setBuyModalTicker={setBuyModalTicker}
           notice={notice}
           setNotice={setNotice}
+          googleAuthEnabled={googleAuthEnabled}
+          setGoogleAuthEnabled={setGoogleAuthEnabled}
           saveSettings={saveSettings}
           settingsMessage={settingsMessage}
         />

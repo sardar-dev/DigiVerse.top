@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const { data } = await supabaseAdmin
       .from("app_meta")
       .select("key, value")
-      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker", "site_notice"]);
+      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker", "site_notice", "google_auth_enabled"]);
     const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
     let notice = { enabled: false, title: "", message: "", button_label: "", button_url: "", v: "1" };
     try {
@@ -26,11 +26,12 @@ export default async function handler(req, res) {
       whatsapp_link: m.whatsapp_link || "",
       channel_type: m.channel_type === "telegram" ? "telegram" : "whatsapp",
       buy_modal_ticker: m.buy_modal_ticker || "",
+      google_auth_enabled: m.google_auth_enabled === "true",
     });
   }
 
   if (req.method === "POST") {
-    const { whatsapp_link, channel_type, buy_modal_ticker, notice } = req.body || {};
+    const { whatsapp_link, channel_type, buy_modal_ticker, notice, google_auth_enabled } = req.body || {};
     const type = channel_type === "telegram" ? "telegram" : "whatsapp";
     const link = String(whatsapp_link || "").trim();
     if (link) {
@@ -81,6 +82,7 @@ export default async function handler(req, res) {
       { key: "whatsapp_link", value: link, updated_at: now },
       { key: "channel_type", value: type, updated_at: now },
       { key: "buy_modal_ticker", value: ticker, updated_at: now },
+      { key: "google_auth_enabled", value: String(Boolean(google_auth_enabled)), updated_at: now },
     ]);
     if (error) return res.status(500).json({ success: false, error: error.message });
     return res.status(200).json({ success: true });
