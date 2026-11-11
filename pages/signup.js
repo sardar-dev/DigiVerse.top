@@ -5,12 +5,13 @@ import { supabase } from "../lib/supabaseClient";
 import SEO from "../components/SEO";
 import Alert from "../components/ui/Alert";
 import { FormInput } from "../components/ui/FormInput";
-import { PrimaryButton, SecondaryButton } from "../components/ui/Button";
+import { PrimaryButton } from "../components/ui/Button";
 import { SITE_NAME } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { validateRegistrationEmail, ALLOWED_EMAIL_DOMAINS } from "../lib/emailAllowlist";
 import { getDeviceId } from "../lib/deviceId";
+import GoogleIcon from "../components/icons/GoogleIcon";
 
 const REF_STORAGE_KEY = "dg_ref_inviter";
 
@@ -27,6 +28,7 @@ export default function Signup() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState("");
 
@@ -45,6 +47,40 @@ export default function Signup() {
       } catch {}
     }
   }, [router.query.ref]);
+
+  async function handleGoogleSignIn() {
+    setError("");
+    setGoogleLoading(true);
+
+    // Persist referral code in localStorage so /auth/callback can link it
+    if (refInviter) {
+      try {
+        localStorage.setItem(REF_STORAGE_KEY, refInviter);
+      } catch {}
+    }
+
+    try {
+      const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://digiverse.top";
+      const { data, error: googleErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${siteUrl}/auth/callback`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (googleErr) {
+        setGoogleLoading(false);
+        setError(googleErr.message);
+      }
+    } catch (err) {
+      setGoogleLoading(false);
+      setError(err.message || "Failed to initiate Google sign-in.");
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -203,10 +239,7 @@ export default function Signup() {
       <div className="absolute end-4 top-4">
         <LanguageSwitcher />
       </div>
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-2xl border border-border bg-surface p-7 shadow-card sm:p-8"
-      >
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-7 shadow-card sm:p-8">
         <Link href="/" className="mb-1 block text-base font-semibold text-ink">
           {SITE_NAME}
         </Link>
@@ -222,7 +255,25 @@ export default function Signup() {
           </div>
         )}
 
-        <div className="space-y-4">
+        {/* Continue with Google */}
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={googleLoading || loading}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition-all hover:bg-surface-alt hover:border-border/80 active:scale-[0.99] disabled:opacity-50"
+        >
+          <GoogleIcon className="h-4 w-4 shrink-0" />
+          <span>{googleLoading ? t("Connecting to Google…") : t("Continue with Google")}</span>
+        </button>
+
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="w-full border-t border-border" />
+          <span className="absolute bg-surface px-3 text-xs font-semibold uppercase tracking-wider text-muted">
+            {t("or")}
+          </span>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <FormInput
             label={t("Username")}
             type="text"
@@ -267,7 +318,7 @@ export default function Signup() {
 
           <Alert variant="error">{error}</Alert>
 
-          <PrimaryButton disabled={loading} className="w-full">
+          <PrimaryButton disabled={loading || googleLoading} className="w-full">
             {loading ? t("Creating account…") : t("Sign up")}
           </PrimaryButton>
 
@@ -277,8 +328,8 @@ export default function Signup() {
               {t("Log in")}
             </Link>
           </p>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

@@ -35,6 +35,9 @@ const part = {
     "Telegram Channel": "قناة تيليجرام",
     "WhatsApp Channel": "قناة واتساب",
     "Close dialog": "إغلاق النافذة",
+    "Continue with Google": "المتابعة باستخدام Google",
+    "Connecting to Google…": "جارٍ الاتصال بـ Google…",
+    "or": "أو",
   },
   ru: {
     "Store": "Магазин",
@@ -71,6 +74,9 @@ const part = {
     "Telegram Channel": "Канал в Telegram",
     "WhatsApp Channel": "Канал в WhatsApp",
     "Close dialog": "Закрыть окно",
+    "Continue with Google": "Продолжить с Google",
+    "Connecting to Google…": "Подключение к Google…",
+    "or": "или",
   },
 };
 export default part;

@@ -8,6 +8,7 @@ import { PrimaryButton, LinkButton } from "../components/ui/Button";
 import { SITE_NAME } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import GoogleIcon from "../components/icons/GoogleIcon";
 
 export default function Login() {
   const { t, locale } = useT();
@@ -18,6 +19,35 @@ export default function Login() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  async function handleGoogleSignIn() {
+    setError("");
+    setNotice("");
+    setGoogleLoading(true);
+
+    try {
+      const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://digiverse.top";
+      const { data, error: googleErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${siteUrl}/auth/callback`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (googleErr) {
+        setGoogleLoading(false);
+        setError(googleErr.message);
+      }
+    } catch (err) {
+      setGoogleLoading(false);
+      setError(err.message || "Failed to initiate Google sign-in.");
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -63,16 +93,31 @@ export default function Login() {
     <div className="relative flex min-h-screen items-center justify-center bg-bg px-4 py-12 font-body text-ink sm:px-6">
       <SEO title={t("Log in")} path="/login" noindex />
       <div className="absolute end-4 top-4"><LanguageSwitcher /></div>
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-xl border border-border bg-surface p-7 shadow-card"
-      >
+      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-7 shadow-card">
         <Link href="/" className="mb-1 block text-base font-semibold text-ink">
           {SITE_NAME}
         </Link>
         <h1 className="mb-5 text-2xl font-semibold text-ink">{t("Log in")}</h1>
 
-        <div className="space-y-4">
+        {/* Continue with Google */}
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={googleLoading || loading}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition-all hover:bg-surface-alt hover:border-border/80 active:scale-[0.99] disabled:opacity-50"
+        >
+          <GoogleIcon className="h-4 w-4 shrink-0" />
+          <span>{googleLoading ? t("Connecting to Google…") : t("Continue with Google")}</span>
+        </button>
+
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="w-full border-t border-border" />
+          <span className="absolute bg-surface px-3 text-xs font-semibold uppercase tracking-wider text-muted">
+            {t("or")}
+          </span>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <FormInput
             label={t("Email")}
             type="email"
@@ -100,7 +145,7 @@ export default function Login() {
           <Alert variant="error">{error}</Alert>
           <Alert variant="success">{notice}</Alert>
 
-          <PrimaryButton disabled={loading} className="w-full">
+          <PrimaryButton disabled={loading || googleLoading} className="w-full">
             {loading ? t("Signing in…") : t("Log in")}
           </PrimaryButton>
 
@@ -119,8 +164,8 @@ export default function Login() {
               {t("Sign up")}
             </Link>
           </p>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
