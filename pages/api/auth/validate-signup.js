@@ -55,11 +55,11 @@ export default async function handler(req, res) {
     });
   }
 
-  // 3. Password validation
-  if (!password || String(password).length < 6) {
+  // 3. Password validation: Allow any password format/length chosen by the user
+  if (!password || typeof password !== "string") {
     return res.status(400).json({
       success: false,
-      error: "Password must be at least 6 characters.",
+      error: "Password is required.",
     });
   }
 

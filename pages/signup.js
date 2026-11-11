@@ -104,9 +104,9 @@ export default function Signup() {
       return setError(emailCheck.error);
     }
 
-    // 3. Client-side Password Check
-    if (password.length < 6) {
-      return setError(t("Password must be at least 6 characters."));
+    // 3. Client-side Password Check: No restriction, allow any format/length
+    if (!password) {
+      return setError(t("Password is required."));
     }
 
     setLoading(true);
@@ -275,6 +275,8 @@ export default function Signup() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <FormInput
+            id="username"
+            name="username"
             label={t("Username")}
             type="text"
             required
@@ -286,6 +288,8 @@ export default function Signup() {
           />
 
           <FormInput
+            id="email"
+            name="email"
             label={t("Email")}
             type="email"
             required
@@ -298,14 +302,14 @@ export default function Signup() {
 
           <div>
             <FormInput
+              id="password"
+              name="password"
               label={t("Password")}
               type={showPassword ? "text" : "password"}
               required
-              minLength={6}
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              hint={t("At least 6 characters.")}
             />
             <button
               type="button"

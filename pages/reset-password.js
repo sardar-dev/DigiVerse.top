@@ -55,13 +55,14 @@ export default function ResetPassword() {
         <div className="space-y-4">
           <div>
             <FormInput
+              id="password"
+              name="password"
               label={t("New password")}
               type={showPassword ? "text" : "password"}
               required
-              minLength={6}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              hint={t("At least 6 characters.")}
             />
             <button
               type="button"

@@ -119,17 +119,23 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <FormInput
+            id="email"
+            name="email"
             label={t("Email")}
             type="email"
             required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <div>
             <FormInput
+              id="password"
+              name="password"
               label={t("Password")}
               type={showPassword ? "text" : "password"}
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
