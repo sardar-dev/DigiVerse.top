@@ -220,7 +220,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
             <p className="mx-auto mt-1 max-w-md text-center text-sm text-muted">
               {t("From choosing a product to receiving it, in three simple steps.")}
             </p>
-            <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+            <ol className="mt-8 grid w-full min-w-0 max-w-full gap-4 sm:grid-cols-3">
               {[
                 { n: 1, title: t("Choose a product"), text: t("Browse the catalog and pick what you need. Prices are shown upfront.") },
                 { n: 2, title: t("Pay with USDT or wallet"), text: t("Send the exact USDT (BEP20) amount, or pay instantly from your wallet balance.") },
@@ -253,7 +253,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                     : t("Browse what's available")}
                 </p>
               </div>
-              <div className="dv-search flex w-full max-w-sm items-center gap-2 rounded-xl border border-border bg-surface px-3 shadow-card transition-shadow sm:w-auto sm:min-w-[300px]">
+              <div className="dv-search flex w-full max-w-full items-center gap-2 rounded-xl border border-border bg-surface px-3 shadow-card transition-shadow sm:w-auto sm:max-w-sm sm:min-w-[280px]">
                 <span className="text-muted" aria-hidden="true">🔍</span>
                 <input
                   type="search"
@@ -272,7 +272,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
             </div>
 
             {categories.length > 1 && (
-              <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label={t("Filter by category")}>
+              <div className="mb-6 flex w-full max-w-full min-w-0 flex-wrap gap-2" role="group" aria-label={t("Filter by category")}>
                 {["", ...categories].map((c) => (
                   <button
                     key={c || "all"}
@@ -1035,10 +1035,10 @@ function HeroSection({ inStock, search, setSearch }) {
 
       <PageContainer className="relative py-10 sm:py-14 md:py-18">
         {/* ── Single centered column on mobile, two-col on desktop ── */}
-        <div className="grid gap-8 md:grid-cols-[1.15fr_0.85fr] md:items-center md:gap-12">
+        <div className="grid w-full min-w-0 max-w-full gap-8 md:grid-cols-[1.15fr_0.85fr] md:items-center md:gap-12">
 
           {/* Left / main content — centered on mobile */}
-          <div className="mx-auto flex w-full max-w-lg flex-col items-center text-center md:mx-0 md:max-w-none md:items-start md:text-start">
+          <div className="mx-auto flex w-full min-w-0 max-w-full sm:max-w-lg flex-col items-center text-center md:mx-0 md:max-w-none md:items-start md:text-start">
 
             {/* Live badge */}
             <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-surface/90 px-3 py-1.5 text-xs font-medium text-brand shadow-[0_0_22px_-4px_rgba(49,105,245,0.45)] backdrop-blur">
@@ -1061,12 +1061,12 @@ function HeroSection({ inStock, search, setSearch }) {
             {/* Sub-copy */}
             <p className="mt-3 text-sm text-muted sm:text-base">
               {t("Fair prices, instant delivery, real support.")}{" "}
-              <span className="whitespace-nowrap">{t("Pay with USDT or wallet balance.")}</span>
+              <span className="sm:whitespace-nowrap">{t("Pay with USDT or wallet balance.")}</span>
             </p>
 
             {/* Search bar */}
             <form
-              className="dv-search mt-5 flex w-full gap-2 rounded-2xl border border-border bg-surface/90 p-1.5 shadow-card backdrop-blur transition-shadow"
+              className="dv-search mt-5 flex w-full max-w-full min-w-0 gap-2 rounded-2xl border border-border bg-surface/90 p-1.5 shadow-card backdrop-blur transition-shadow"
               role="search"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1082,15 +1082,15 @@ function HeroSection({ inStock, search, setSearch }) {
                 aria-label={t("Search products")}
                 className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm text-ink placeholder:text-muted focus:outline-none"
               />
-              <PrimaryButton type="submit" className="px-4 text-sm">{t("Search")}</PrimaryButton>
+              <PrimaryButton type="submit" className="flex-shrink-0 px-3 sm:px-4 text-xs sm:text-sm">{t("Search")}</PrimaryButton>
             </form>
 
             {/* CTA buttons — stacked on mobile, row on sm+ */}
-            <div className="mt-4 grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2 md:flex md:w-auto">
-              <a href="#catalog">
+            <div className="mt-4 grid w-full max-w-full min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 md:flex md:w-auto">
+              <a href="#catalog" className="w-full block">
                 <PrimaryButton className="w-full px-7 py-2.5">{t("Browse products")}</PrimaryButton>
               </a>
-              <a href="#how-it-works">
+              <a href="#how-it-works" className="w-full block">
                 <SecondaryButton className="w-full px-7 py-2.5">{t("How it works")}</SecondaryButton>
               </a>
             </div>
@@ -1152,9 +1152,9 @@ function HeroSection({ inStock, search, setSearch }) {
 
           {/* Mobile product strip — below text, hidden on desktop */}
           {inStock.length > 0 && (
-            <div className="md:hidden">
+            <div className="w-full max-w-full min-w-0 overflow-hidden md:hidden">
               <p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted">{t("In stock now")}</p>
-              <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex w-full max-w-full min-w-0 gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {inStock.slice(0, 6).map((p) => (
                   <a
                     key={p.id}

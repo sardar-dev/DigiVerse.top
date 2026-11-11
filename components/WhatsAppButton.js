@@ -35,9 +35,9 @@ export default function WhatsAppButton() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label={isTg ? t("Join our Telegram channel") : t("Join our WhatsApp channel")}
-        className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] end-5 z-40 flex items-center gap-2 rounded-full ${
+        className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] end-4 sm:end-5 z-40 flex items-center gap-2 rounded-full ${
           isTg ? "bg-[#229ED9]" : "bg-[#25D366]"
-        } px-4 py-3 text-white shadow-card-hover transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+        } p-3 sm:px-4 sm:py-3 text-white shadow-card-hover transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
           isTg ? "focus-visible:outline-[#229ED9]" : "focus-visible:outline-[#25D366]"
         }`}
       >
