@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
+import { getReferralSettings, updateReferralSettings } from "../../../lib/referralSettings";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
@@ -7,8 +8,8 @@ export default async function handler(req, res) {
 
   // GET — Load referral settings, referral registrations list, and gifts list
   if (req.method === "GET") {
-    const [{ data: settings }, { data: referralsRaw }, { data: giftsRaw }] = await Promise.all([
-      supabaseAdmin.from("referral_settings").select("*").eq("id", 1).single(),
+    const [settings, { data: referralsRaw }, { data: giftsRaw }] = await Promise.all([
+      getReferralSettings(),
       supabaseAdmin
         .from("referrals")
         .select("id, referrer_id, referred_id, referrer_username, status, device_id, registration_ip, suspicious_reason, reward_issued, verified_at, created_at")
@@ -70,7 +71,29 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     const { action } = req.body || {};
 
-    // 1. Action: Approve flagged referral
+    // 1. Action: Quick Toggle Master Redemption Switch
+    if (action === "toggle_redemption") {
+      const { enabled } = req.body;
+      try {
+        const updated = await updateReferralSettings({ redemption_enabled: Boolean(enabled) }, session.user.id);
+        return res.status(200).json({ success: true, settings: updated });
+      } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+      }
+    }
+
+    // 2. Action: Quick Toggle Referral Program Switch
+    if (action === "toggle_referral") {
+      const { enabled } = req.body;
+      try {
+        const updated = await updateReferralSettings({ referral_enabled: Boolean(enabled) }, session.user.id);
+        return res.status(200).json({ success: true, settings: updated });
+      } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+      }
+    }
+
+    // 3. Action: Approve flagged referral
     if (action === "approve_referral") {
       const { referral_id } = req.body;
       if (!referral_id) return res.status(400).json({ success: false, error: "referral_id_required" });
@@ -92,7 +115,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, result: qualResult });
     }
 
-    // 2. Action: Reject referral
+    // 4. Action: Reject referral
     if (action === "reject_referral") {
       const { referral_id, reason = "Admin rejected" } = req.body;
       const { error } = await supabaseAdmin
@@ -104,7 +127,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true });
     }
 
-    // 3. Action: Revoke an unused gift
+    // 5. Action: Revoke an unused gift
     if (action === "revoke_gift") {
       const { gift_id, reason = "Revoked by admin" } = req.body;
       if (!gift_id) return res.status(400).json({ success: false, error: "gift_id_required" });
@@ -119,7 +142,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, result: data });
     }
 
-    // 4. Update referral settings
+    // 6. Update full referral settings
     const {
       referral_enabled,
       redemption_enabled,
@@ -131,10 +154,7 @@ export default async function handler(req, res) {
       fraud_max_accounts_per_device,
     } = req.body;
 
-    const patch = {
-      updated_at: new Date().toISOString(),
-      updated_by: session.user.id,
-    };
+    const patch = {};
 
     if (typeof referral_enabled === "boolean") patch.referral_enabled = referral_enabled;
     if (typeof redemption_enabled === "boolean") patch.redemption_enabled = redemption_enabled;
@@ -148,22 +168,26 @@ export default async function handler(req, res) {
       const newCost = Number(supplier_cost_per_gift);
       patch.supplier_cost_per_gift = newCost;
 
-      // Log in supplier_cost_history
-      await supabaseAdmin.from("supplier_cost_history").insert({
-        cost_per_billion: newCost,
-        currency: "USD",
-        created_by: session.user.id,
-        notes: "Updated from Admin Referral Settings",
-      });
+      // Log in supplier_cost_history (non-fatal if table doesn't exist)
+      try {
+        await supabaseAdmin.from("supplier_cost_history").insert({
+          cost_per_billion: newCost,
+          currency: "USD",
+          created_by: session.user.id,
+          notes: "Updated from Admin Referral Settings",
+        });
+      } catch (logErr) {
+        console.warn("[referrals] supplier_cost_history insert warning:", logErr?.message);
+      }
     }
 
-    const { error: setErr } = await supabaseAdmin
-      .from("referral_settings")
-      .update(patch)
-      .eq("id", 1);
-
-    if (setErr) return res.status(500).json({ success: false, error: setErr.message });
-    return res.status(200).json({ success: true });
+    try {
+      const savedSettings = await updateReferralSettings(patch, session.user.id);
+      return res.status(200).json({ success: true, settings: savedSettings });
+    } catch (e) {
+      console.error("[admin/referrals] update settings error:", e?.message);
+      return res.status(500).json({ success: false, error: e?.message || "Failed to save settings" });
+    }
   }
 
   return res.status(405).json({ success: false, error: "method_not_allowed" });

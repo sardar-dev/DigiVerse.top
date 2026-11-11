@@ -1,5 +1,6 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { getReferralSettings } from "../../../../lib/referralSettings";
 
 export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
@@ -37,11 +38,7 @@ export default async function handler(req, res) {
   }
 
   // 2. Check system settings & master redemption switch
-  const { data: settings } = await supabaseAdmin
-    .from("referral_settings")
-    .select("redemption_enabled, daily_redemption_limit")
-    .eq("id", 1)
-    .single();
+  const settings = await getReferralSettings();
 
   if (!settings || !settings.redemption_enabled) {
     return res.status(200).json({

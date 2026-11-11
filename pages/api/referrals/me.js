@@ -1,5 +1,6 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { getReferralSettings } from "../../../lib/referralSettings";
 
 export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
@@ -102,11 +103,7 @@ export default async function handler(req, res) {
   }));
 
   // 5. System settings
-  const { data: settings } = await supabaseAdmin
-    .from("referral_settings")
-    .select("referral_enabled, redemption_enabled, max_lifetime_gifts, daily_redemption_limit, lock_delay_seconds")
-    .eq("id", 1)
-    .single();
+  const settings = await getReferralSettings();
 
   return res.status(200).json({
     success: true,

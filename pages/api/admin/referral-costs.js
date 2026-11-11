@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import * as tunvn from "../../../lib/suppliers/tunvn";
+import { getReferralSettings } from "../../../lib/referralSettings";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
@@ -23,12 +24,7 @@ export default async function handler(req, res) {
   }
 
   // 2. Settings & Cost config
-  const { data: settings } = await supabaseAdmin
-    .from("referral_settings")
-    .select("*")
-    .eq("id", 1)
-    .single();
-
+  const settings = await getReferralSettings();
   const currentSupplierCost = Number(settings?.supplier_cost_per_gift || 0.06);
 
   // 3. Overall referral counts

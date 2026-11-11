@@ -35,10 +35,10 @@ export default function ReferralsTab() {
       const json = await res.json();
       if (json.success) {
         setData(json);
-        if (json.settings) {
+        if (json.settings && Object.keys(json.settings).length > 0) {
           setSettingsForm({
-            referral_enabled: Boolean(json.settings.referral_enabled),
-            redemption_enabled: Boolean(json.settings.redemption_enabled),
+            referral_enabled: json.settings.referral_enabled !== undefined ? Boolean(json.settings.referral_enabled) : true,
+            redemption_enabled: json.settings.redemption_enabled !== undefined ? Boolean(json.settings.redemption_enabled) : true,
             max_lifetime_gifts: json.settings.max_lifetime_gifts ?? 15,
             daily_redemption_limit: json.settings.daily_redemption_limit ?? 3,
             lock_delay_seconds: json.settings.lock_delay_seconds ?? 30,
@@ -71,7 +71,19 @@ export default function ReferralsTab() {
       const json = await res.json();
       if (json.success) {
         setSuccess("Referral settings updated successfully!");
-        load();
+        if (json.settings) {
+          setSettingsForm((prev) => ({
+            ...prev,
+            referral_enabled: json.settings.referral_enabled !== undefined ? Boolean(json.settings.referral_enabled) : prev.referral_enabled,
+            redemption_enabled: json.settings.redemption_enabled !== undefined ? Boolean(json.settings.redemption_enabled) : prev.redemption_enabled,
+            max_lifetime_gifts: json.settings.max_lifetime_gifts ?? prev.max_lifetime_gifts,
+            daily_redemption_limit: json.settings.daily_redemption_limit ?? prev.daily_redemption_limit,
+            lock_delay_seconds: json.settings.lock_delay_seconds ?? prev.lock_delay_seconds,
+            supplier_cost_per_gift: Number(json.settings.supplier_cost_per_gift ?? prev.supplier_cost_per_gift),
+            fraud_max_accounts_per_ip: json.settings.fraud_max_accounts_per_ip ?? prev.fraud_max_accounts_per_ip,
+            fraud_max_accounts_per_device: json.settings.fraud_max_accounts_per_device ?? prev.fraud_max_accounts_per_device,
+          }));
+        }
       } else {
         setError(json.error || "Failed to save settings.");
       }
@@ -79,6 +91,27 @@ export default function ReferralsTab() {
       setError("Network error while saving settings.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function toggleRedemptionQuick(targetState) {
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle_redemption", enabled: targetState }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettingsForm((prev) => ({ ...prev, redemption_enabled: targetState }));
+        setSuccess(`Redemption master switch is now ${targetState ? "ACTIVE (Enabled)" : "DISABLED"}.`);
+      } else {
+        setError(json.error || "Failed to toggle redemption.");
+      }
+    } catch {
+      setError("Network error while toggling redemption.");
     }
   }
 
@@ -162,7 +195,7 @@ export default function ReferralsTab() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <span
               className={`rounded-full px-3 py-1 text-xs font-bold ${
                 settingsForm.redemption_enabled
@@ -172,6 +205,18 @@ export default function ReferralsTab() {
             >
               {settingsForm.redemption_enabled ? "Redemption: ACTIVE" : "Redemption: DISABLED"}
             </span>
+
+            <button
+              type="button"
+              onClick={() => toggleRedemptionQuick(!settingsForm.redemption_enabled)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold shadow-sm transition-all cursor-pointer ${
+                settingsForm.redemption_enabled
+                  ? "bg-danger/10 text-danger border border-danger/30 hover:bg-danger hover:text-white"
+                  : "bg-success text-white border border-success hover:bg-success/90"
+              }`}
+            >
+              {settingsForm.redemption_enabled ? "Turn OFF" : "Turn ON (Enable)"}
+            </button>
           </div>
         </div>
 
