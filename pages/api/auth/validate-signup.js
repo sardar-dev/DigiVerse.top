@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { validateRegistrationEmail } from "../../../lib/emailAllowlist";
 import { getReferralSettings } from "../../../lib/referralSettings";
+import { checkEntityBanned, banEntity } from "../../../lib/bannedEntities";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -77,6 +78,8 @@ export default async function handler(req, res) {
 
   // Check if current IP or Device is whitelisted by Admin (e.g. for testing)
   let isWhitelisted = false;
+  let whitelistIps = [];
+  let whitelistDevices = [];
   try {
     const { data: metaRows } = await supabaseAdmin
       .from("app_meta")
@@ -84,24 +87,55 @@ export default async function handler(req, res) {
       .in("key", ["admin_whitelist_ips", "admin_whitelist_devices"]);
 
     const metaMap = Object.fromEntries((metaRows || []).map((r) => [r.key, r.value]));
-    const whitelistIps = (metaMap.admin_whitelist_ips || "")
+    whitelistIps = (metaMap.admin_whitelist_ips || "")
       .split(/[\n,;\s]+/)
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const whitelistDevices = (metaMap.admin_whitelist_devices || "")
+    whitelistDevices = (metaMap.admin_whitelist_devices || "")
       .split(/[\n,;\s]+/)
       .map((s) => s.trim())
       .filter(Boolean);
 
-    if (clientIp && whitelistIps.includes(clientIp)) {
+    if (clientIp && whitelistIps.some((w) => w.toLowerCase() === clientIp.toLowerCase())) {
       isWhitelisted = true;
     }
-    if (cleanDeviceId && whitelistDevices.includes(cleanDeviceId)) {
+    if (cleanDeviceId && whitelistDevices.some((w) => w.toLowerCase() === cleanDeviceId.toLowerCase())) {
       isWhitelisted = true;
     }
   } catch (err) {
     console.warn("[validate-signup] whitelist check warn:", err.message);
+  }
+
+  // 4b. Explicit Ban Check (unless whitelisted)
+  if (!isWhitelisted) {
+    try {
+      const banCheck = await checkEntityBanned({
+        ip: clientIp,
+        deviceId: cleanDeviceId,
+        whitelistIps,
+        whitelistDevices,
+      });
+
+      if (banCheck.banned) {
+        if (banCheck.type === "device") {
+          return res.status(403).json({
+            success: false,
+            code: "DEVICE_BANNED",
+            error: "This mobile/device has been blocked by the administrator. Multiple accounts from the same mobile are not allowed.",
+          });
+        }
+        if (banCheck.type === "ip") {
+          return res.status(403).json({
+            success: false,
+            code: "IP_BANNED",
+            error: "This IP address has been blocked by the administrator. Multiple accounts from this IP network are not allowed.",
+          });
+        }
+      }
+    } catch (banErr) {
+      console.warn("[validate-signup] banCheck error:", banErr?.message);
+    }
   }
 
   // 5. Anti-Fraud Check: Device Registration Cap (Bypassed if whitelisted)
@@ -113,6 +147,16 @@ export default async function handler(req, res) {
         .eq("device_id", cleanDeviceId);
 
       if (typeof deviceCount === "number" && deviceCount >= maxDeviceAccounts) {
+        // Auto-record this device in banned list so it shows in Admin Panel
+        try {
+          await banEntity({
+            type: "device",
+            value: cleanDeviceId,
+            reason: `Exceeded device limit (${deviceCount}/${maxDeviceAccounts} accounts created from this mobile)`,
+            bannedBy: "system",
+          });
+        } catch {}
+
         return res.status(400).json({
           success: false,
           code: "DEVICE_LIMIT_EXCEEDED",
@@ -133,10 +177,20 @@ export default async function handler(req, res) {
         .eq("registration_ip", clientIp);
 
       if (typeof ipCount === "number" && ipCount >= maxIpAccounts) {
+        // Auto-record this IP in banned list so it shows in Admin Panel
+        try {
+          await banEntity({
+            type: "ip",
+            value: clientIp,
+            reason: `Exceeded IP limit (${ipCount}/${maxIpAccounts} accounts created from this IP)`,
+            bannedBy: "system",
+          });
+        } catch {}
+
         return res.status(400).json({
           success: false,
           code: "IP_LIMIT_EXCEEDED",
-          error: "Account registration limit reached for this network/IP address. Multiple accounts are not allowed. Please log in.",
+          error: "Account registration limit reached for this IP/network. Multiple accounts are not allowed. Please log in.",
         });
       }
     } catch (e) {

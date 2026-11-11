@@ -26,8 +26,12 @@ export default function ReferralsTab() {
   const [whitelistIps, setWhitelistIps] = useState("");
   const [whitelistDevices, setWhitelistDevices] = useState("");
   const [referralFilter, setReferralFilter] = useState("all"); // all | qualified | pending | flagged
+  const [bannedFilter, setBannedFilter] = useState("all"); // all | ip | device
+  const [banForm, setBanForm] = useState({ type: "ip", value: "", reason: "" });
+  const [banSubmitting, setBanSubmitting] = useState(false);
+  const [clearingPast, setClearingPast] = useState(false);
 
-  const [activeSubTab, setActiveSubTab] = useState("referrals"); // referrals | gifts | settings
+  const [activeSubTab, setActiveSubTab] = useState("referrals"); // referrals | gifts | settings | banned
 
   useEffect(() => {
     load();
@@ -130,6 +134,138 @@ export default function ReferralsTab() {
       }
     } catch (e) {
       setError("Failed to save whitelist IP: " + e.message);
+    }
+  }
+
+  async function handleBanEntity(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!banForm.value.trim()) {
+      setError("Please enter an IP address or Device ID to ban.");
+      return;
+    }
+    setError("");
+    setSuccess("");
+    setBanSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ban_entity",
+          type: banForm.type,
+          value: banForm.value.trim(),
+          reason: banForm.reason.trim() || "Manual ban by admin",
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccess(`Successfully banned ${banForm.type.toUpperCase()}: ${banForm.value}!`);
+        setBanForm({ type: "ip", value: "", reason: "" });
+        load();
+      } else {
+        setError(json.error || "Failed to ban entity.");
+      }
+    } catch {
+      setError("Network error banning entity.");
+    } finally {
+      setBanSubmitting(false);
+    }
+  }
+
+  async function handleQuickBan(type, value) {
+    if (!value) return;
+    const reason = prompt(
+      `Enter reason to ban this ${type === "ip" ? "IP address" : "device"}:`,
+      "Multiple accounts / fraud detected"
+    );
+    if (!reason) return;
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ban_entity",
+          type,
+          value,
+          reason,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccess(`Successfully banned ${type.toUpperCase()}: ${value}!`);
+        load();
+      } else {
+        setError(json.error || "Failed to ban.");
+      }
+    } catch {
+      setError("Network error.");
+    }
+  }
+
+  async function handleUnbanEntity(type, value) {
+    if (
+      !confirm(
+        `Are you sure you want to unban this ${type === "ip" ? "IP" : "device"} (${value})?\n\nThis will remove it from the blocklist and allow registrations again.`
+      )
+    ) {
+      return;
+    }
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "unban_entity",
+          type,
+          value,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccess(`Successfully unbanned ${value}! Restrictions lifted.`);
+        load();
+      } else {
+        setError(json.error || "Failed to unban.");
+      }
+    } catch {
+      setError("Network error.");
+    }
+  }
+
+  async function handleClearAllPastBans() {
+    if (
+      !confirm(
+        "⚠️ FRESH START CONFIRMATION\n\nAre you sure you want to clear ALL past test bans and reset device tracking?\n\nThis will:\n1. Remove all banned IPs and Devices from previous tests.\n2. Mark past test flagged referrals as qualified.\n3. Reset device registration limits so your system starts 100% fresh from now."
+      )
+    ) {
+      return;
+    }
+    setError("");
+    setSuccess("");
+    setClearingPast(true);
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear_past_bans" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccess(
+          `Fresh start activated! Cleared past bans. Unflagged ${json.unflagged_referrals_count || 0} referral(s) and reset device counters.`
+        );
+        load();
+      } else {
+        setError(json.error || "Failed to clear past bans.");
+      }
+    } catch {
+      setError("Network error while clearing past bans.");
+    } finally {
+      setClearingPast(false);
     }
   }
 
@@ -268,6 +404,17 @@ export default function ReferralsTab() {
     return <div className="p-8 text-center text-sm text-muted">Loading referral management…</div>;
   }
 
+  const bannedIpsSet = new Set(
+    (data.banned_entities || [])
+      .filter((b) => b.type === "ip")
+      .map((b) => (b.value || "").toLowerCase().trim())
+  );
+  const bannedDevicesSet = new Set(
+    (data.banned_entities || [])
+      .filter((b) => b.type === "device")
+      .map((b) => (b.value || "").toLowerCase().trim())
+  );
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Master Switches */}
@@ -373,6 +520,27 @@ export default function ReferralsTab() {
             }`}
           >
             Settings & Anti-Fraud
+          </button>
+          <button
+            onClick={() => setActiveSubTab("banned")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+              activeSubTab === "banned"
+                ? "bg-danger text-white"
+                : (data.banned_entities?.length || 0) > 0
+                ? "bg-danger-soft text-danger hover:bg-danger hover:text-white border border-danger/30"
+                : "bg-surface-alt text-muted hover:text-ink"
+            }`}
+          >
+            <span>🚫 Banned IPs & Devices</span>
+            {(data.banned_entities?.length || 0) > 0 && (
+              <span
+                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                  activeSubTab === "banned" ? "bg-white text-danger" : "bg-danger text-white"
+                }`}
+              >
+                {data.banned_entities.length}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -508,20 +676,79 @@ export default function ReferralsTab() {
                         )}
                       </td>
                       <td className="py-3 text-[11px] text-muted font-mono">
+                        {/* IP row */}
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span>IP: {r.registration_ip || "—"}</span>
                           {r.registration_ip && (
-                            <button
-                              type="button"
-                              onClick={() => handleWhitelistIp(r.registration_ip)}
-                              className="text-[10px] text-brand hover:underline cursor-pointer font-sans font-semibold"
-                              title="Add this IP to Admin Whitelist so it can register without limits"
-                            >
-                              + Whitelist
-                            </button>
+                            <>
+                              {bannedIpsSet.has((r.registration_ip || "").toLowerCase().trim()) ? (
+                                <>
+                                  <span className="rounded bg-danger/10 text-danger border border-danger/30 px-1.5 py-0.2 text-[9px] font-bold font-sans">
+                                    BANNED
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUnbanEntity("ip", r.registration_ip)}
+                                    className="text-[10px] text-success hover:underline cursor-pointer font-sans font-semibold"
+                                  >
+                                    Unban
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleWhitelistIp(r.registration_ip)}
+                                    className="text-[10px] text-brand hover:underline cursor-pointer font-sans font-semibold"
+                                    title="Add this IP to Admin Whitelist"
+                                  >
+                                    + Whitelist
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickBan("ip", r.registration_ip)}
+                                    className="text-[10px] text-danger hover:underline cursor-pointer font-sans font-semibold"
+                                    title="Block this IP address"
+                                  >
+                                    🚫 Ban
+                                  </button>
+                                </>
+                              )}
+                            </>
                           )}
                         </div>
-                        <div className="truncate max-w-[140px]">Dev: {r.device_id || "—"}</div>
+
+                        {/* Device row */}
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <span className="truncate max-w-[120px]">Dev: {r.device_id || "—"}</span>
+                          {r.device_id && (
+                            <>
+                              {bannedDevicesSet.has((r.device_id || "").toLowerCase().trim()) ? (
+                                <>
+                                  <span className="rounded bg-danger/10 text-danger border border-danger/30 px-1.5 py-0.2 text-[9px] font-bold font-sans">
+                                    BANNED
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUnbanEntity("device", r.device_id)}
+                                    className="text-[10px] text-success hover:underline cursor-pointer font-sans font-semibold"
+                                  >
+                                    Unban
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickBan("device", r.device_id)}
+                                  className="text-[10px] text-danger hover:underline cursor-pointer font-sans font-semibold"
+                                  title="Block this mobile/device"
+                                >
+                                  🚫 Ban
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 text-muted">
                         {new Date(r.created_at).toLocaleString("en-US", {
@@ -838,6 +1065,256 @@ export default function ReferralsTab() {
             </PrimaryButton>
           </div>
         </form>
+      )}
+
+      {/* SUB-TAB 4: Banned Devices & IPs */}
+      {activeSubTab === "banned" && (
+        <div className="space-y-6">
+          {/* Header & Fresh Start banner */}
+          <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-ink flex items-center gap-2">
+                  <span>🚫</span> Banned Devices & IP Addresses
+                  <span className="rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-bold text-danger">
+                    {data.banned_entities?.length || 0} Blocked
+                  </span>
+                </h3>
+                <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+                  Yahan wo sabhi mobile devices aur IP addresses list honge jo multiple accounts limit ya anti-fraud rule cross karne par block hue hain. Aap yahan se kisi bhi device ya IP ko <strong>1-click me Unban</strong> kar sakte hain, ya manually nayi IP/device ko <strong>Ban</strong> kar sakte hain.
+                </p>
+                {data.banned_system_started_at && (
+                  <div className="text-[11px] text-brand mt-2 font-medium flex items-center gap-1.5">
+                    <span>⚡ Fresh Start Active:</span>
+                    <span>Tracking active since {new Date(data.banned_system_started_at).toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={clearingPast}
+                  onClick={handleClearAllPastBans}
+                  className="rounded-xl border border-danger/30 bg-danger/10 hover:bg-danger hover:text-white text-danger px-4 py-2.5 text-xs font-bold transition-all shadow-sm cursor-pointer whitespace-nowrap flex items-center gap-1.5 disabled:opacity-50"
+                  title="Purge all previous test bans and flagged records so tracking starts completely fresh from now"
+                >
+                  <span>⚡</span>
+                  <span>{clearingPast ? "Clearing Past Bans…" : "Clear All Past Test Bans (Fresh Start)"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Manual Ban Form Card */}
+          <form
+            onSubmit={handleBanEntity}
+            className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-card"
+          >
+            <h4 className="text-sm font-bold text-ink flex items-center gap-2 mb-3">
+              <span>➕</span> Ban New IP Address or Mobile Device Manually
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+              <div className="sm:col-span-3">
+                <label className="block text-xs font-semibold text-ink mb-1">Entity Type</label>
+                <select
+                  value={banForm.type}
+                  onChange={(e) => setBanForm({ ...banForm, type: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink focus:border-brand focus:outline-none"
+                >
+                  <option value="ip">🌐 IP Address</option>
+                  <option value="device">📱 Device ID (Mobile / Browser)</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-4">
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  {banForm.type === "ip" ? "IP Address" : "Device Identifier"}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={banForm.type === "ip" ? "e.g. 182.185.10.20" : "e.g. dev_a1b2c3d4e5..."}
+                  value={banForm.value}
+                  onChange={(e) => setBanForm({ ...banForm, value: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs font-mono text-ink placeholder:text-muted focus:border-brand focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-xs font-semibold text-ink mb-1">Reason (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Multiple accounts / fake test"
+                  value={banForm.reason}
+                  onChange={(e) => setBanForm({ ...banForm, reason: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-brand focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={banSubmitting}
+                  className="w-full rounded-lg bg-danger text-white px-4 py-2 text-xs font-bold hover:bg-danger/90 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {banSubmitting ? "Banning…" : "🚫 Ban Now"}
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* Table of Banned Entities */}
+          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h4 className="text-sm font-bold text-ink">Currently Blocked Entities</h4>
+                <p className="text-[11px] text-muted">
+                  These devices and IP addresses are completely blocked from registering new accounts.
+                </p>
+              </div>
+
+              {/* Filter pills */}
+              <div className="flex gap-2">
+                {[
+                  { id: "all", label: `All (${data.banned_entities?.length || 0})` },
+                  { id: "ip", label: `🌐 IPs (${(data.banned_entities || []).filter((b) => b.type === "ip").length})` },
+                  { id: "device", label: `📱 Devices (${(data.banned_entities || []).filter((b) => b.type === "device").length})` },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setBannedFilter(f.id)}
+                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                      bannedFilter === f.id
+                        ? "bg-brand text-white shadow-sm"
+                        : "bg-surface-alt text-muted hover:text-ink border border-border"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {(!data.banned_entities || data.banned_entities.length === 0) ? (
+              <div className="py-12 text-center">
+                <div className="text-3xl mb-2">🎉</div>
+                <div className="text-sm font-bold text-ink">No Banned IPs or Devices!</div>
+                <div className="text-xs text-muted max-w-sm mx-auto mt-1">
+                  Your system is clean. No IP or device is currently blocked. If any suspicious activity or multi-accounting occurs, it will automatically show here.
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-muted">
+                      <th className="pb-2.5 text-start font-semibold">Type</th>
+                      <th className="pb-2.5 text-start font-semibold">Value (IP / Device ID)</th>
+                      <th className="pb-2.5 text-start font-semibold">Reason</th>
+                      <th className="pb-2.5 text-start font-semibold">Associated Accounts</th>
+                      <th className="pb-2.5 text-start font-semibold">Banned Date</th>
+                      <th className="pb-2.5 text-end font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {data.banned_entities
+                      .filter((b) => {
+                        if (bannedFilter === "ip") return b.type === "ip";
+                        if (bannedFilter === "device") return b.type === "device";
+                        return true;
+                      })
+                      .map((b) => (
+                        <tr key={b.id || `${b.type}_${b.value}`} className="text-ink">
+                          <td className="py-3">
+                            {b.type === "ip" ? (
+                              <span className="rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 px-2 py-0.5 text-[11px] font-bold">
+                                🌐 IP Address
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20 px-2 py-0.5 text-[11px] font-bold">
+                                📱 Device ID
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 font-mono font-bold text-ink">
+                            <div className="flex items-center gap-1.5">
+                              <span>{b.value}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (typeof navigator !== "undefined" && navigator.clipboard) {
+                                    navigator.clipboard.writeText(b.value);
+                                    setSuccess(`Copied "${b.value}" to clipboard!`);
+                                  }
+                                }}
+                                className="text-[10px] text-muted hover:text-brand cursor-pointer font-sans"
+                                title="Copy to clipboard"
+                              >
+                                📋
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-3 text-muted">
+                            <span className="text-danger font-medium">{b.reason || "Policy violation / multi-accounts"}</span>
+                          </td>
+                          <td className="py-3">
+                            {b.accounts && b.accounts.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {b.accounts.map((acc, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="rounded bg-surface-alt px-1.5 py-0.5 text-[10px] font-semibold text-ink border border-border"
+                                  >
+                                    {acc}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted text-[11px]">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 text-muted text-[11px]">
+                            {b.banned_at
+                              ? new Date(b.banned_at).toLocaleString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "—"}
+                          </td>
+                          <td className="py-3 text-end">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {b.type === "ip" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleWhitelistIp(b.value)}
+                                  className="rounded px-2.5 py-1 text-[11px] font-semibold bg-brand-soft text-brand hover:bg-brand hover:text-white transition-colors cursor-pointer"
+                                  title="Add this IP to Whitelist so it is permanently exempt"
+                                >
+                                  + Whitelist
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleUnbanEntity(b.type, b.value)}
+                                className="rounded px-2.5 py-1 text-[11px] font-bold bg-success text-white hover:bg-success/90 transition-colors shadow-sm cursor-pointer"
+                                title="Unban this entity and allow account creation"
+                              >
+                                ✓ Unban (Allow)
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,14 +1,15 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { getReferralSettings, updateReferralSettings } from "../../../lib/referralSettings";
+import { getBannedEntities, banEntity, unbanEntity, clearAllPastBans } from "../../../lib/bannedEntities";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
   if (!session) return;
 
-  // GET — Load referral settings, referral registrations list, and gifts list
+  // GET — Load referral settings, referral registrations list, gifts list, and banned entities
   if (req.method === "GET") {
-    const [settings, { data: referralsRaw }, { data: giftsRaw }, { data: metaRows }] = await Promise.all([
+    const [settings, { data: referralsRaw }, { data: giftsRaw }, { data: metaRows }, explicitBanned] = await Promise.all([
       getReferralSettings(),
       supabaseAdmin
         .from("referrals")
@@ -23,7 +24,8 @@ export default async function handler(req, res) {
       supabaseAdmin
         .from("app_meta")
         .select("key, value")
-        .in("key", ["admin_whitelist_ips", "admin_whitelist_devices"]),
+        .in("key", ["admin_whitelist_ips", "admin_whitelist_devices", "banned_system_started_at"]),
+      getBannedEntities(),
     ]);
 
     const metaMap = Object.fromEntries((metaRows || []).map((r) => [r.key, r.value]));
@@ -69,10 +71,72 @@ export default async function handler(req, res) {
       referred_name: userMap[g.referred_user_id]?.username || "—",
     }));
 
-    // Calculate flagged / banned devices and IPs
+    // Calculate flagged referrals
     const flaggedList = referrals.filter((r) => r.status === "flagged_suspicious");
     const uniqueFlaggedIps = Array.from(new Set(flaggedList.map((r) => r.registration_ip).filter(Boolean)));
     const uniqueFlaggedDevices = Array.from(new Set(flaggedList.map((r) => r.device_id).filter(Boolean)));
+
+    // Build unified banned entities list
+    const bannedMap = new Map();
+    // 1. Add explicit bans from app_meta
+    (explicitBanned || []).forEach((b) => {
+      const key = `${b.type}:${b.value.toLowerCase()}`;
+      bannedMap.set(key, { ...b, accounts: [] });
+    });
+
+    // 2. Add any IP or Device from flagged referrals not yet listed
+    flaggedList.forEach((r) => {
+      if (r.registration_ip) {
+        const key = `ip:${r.registration_ip.toLowerCase()}`;
+        if (!bannedMap.has(key)) {
+          bannedMap.set(key, {
+            id: `flagged_ip_${r.id}`,
+            type: "ip",
+            value: r.registration_ip,
+            reason: r.suspicious_reason || "Flagged in referral check",
+            banned_at: r.created_at,
+            banned_by: "system",
+            accounts: [],
+          });
+        }
+      }
+      if (r.device_id) {
+        const key = `device:${r.device_id.toLowerCase()}`;
+        if (!bannedMap.has(key)) {
+          bannedMap.set(key, {
+            id: `flagged_dev_${r.id}`,
+            type: "device",
+            value: r.device_id,
+            reason: r.suspicious_reason || "Flagged in referral check",
+            banned_at: r.created_at,
+            banned_by: "system",
+            accounts: [],
+          });
+        }
+      }
+    });
+
+    // Associate registered accounts with each banned entity
+    referrals.forEach((r) => {
+      const acc = r.referred_name !== "—" ? `@${r.referred_name}` : r.referred_email;
+      if (!acc || acc === "—") return;
+      if (r.registration_ip) {
+        const key = `ip:${r.registration_ip.toLowerCase()}`;
+        if (bannedMap.has(key)) {
+          const entry = bannedMap.get(key);
+          if (!entry.accounts.includes(acc)) entry.accounts.push(acc);
+        }
+      }
+      if (r.device_id) {
+        const key = `device:${r.device_id.toLowerCase()}`;
+        if (bannedMap.has(key)) {
+          const entry = bannedMap.get(key);
+          if (!entry.accounts.includes(acc)) entry.accounts.push(acc);
+        }
+      }
+    });
+
+    const bannedEntities = Array.from(bannedMap.values());
 
     const flaggedStats = {
       total_flagged: flaggedList.length,
@@ -87,6 +151,8 @@ export default async function handler(req, res) {
       settings: settings || {},
       referrals,
       gifts,
+      banned_entities: bannedEntities,
+      banned_system_started_at: metaMap.banned_system_started_at || null,
       current_admin_ip: currentAdminIp,
       whitelist_ips: metaMap.admin_whitelist_ips || "",
       whitelist_devices: metaMap.admin_whitelist_devices || "",
@@ -245,6 +311,49 @@ export default async function handler(req, res) {
         { key: "admin_whitelist_devices", value: String(whitelist_devices || "").trim(), updated_at: now },
       ]);
       return res.status(200).json({ success: true });
+    }
+
+    // 5c. Action: Ban an IP or Device
+    if (action === "ban_entity") {
+      const { type, value, reason } = req.body || {};
+      if (!type || !value) {
+        return res.status(400).json({ success: false, error: "Both type ('ip' or 'device') and value are required." });
+      }
+      try {
+        const banned = await banEntity({
+          type,
+          value,
+          reason: reason || "Manual ban by admin",
+          bannedBy: session.user.id,
+        });
+        return res.status(200).json({ success: true, banned });
+      } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+      }
+    }
+
+    // 5d. Action: Unban an IP or Device
+    if (action === "unban_entity") {
+      const { type, value } = req.body || {};
+      if (!value) {
+        return res.status(400).json({ success: false, error: "Value (IP or Device ID) is required to unban." });
+      }
+      try {
+        const result = await unbanEntity({ type, value });
+        return res.status(200).json({ success: true, ...result });
+      } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+      }
+    }
+
+    // 5e. Action: Clear all past bans & reset tracking (Fresh start)
+    if (action === "clear_past_bans") {
+      try {
+        const result = await clearAllPastBans();
+        return res.status(200).json({ success: true, ...result });
+      } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+      }
     }
 
     // 6. Update full referral settings
