@@ -110,14 +110,15 @@ begin
 
   -- 6. Safe device tracking & referral record tracking
   begin
-    if v_device_id <> '' then
-      insert into public.device_registrations (device_id, user_id, ip_address)
-      values (v_device_id, new.id, nullif(v_reg_ip, ''))
-      on conflict do nothing;
+    if v_device_id <> '' and to_regclass('public.device_registrations') is not null then
+      execute 'insert into public.device_registrations (device_id, user_id, ip_address)
+               values ($1, $2, $3)
+               on conflict do nothing'
+      using v_device_id, new.id, nullif(v_reg_ip, '');
     end if;
 
-    if v_inviter_id is not null then
-      insert into public.referrals (
+    if v_inviter_id is not null and to_regclass('public.referrals') is not null then
+      execute 'insert into public.referrals (
         referrer_id,
         referred_id,
         referrer_username,
@@ -125,27 +126,26 @@ begin
         registration_ip,
         status
       )
-      values (
-        v_inviter_id,
-        new.id,
-        v_ref_code,
-        nullif(v_device_id, ''),
-        nullif(v_reg_ip, ''),
-        'pending_verification'
-      )
-      on conflict (referred_id) do nothing;
+      values ($1, $2, $3, $4, $5, ''pending_verification'')
+      on conflict (referred_id) do nothing'
+      using v_inviter_id, new.id, v_ref_code, nullif(v_device_id, ''), nullif(v_reg_ip, '');
 
       -- Check if email verification is required
-      select coalesce(require_email_verification, true) into v_req_email
-      from public.referral_settings
-      where id = 1;
+      if to_regclass('public.referral_settings') is not null then
+        begin
+          select coalesce(require_email_verification, true) into v_req_email
+          from public.referral_settings
+          where id = 1;
+        exception when others then
+          v_req_email := true;
+        end;
+      end if;
 
       -- If email verification is OFF or user is already verified via OAuth, qualify
       if v_req_email is false or v_is_oauth then
         begin
           perform public.qualify_referral(new.id);
         exception when others then
-          -- Absorb any qualification exception so auth.users registration succeeds
           null;
         end;
       end if;
