@@ -619,7 +619,7 @@ function BuyModal({ product, onClose, ticker }) {
       )}
 
       {step !== "done" && (
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">
             {stepLabels[step]}
           </p>
@@ -627,9 +627,19 @@ function BuyModal({ product, onClose, ticker }) {
             <button
               type="button"
               onClick={() => setStep("form")}
-              className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:bg-brand-soft hover:border-brand/30 hover:text-brand active:scale-95 cursor-pointer"
             >
-              ← {t("Change quantity")}
+              <svg
+                className="h-3.5 w-3.5 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>{t("Change quantity")}</span>
             </button>
           )}
         </div>
