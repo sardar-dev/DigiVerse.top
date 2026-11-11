@@ -51,28 +51,33 @@ export default async function handler(req, res) {
       const balRes = await tunvn.getBalance();
       tunvnBal = balRes?.balance;
     } catch (e) {
-      console.warn("[pay-with-balance] tunvn balance check failed:", e?.message);
+      console.warn("[pay-with-balance] tunvn balance check failed (non-fatal):", e?.message);
     }
-    const bal = Number.isFinite(tunvnBal) ? Math.max(0, tunvnBal) : 0;
-    const unitCost = Number(prod.cost_price) > 0 ? Number(prod.cost_price) : 0.06;
-    const maxAffordable = Math.floor(bal / unitCost);
-    const reqQty = Number(claimedOrder.quantity) || 1;
 
-    if (maxAffordable < reqQty) {
-      // Revert order back to pending_payment without touching user's wallet balance!
-      await supabaseAdmin
-        .from("orders")
-        .update({ status: "pending_payment", updated_at: new Date().toISOString() })
-        .eq("id", order_id);
+    // Only enforce balance limit if we successfully retrieved a finite balance number from TunVN.
+    // If TunVN balance check timed out or was null, do not block the user — let buffOrder proceed.
+    if (Number.isFinite(tunvnBal)) {
+      const bal = Math.max(0, tunvnBal);
+      const unitCost = Number(prod.cost_price) > 0 ? Number(prod.cost_price) : 0.06;
+      const maxAffordable = Math.floor(bal / unitCost);
+      const reqQty = Number(claimedOrder.quantity) || 1;
 
-      return res.status(409).json({
-        success: false,
-        error: "supplier_balance_limit",
-        max_qty: maxAffordable,
-        message: maxAffordable > 0
-          ? `You can order up to ${maxAffordable}B tokens right now. Please lower your quantity.`
-          : `This product is temporarily unavailable. Please try again later.`,
-      });
+      if (maxAffordable < reqQty) {
+        // Revert order back to pending_payment without touching user's wallet balance!
+        await supabaseAdmin
+          .from("orders")
+          .update({ status: "pending_payment", updated_at: new Date().toISOString() })
+          .eq("id", order_id);
+
+        return res.status(409).json({
+          success: false,
+          error: "supplier_balance_limit",
+          max_qty: maxAffordable,
+          message: maxAffordable > 0
+            ? `You can order up to ${maxAffordable}B tokens right now. Please lower your quantity.`
+            : `This product is temporarily unavailable. Please try again later.`,
+        });
+      }
     }
   }
 

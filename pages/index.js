@@ -391,6 +391,38 @@ function BuyModal({ product, onClose, ticker }) {
   const [couponBusy, setCouponBusy] = useState(false);
   const [availableGiftsData, setAvailableGiftsData] = useState(null);
   const [giftsToRedeem, setGiftsToRedeem] = useState(0);
+  const [buffState, setBuffState] = useState(null);
+
+  useEffect(() => {
+    if (step !== "done" || !product?.tunvn_buff || !order?.id) return;
+    let stop = false;
+    async function check() {
+      try {
+        const res = await fetch("/api/orders/buff-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order_id: order.id }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.state === "done") {
+          setBuffState("done");
+          stop = true;
+        } else if (data.state === "failed") {
+          setBuffState("failed");
+          stop = true;
+        }
+      } catch {}
+    }
+    const tId = setTimeout(check, 3000);
+    const interval = setInterval(() => {
+      if (!stop) check();
+    }, 6000);
+    return () => {
+      stop = true;
+      clearTimeout(tId);
+      clearInterval(interval);
+    };
+  }, [step, product?.tunvn_buff, order?.id]);
 
   useEffect(() => {
     if (product?.tunvn_buff && product?.id) {
@@ -466,9 +498,22 @@ function BuyModal({ product, onClose, ticker }) {
         return;
       }
       if (product.tunvn_buff) {
-        const code = activationInfo.trim().toUpperCase();
-        if (!/^[A-Za-z0-9_-]{4,20}$/.test(code)) {
-          setError(t("Please enter a valid Muse AI invite code (4–20 characters)."));
+        let code = activationInfo.trim();
+        if (code.includes("http://") || code.includes("https://") || code.includes("/")) {
+          try {
+            const u = new URL(code.startsWith("http") ? code : `https://${code}`);
+            const parts = u.pathname.split("/").filter(Boolean);
+            const codeFromPath = parts[parts.length - 1];
+            const codeFromParam = u.searchParams.get("invite") || u.searchParams.get("ref") || u.searchParams.get("code");
+            code = (codeFromParam || codeFromPath || code).trim();
+          } catch {
+            const m = code.match(/([A-Za-z0-9_-]{4,32})\s*$/);
+            if (m) code = m[1];
+          }
+          setActivationInfo(code);
+        }
+        if (!/^[A-Za-z0-9_-]{4,32}$/.test(code)) {
+          setError(t("Please enter a valid Muse AI invite code (4–32 characters)."));
           return;
         }
       }
@@ -796,16 +841,39 @@ function BuyModal({ product, onClose, ticker }) {
       {step === "done" && manual && (
         <div className="space-y-3 text-sm">
           <p className="font-mono text-xs text-muted" dir="ltr">{t("Order #{n}", { n: order?.order_number })}</p>
-          <Alert variant="success">
-            {product.tunvn_buff
-              ? t("Payment confirmed! Crediting tokens to your invite code … this usually takes 10 to 15 minutes.")
-              : t("Payment confirmed. This product is delivered manually — estimated delivery {delivery}.", { delivery: product.delivery || t("soon") })}{" "}
-            {checkParts[0]}
-            <Link href="/account/orders" className="underline">
-              {t("My Orders")}
-            </Link>
-            {checkParts[1]}
-          </Alert>
+          {product.tunvn_buff && buffState === "done" ? (
+            <Alert variant="success">
+              🎉 <strong>{t("Tokens delivered successfully!")}</strong> {t("The Muse AI tokens have been credited to your account.")}
+            </Alert>
+          ) : (
+            <Alert variant="success">
+              {product.tunvn_buff ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 font-medium">
+                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-success border-t-transparent" />
+                    <span>{t("Payment confirmed! Crediting tokens to your invite code… (usually 1–2 minutes)")}</span>
+                  </div>
+                  <p className="text-xs text-muted">
+                    {t("We are auto-checking with supplier. You can wait here or check {link} anytime.", {
+                      link: "",
+                    })}{" "}
+                    <Link href="/account/orders" className="underline font-medium text-success">
+                      {t("My Orders")}
+                    </Link>
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {t("Payment confirmed. This product is delivered manually — estimated delivery {delivery}.", { delivery: product.delivery || t("soon") })}{" "}
+                  {checkParts[0]}
+                  <Link href="/account/orders" className="underline">
+                    {t("My Orders")}
+                  </Link>
+                  {checkParts[1]}
+                </>
+              )}
+            </Alert>
+          )}
           <PrimaryButton onClick={onClose} className="w-full">
             {t("Done")}
           </PrimaryButton>

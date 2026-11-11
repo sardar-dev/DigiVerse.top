@@ -175,7 +175,48 @@ export default function OrdersTab({
                   <LinkButton onClick={() => setOrderStatus(o.id, "cancelled")}>Cancel</LinkButton>
                 )}
                 {o.status === "awaiting_manual_fulfillment" && (
-                  <LinkButton onClick={() => onDeliverManual(o)}>Deliver</LinkButton>
+                  <>
+                    {o.is_buff && (
+                      <LinkButton
+                        onClick={async () => {
+                          if (!confirm(`Send order #${o.order_number} to TunVN automatically?`)) return;
+                          const res = await fetch("/api/admin/orders", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ id: o.id, action: "retry_buff" }),
+                          });
+                          const d = await res.json();
+                          if (d.success) {
+                            alert("Order placed with TunVN successfully!");
+                            setOrderStatus(o.id, "fulfilling");
+                          } else {
+                            alert("Failed to place on TunVN: " + (d.error || "unknown"));
+                          }
+                        }}
+                        className="font-medium text-brand"
+                      >
+                        Send to TunVN
+                      </LinkButton>
+                    )}
+                    <LinkButton onClick={() => onDeliverManual(o)}>Deliver</LinkButton>
+                  </>
+                )}
+                {o.status === "fulfilling" && o.is_buff && (
+                  <LinkButton
+                    onClick={async () => {
+                      const res = await fetch("/api/admin/orders", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: o.id, action: "settle_buff" }),
+                      });
+                      const d = await res.json();
+                      alert("TunVN status: " + (d.state || "unknown"));
+                      setOrderStatus(o.id, d.state === "done" ? "delivered" : "fulfilling");
+                    }}
+                    className="font-medium text-brand"
+                  >
+                    Check TunVN
+                  </LinkButton>
                 )}
                 {o.status === "failed" && (
                   <>

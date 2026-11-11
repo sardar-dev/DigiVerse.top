@@ -25,6 +25,7 @@ export default async function handler(req, res) {
   }
 
   const { product_id, quantity = 1, email, activation_info, coupon_code, gifts_to_redeem = 0 } = req.body || {};
+  let finalActivation = activation_info;
   if (!product_id || quantity < 1) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
@@ -59,14 +60,27 @@ export default async function handler(req, res) {
 
     // TunVN Buff Token (Muse AI) invite code format check
     if (localProduct.tunvn_buff) {
-      const inviteCode = String(activation_info || "").trim().toUpperCase();
-      if (!/^[A-Za-z0-9_-]{4,20}$/.test(inviteCode)) {
+      let rawCode = String(activation_info || "").trim();
+      if (rawCode.includes("http://") || rawCode.includes("https://") || rawCode.includes("/")) {
+        try {
+          const u = new URL(rawCode.startsWith("http") ? rawCode : `https://${rawCode}`);
+          const parts = u.pathname.split("/").filter(Boolean);
+          const codeFromPath = parts[parts.length - 1];
+          const codeFromParam = u.searchParams.get("invite") || u.searchParams.get("ref") || u.searchParams.get("code");
+          rawCode = (codeFromParam || codeFromPath || rawCode).trim();
+        } catch {
+          const m = rawCode.match(/([A-Za-z0-9_-]{4,32})\s*$/);
+          if (m) rawCode = m[1];
+        }
+      }
+      if (!/^[A-Za-z0-9_-]{4,32}$/.test(rawCode)) {
         return res.status(400).json({
           success: false,
           error: "invalid_invite_code",
-          message: "Please enter a valid Muse AI invite code (4–20 alphanumeric characters).",
+          message: "Please enter a valid Muse AI invite code (4–32 alphanumeric characters).",
         });
       }
+      finalActivation = rawCode;
     }
   } else if (localProduct.requires_email && !email) {
     return res.status(400).json({ success: false, error: "email_required" });
@@ -238,7 +252,7 @@ export default async function handler(req, res) {
       unit_price: unitPrice,
       total,
       email: email || null,
-      activation_info: localProduct.provider === "manual" ? (activation_info || null) : null,
+      activation_info: localProduct.provider === "manual" ? (finalActivation || null) : null,
       status: "pending_payment",
       payout_wallet: process.env.PAYOUT_WALLET_ADDRESS,
       expected_amount: total,

@@ -27,27 +27,35 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, is_buff: true, max_qty: 0, reason: "supplier_not_configured" });
     }
 
-    const { balance } = await tunvn.getBalance();
-    const bal = Number.isFinite(balance) ? Math.max(0, balance) : 0;
-
     let unitCost = Number(prod.cost_price) > 0 ? Number(prod.cost_price) : 0.06;
     let maxLimit = Number(prod.max_order_qty) > 0 ? Number(prod.max_order_qty) : 30;
 
-    const affordable = unitCost > 0 ? Math.floor(bal / unitCost) : 0;
-    const finalMax = Math.min(affordable, maxLimit);
+    let finalMax = maxLimit;
+    let balVal = null;
+
+    try {
+      const { balance } = await tunvn.getBalance();
+      if (Number.isFinite(balance)) {
+        balVal = Math.max(0, balance);
+        const affordable = unitCost > 0 ? Math.floor(balVal / unitCost) : 0;
+        finalMax = Math.min(affordable, maxLimit);
+      }
+    } catch (balErr) {
+      console.warn("[buff-info] TunVN balance fetch error (falling back to product maxLimit):", balErr?.message);
+    }
 
     return res.status(200).json({
       success: true,
       is_buff: true,
       max_qty: finalMax,
-      balance: Number(bal.toFixed(4)),
+      balance: balVal !== null ? Number(balVal.toFixed(4)) : null,
       unit_cost: unitCost,
     });
   } catch (e) {
     return res.status(200).json({
-      success: false,
+      success: true,
       is_buff: true,
-      max_qty: 0,
+      max_qty: 30,
       error: e.message,
     });
   }
