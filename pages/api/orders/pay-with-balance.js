@@ -111,6 +111,9 @@ export default async function handler(req, res) {
     console.error("[pay-with-balance] fulfillOrder threw:", e?.message);
     // Unexpected crash — refund the balance immediately so user isn't stuck
     try {
+      if (Number(claimedOrder.gifts_redeemed || 0) > 0) {
+        await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: claimedOrder.id });
+      }
       await supabaseAdmin.rpc("increment_balance", {
         p_user_id: session.user.id,
         p_amount: claimedOrder.total,
@@ -129,6 +132,9 @@ export default async function handler(req, res) {
     const refundableErrors = ["out_of_stock_refund_pending", "fulfillment_failed_refund_pending"];
     if (refundableErrors.includes(result.error)) {
       try {
+        if (Number(claimedOrder.gifts_redeemed || 0) > 0) {
+          await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: claimedOrder.id });
+        }
         await supabaseAdmin.rpc("increment_balance", {
           p_user_id: session.user.id,
           p_amount: claimedOrder.total,

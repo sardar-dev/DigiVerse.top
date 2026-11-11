@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getSupplier, resolveSource, applyBuffer } from "../../../lib/suppliers";
@@ -23,7 +24,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: "login_required" });
   }
 
-  const { product_id, quantity = 1, email, activation_info, coupon_code } = req.body || {};
+  const { product_id, quantity = 1, email, activation_info, coupon_code, gifts_to_redeem = 0 } = req.body || {};
   if (!product_id || quantity < 1) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
@@ -169,42 +170,68 @@ export default async function handler(req, res) {
     });
   }
 
+  const giftsCount = Math.floor(Number(gifts_to_redeem) || 0);
+  const orderId = crypto.randomUUID();
+
+  // Validate and reserve referral gifts atomically
+  if (giftsCount > 0) {
+    if (!localProduct.tunvn_buff) {
+      return res.status(400).json({ success: false, error: "gifts_only_for_muse_ai" });
+    }
+    if (giftsCount > quantity) {
+      return res.status(400).json({ success: false, error: "cannot_redeem_more_gifts_than_qty" });
+    }
+    const { error: reserveErr } = await supabaseAdmin.rpc("reserve_gifts_for_order", {
+      p_user_id: session.user.id,
+      p_order_id: orderId,
+      p_product_id: product_id,
+      p_gift_count: giftsCount,
+    });
+    if (reserveErr) {
+      return res.status(400).json({ success: false, error: reserveErr.message });
+    }
+  }
+
   const unitPrice = Number(localProduct.sell_price);
-  const fullBase = Number((unitPrice * quantity).toFixed(2));
+  const paidQty = Math.max(0, quantity - giftsCount);
+  const giftDiscount = Number((giftsCount * unitPrice).toFixed(2));
+  const fullBase = Number((unitPrice * paidQty).toFixed(2));
 
   // Optional coupon — fully re-validated here on the server; the
   // popup's preview is never trusted.
   let coupon = null;
   let discount = 0;
-  if (coupon_code && String(coupon_code).trim()) {
+  if (coupon_code && String(coupon_code).trim() && fullBase > 0) {
     const result = await checkCoupon({
       code: coupon_code,
       userId: session.user.id,
       productId: product_id,
       base: fullBase,
       unitCost, // live supplier cost (or the manual product's cost)
-      quantity,
+      quantity: paidQty,
     });
     if (!result.ok) {
+      if (giftsCount > 0) {
+        await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: orderId });
+      }
       return res.status(400).json({ success: false, error: result.reason, min_order: result.min_order });
     }
     coupon = result.coupon;
     discount = result.discount;
   }
-  const base = Number((fullBase - discount).toFixed(2));
+  const base = Math.max(0, Number((fullBase - discount).toFixed(2)));
 
-  // Same unique-fingerprint trick used for wallet top-up invoices:
-  // the customer is asked to send base + a random 0.0001-0.0009 tail
-  // (e.g. $5 -> $5.0004) instead of a round figure. This isn't for
-  // collision-avoidance here (orders are matched by tx hash, not by
-  // amount lookup) — it's so the on-chain amount a bystander sees
-  // pending to our wallet can never be "obviously" the round price of
-  // a product, which is the same front-running protection wallet
-  // deposits already get.
-  const fingerprint = Math.floor(Math.random() * 9) + 1; // 1-9
-  const total = Number((base + fingerprint / 10000).toFixed(4)); // e.g. 5 -> 5.0004
+  // If order is fully covered by gifts/discount, total is exactly 0.00
+  let total;
+  if (base <= 0) {
+    total = 0.0;
+  } else {
+    const fingerprint = Math.floor(Math.random() * 9) + 1; // 1-9
+    total = Number((base + fingerprint / 10000).toFixed(4)); // e.g. 5 -> 5.0004
+  }
 
   const orderRow = {
+      id: orderId,
       user_id: session.user.id,
       product_id,
       quantity,
@@ -215,6 +242,8 @@ export default async function handler(req, res) {
       status: "pending_payment",
       payout_wallet: process.env.PAYOUT_WALLET_ADDRESS,
       expected_amount: total,
+      gifts_redeemed: giftsCount,
+      gift_discount: giftDiscount,
       // Only sent when a coupon is used, so normal orders keep working
       // even before migration_010 has been run.
       ...(coupon
@@ -234,12 +263,18 @@ export default async function handler(req, res) {
   }
 
   if (orderErr) {
+    if (giftsCount > 0) {
+      await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: orderId });
+    }
     return res.status(500).json({ success: false, error: orderErr.message });
   }
 
   // Two customers can race for the last use of a limited coupon; the
   // later order is rejected here (and cancelled so it holds no use).
   if (coupon && !(await orderFitsCouponLimits(coupon, order.id, session.user.id))) {
+    if (giftsCount > 0) {
+      await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: order.id });
+    }
     await supabaseAdmin
       .from("orders")
       .update({ status: "cancelled", updated_at: new Date().toISOString() })

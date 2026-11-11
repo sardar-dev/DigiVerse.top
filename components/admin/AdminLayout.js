@@ -28,6 +28,8 @@ const GROUPS = [
       { id: "orders", label: "Orders", icon: "📦" },
       { id: "deposits", label: "Deposits", icon: "💳" },
       { id: "coupons", label: "Coupons", icon: "🎟️" },
+      { id: "referrals", label: "Referrals & Gifts", icon: "🎁" },
+      { id: "referral-costs", label: "Referral Costs", icon: "📊" },
       { id: "withdrawals", label: "Withdrawals", icon: "💸" },
     ],
   },

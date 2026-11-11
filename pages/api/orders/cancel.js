@@ -44,5 +44,9 @@ export default async function handler(req, res) {
     .eq("id", order.id);
 
   if (error) return res.status(500).json({ success: false, error: error.message });
+
+  // Release any gifts that were reserved for this order
+  await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: order.id });
+
   return res.status(200).json({ success: true });
 }

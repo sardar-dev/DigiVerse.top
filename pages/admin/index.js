@@ -8,6 +8,8 @@ import OrdersTab from "../../components/admin/OrdersTab";
 import DepositsTab from "../../components/admin/DepositsTab";
 import FeedbackTab from "../../components/admin/FeedbackTab";
 import CouponsTab from "../../components/admin/CouponsTab";
+import ReferralsTab from "../../components/admin/ReferralsTab";
+import ReferralCostTab from "../../components/admin/ReferralCostTab";
 import AiDescriptionsTab from "../../components/admin/AiDescriptionsTab";
 import SupportTab from "../../components/admin/SupportTab";
 import MessagesTab from "../../components/admin/MessagesTab";
@@ -597,6 +599,10 @@ export default function Admin() {
       {tab === "coupons" && (
         <CouponsTab products={allAdminProducts} />
       )}
+
+      {tab === "referrals" && <ReferralsTab />}
+
+      {tab === "referral-costs" && <ReferralCostTab />}
 
       {tab === "products" && (
         <ProductsTab

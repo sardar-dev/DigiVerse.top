@@ -145,6 +145,36 @@ export default function PaymentPanel({ order, onDone }) {
     }
   }
 
+  // Free order covered 100% by referral gift boxes ($0.00)
+  if (Number(order.total) <= 0.0001) {
+    return (
+      <div className="space-y-4 text-sm">
+        <div className="rounded-xl border border-success/30 bg-success-soft/30 p-5 text-center">
+          <span className="text-3xl block mb-1">🎁</span>
+          <h3 className="font-bold text-base text-ink">{t("Free Gift Order!")}</h3>
+          <p className="text-xs text-muted mt-1 leading-relaxed">
+            {t("This order is fully covered by your Muse AI referral gift boxes. No payment is required.")}
+          </p>
+        </div>
+        {buffCheck?.is_buff && !buffCheck.affordable && (
+          <Alert variant="error">
+            {buffCheck.max_qty > 0
+              ? t("You can order up to {n}B tokens right now. Please lower your quantity.", { n: buffCheck.max_qty })
+              : t("Temporarily unavailable right now. Please check back soon.")}
+          </Alert>
+        )}
+        <Alert variant="error">{error}</Alert>
+        <PrimaryButton
+          onClick={payWithBalance}
+          disabled={busy || isPaymentBlocked || buffLoading}
+          className="w-full py-3 text-sm font-bold"
+        >
+          {busy ? t("Redeeming Free Tokens…") : t("Claim Free Tokens Now ✨")}
+        </PrimaryButton>
+      </div>
+    );
+  }
+
   if (!method) {
     const isChecking = buffLoading;
 

@@ -60,6 +60,7 @@ export default function SiteHeader({
   const links = session
     ? [
         { href: "/", label: t("Store") },
+        { href: "/account/referrals", label: t("Referrals 🎁") },
         { href: "/account/wallet", label: t("Wallet") },
         { href: "/account/orders", label: t("My Orders") },
         { href: "/account/support", label: t("Support") },
@@ -167,6 +168,9 @@ export default function SiteHeader({
                       )}
                     </div>
                     <div className="p-1.5 text-sm">
+                      <Link role="menuitem" href="/account/referrals" className="block rounded-lg px-3 py-2 text-ink hover:bg-brand-soft">
+                        {t("Referrals & Gift Wallet 🎁")}
+                      </Link>
                       <Link role="menuitem" href="/account/wallet" className="block rounded-lg px-3 py-2 text-ink hover:bg-brand-soft">
                         {t("Wallet & top-up")}
                       </Link>

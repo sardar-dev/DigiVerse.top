@@ -389,6 +389,21 @@ function BuyModal({ product, onClose, ticker }) {
   const [coupon, setCoupon] = useState(null); // { code, discount, final } once applied
   const [couponError, setCouponError] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
+  const [availableGiftsData, setAvailableGiftsData] = useState(null);
+  const [giftsToRedeem, setGiftsToRedeem] = useState(0);
+
+  useEffect(() => {
+    if (product?.tunvn_buff && product?.id) {
+      fetch(`/api/wallet/gifts/available?product_id=${product.id}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.eligible && d.max_redeemable > 0) {
+            setAvailableGiftsData(d);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [product?.id, product?.tunvn_buff]);
 
   useEffect(() => {
     if (product?.id) {
@@ -502,6 +517,7 @@ function BuyModal({ product, onClose, ticker }) {
         email,
         activation_info: activationInfo,
         coupon_code: coupon ? coupon.code : undefined,
+        gifts_to_redeem: effectiveGifts,
       }),
     });
     const data = await res.json();
@@ -530,7 +546,13 @@ function BuyModal({ product, onClose, ticker }) {
     setStep("order");
   }
 
-  const subtotal = Number(product.sell_price) * (parseInt(quantity, 10) || 0);
+  const parsedQty = parseInt(quantity, 10) || 0;
+  const unitPriceNum = Number(product.sell_price) || 0;
+  const maxRedeemableForQty = availableGiftsData?.max_redeemable ? Math.min(availableGiftsData.max_redeemable, parsedQty) : 0;
+  const effectiveGifts = Math.min(giftsToRedeem, maxRedeemableForQty);
+  const giftDiscountAmount = effectiveGifts * unitPriceNum;
+  const paidQty = Math.max(0, parsedQty - effectiveGifts);
+  const subtotal = Number((paidQty * unitPriceNum).toFixed(2));
   const total = (coupon ? coupon.final : subtotal).toFixed(2);
   const checkParts = t("Check {link} once it's ready. If you need support, just quote your order number above.").split("{link}");
   const stepLabels = { form: t("1. Details"), summary: t("2. Review"), order: t("3. Payment"), done: t("4. Done") };
@@ -647,6 +669,12 @@ function BuyModal({ product, onClose, ticker }) {
             {isManualDelivery && (
               <Row label={t("Delivery")} value={t("Manual — {delivery}", { delivery: product.delivery || t("see details") })} />
             )}
+            {effectiveGifts > 0 && (
+              <div className="flex justify-between px-3.5 py-3 text-brand font-medium">
+                <span>🎁 {t("Referral Gift ({n}B free)", { n: effectiveGifts })}</span>
+                <span className="font-mono" dir="ltr">−${giftDiscountAmount.toFixed(2)}</span>
+              </div>
+            )}
             {coupon && (
               <>
                 <Row label={t("Subtotal")} value={`$${subtotal.toFixed(2)}`} mono />
@@ -664,6 +692,50 @@ function BuyModal({ product, onClose, ticker }) {
               <span dir="ltr">${total}</span>
             </div>
           </div>
+
+          {/* Referral Gift Box Redemption Selector for Muse AI */}
+          {product.tunvn_buff && availableGiftsData?.max_redeemable > 0 && (
+            <div className="rounded-xl border border-brand/30 bg-gradient-to-br from-brand-soft/40 to-surface p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎁</span>
+                  <div>
+                    <span className="font-semibold text-xs text-ink">{t("Redeem Muse AI Gift Boxes")}</span>
+                    <p className="text-[11px] text-muted">
+                      {t("1 Box = 1B Free Tokens ({n} available today)", { n: availableGiftsData.max_redeemable })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={effectiveGifts <= 0}
+                    onClick={() => setGiftsToRedeem((g) => Math.max(0, g - 1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-ink hover:bg-border/40 disabled:opacity-30"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[24px] text-center font-mono font-bold text-sm text-brand">
+                    {effectiveGifts}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={effectiveGifts >= maxRedeemableForQty}
+                    onClick={() => setGiftsToRedeem((g) => Math.min(maxRedeemableForQty, g + 1))}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-ink hover:bg-border/40 disabled:opacity-30"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              {effectiveGifts > 0 && (
+                <div className="flex items-center justify-between text-xs text-brand font-medium pt-1.5 border-t border-brand/20">
+                  <span>{t("Free Tokens: {n}B", { n: effectiveGifts })}</span>
+                  <span className="font-mono" dir="ltr">−${giftDiscountAmount.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             {coupon ? (

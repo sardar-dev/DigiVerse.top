@@ -41,5 +41,14 @@ export default async function handler(req, res) {
     return res.status(409).json({ success: false, error: "order_not_awaiting_delivery" });
   }
 
+  // Finalize referral gifts if applied to this order
+  if (Number(data.gifts_redeemed || 0) > 0) {
+    await supabaseAdmin.rpc("finalize_gift_redemption", {
+      p_order_id: data.id,
+      p_actual_cost: data.unit_cost ? Number(data.unit_cost) : null,
+      p_is_estimated: true,
+    });
+  }
+
   return res.status(200).json({ success: true });
 }
