@@ -23,6 +23,10 @@ export default function ReferralsTab() {
     fraud_max_accounts_per_device: 2,
   });
 
+  const [whitelistIps, setWhitelistIps] = useState("");
+  const [whitelistDevices, setWhitelistDevices] = useState("");
+  const [referralFilter, setReferralFilter] = useState("all"); // all | qualified | pending | flagged
+
   const [activeSubTab, setActiveSubTab] = useState("referrals"); // referrals | gifts | settings
 
   useEffect(() => {
@@ -36,6 +40,8 @@ export default function ReferralsTab() {
       const json = await res.json();
       if (json.success) {
         setData(json);
+        if (json.whitelist_ips !== undefined) setWhitelistIps(json.whitelist_ips || "");
+        if (json.whitelist_devices !== undefined) setWhitelistDevices(json.whitelist_devices || "");
         if (json.settings && Object.keys(json.settings).length > 0) {
           setSettingsForm({
             referral_enabled: json.settings.referral_enabled !== undefined ? Boolean(json.settings.referral_enabled) : true,
@@ -60,7 +66,7 @@ export default function ReferralsTab() {
   }
 
   async function saveSettings(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setError("");
     setSuccess("");
     setSaving(true);
@@ -68,11 +74,15 @@ export default function ReferralsTab() {
       const res = await fetch("/api/admin/referrals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settingsForm),
+        body: JSON.stringify({
+          ...settingsForm,
+          whitelist_ips: whitelistIps,
+          whitelist_devices: whitelistDevices,
+        }),
       });
       const json = await res.json();
       if (json.success) {
-        setSuccess("Referral settings updated successfully!");
+        setSuccess("Referral settings and admin whitelist saved successfully!");
         if (json.settings) {
           setSettingsForm((prev) => ({
             ...prev,
@@ -94,6 +104,32 @@ export default function ReferralsTab() {
       setError("Network error while saving settings.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleWhitelistIp(ipToWhitelist) {
+    if (!ipToWhitelist) return;
+    setError("");
+    setSuccess("");
+    const currentList = whitelistIps.split(/[\n,;\s]+/).map((s) => s.trim()).filter(Boolean);
+    if (currentList.includes(ipToWhitelist)) {
+      setSuccess(`IP ${ipToWhitelist} is already in whitelist!`);
+      return;
+    }
+    const updated = currentList.concat(ipToWhitelist).join(", ");
+    setWhitelistIps(updated);
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_whitelist", whitelist_ips: updated, whitelist_devices: whitelistDevices }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccess(`IP ${ipToWhitelist} has been successfully added to Admin Whitelist! You can now create unlimited test accounts on this IP.`);
+      }
+    } catch (e) {
+      setError("Failed to save whitelist IP: " + e.message);
     }
   }
 
@@ -347,6 +383,25 @@ export default function ReferralsTab() {
       {/* SUB-TAB 1: Referrals List */}
       {activeSubTab === "referrals" && (
         <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+          {/* Flagged / Blocked Stats Alert Banner */}
+          {data.flagged_stats?.total_flagged > 0 && (
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger-soft p-3.5 text-xs text-danger font-medium">
+              <div className="flex items-center gap-2">
+                <span className="text-base">⚠️</span>
+                <span>
+                  <strong>{data.flagged_stats.total_flagged}</strong> registration{data.flagged_stats.total_flagged > 1 ? "s" : ""} flagged from <strong>{data.flagged_stats.unique_devices_count}</strong> devices and <strong>{data.flagged_stats.unique_ips_count}</strong> IPs.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReferralFilter(referralFilter === "flagged" ? "all" : "flagged")}
+                className="self-start sm:self-auto rounded-lg bg-danger text-white px-3 py-1 font-semibold hover:bg-danger/90 transition-colors shadow-sm cursor-pointer"
+              >
+                {referralFilter === "flagged" ? "Show All Referrals" : `View Flagged Only (${data.flagged_stats.total_flagged})`}
+              </button>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
             <div>
               <h3 className="text-sm font-bold text-ink">All Referral Registrations</h3>
@@ -366,6 +421,34 @@ export default function ReferralsTab() {
               </button>
             )}
           </div>
+
+          {/* Filter Pills */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[
+              { id: "all", label: `All (${data.referrals.length})` },
+              { id: "qualified", label: `✓ Qualified (${data.referrals.filter((r) => r.status === "qualified" || r.status === "qualified_cap_reached").length})` },
+              { id: "pending", label: `⏳ Pending Email (${data.referrals.filter((r) => r.status === "pending_verification").length})` },
+              { id: "flagged", label: `⚠️ Flagged / Blocked (${data.referrals.filter((r) => r.status === "flagged_suspicious").length})`, isFlagged: true },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setReferralFilter(f.id)}
+                className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                  referralFilter === f.id
+                    ? f.isFlagged
+                      ? "bg-danger text-white shadow-sm"
+                      : "bg-brand text-white shadow-sm"
+                    : f.isFlagged && data.referrals.some((r) => r.status === "flagged_suspicious")
+                    ? "bg-danger-soft text-danger border border-danger/30 hover:bg-danger hover:text-white"
+                    : "bg-surface-alt text-muted hover:text-ink border border-border"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           {data.referrals.length === 0 ? (
             <div className="py-8 text-center text-xs text-muted">No referrals recorded yet.</div>
           ) : (
@@ -382,7 +465,14 @@ export default function ReferralsTab() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {data.referrals.map((r) => (
+                  {data.referrals
+                    .filter((r) => {
+                      if (referralFilter === "qualified") return r.status === "qualified" || r.status === "qualified_cap_reached";
+                      if (referralFilter === "pending") return r.status === "pending_verification";
+                      if (referralFilter === "flagged") return r.status === "flagged_suspicious";
+                      return true;
+                    })
+                    .map((r) => (
                     <tr key={r.id} className="text-ink">
                       <td className="py-3">
                         <div className="font-semibold">@{r.referred_name}</div>
@@ -418,7 +508,19 @@ export default function ReferralsTab() {
                         )}
                       </td>
                       <td className="py-3 text-[11px] text-muted font-mono">
-                        <div>IP: {r.registration_ip || "—"}</div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>IP: {r.registration_ip || "—"}</span>
+                          {r.registration_ip && (
+                            <button
+                              type="button"
+                              onClick={() => handleWhitelistIp(r.registration_ip)}
+                              className="text-[10px] text-brand hover:underline cursor-pointer font-sans font-semibold"
+                              title="Add this IP to Admin Whitelist so it can register without limits"
+                            >
+                              + Whitelist
+                            </button>
+                          )}
+                        </div>
                         <div className="truncate max-w-[140px]">Dev: {r.device_id || "—"}</div>
                       </td>
                       <td className="py-3 text-muted">
@@ -663,6 +765,70 @@ export default function ReferralsTab() {
                 onChange={(e) => setSettingsForm({ ...settingsForm, fraud_max_accounts_per_ip: parseInt(e.target.value, 10) || 3 })}
                 hint="Accounts sharing public IP before flagging."
               />
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <h3 className="text-base font-bold text-ink mb-1">🛡️ Admin Whitelist & Bypass (For Testing)</h3>
+            <p className="text-xs text-muted mb-4 leading-relaxed">
+              Yahan aap apna IP address aur device whitelist kar sakte hain. Whitelisted IP aur device par koi bhi multiple account limit, IP cap, ya self-referral restriction nahi lagegi taake aap aasaani se testing kar sakein.
+            </p>
+
+            <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-ink flex items-center gap-2">
+                    <span>🌐 Your Current Detected IP:</span>
+                    <span className="font-mono text-brand bg-brand-soft px-2 py-0.5 rounded text-xs">
+                      {data.current_admin_ip || "Loading…"}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted mt-0.5">
+                    Click the button to automatically add your current IP to the whitelist.
+                  </div>
+                </div>
+                {data.current_admin_ip && (
+                  <button
+                    type="button"
+                    onClick={() => handleWhitelistIp(data.current_admin_ip)}
+                    className="rounded-lg bg-brand text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-brand/90 transition-all shadow-sm whitespace-nowrap self-start sm:self-auto cursor-pointer"
+                  >
+                    + Whitelist My Current IP ({data.current_admin_ip})
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Whitelisted IP Addresses (comma or space separated)
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs font-mono text-ink placeholder:text-muted focus:border-brand focus:outline-none"
+                  placeholder="e.g. 182.185.10.20, 110.39.40.50"
+                  value={whitelistIps}
+                  onChange={(e) => setWhitelistIps(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  In IPs se aane wale registrations par koi restriction nahi hogi.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Whitelisted Device IDs (comma or space separated)
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs font-mono text-ink placeholder:text-muted focus:border-brand focus:outline-none"
+                  placeholder="e.g. dev_a1b2c3d4e5..."
+                  value={whitelistDevices}
+                  onChange={(e) => setWhitelistDevices(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  In devices se aane wale signups par multiple account block nahi hoga.
+                </p>
+              </div>
             </div>
           </div>
 

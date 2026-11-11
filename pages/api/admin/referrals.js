@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
   // GET — Load referral settings, referral registrations list, and gifts list
   if (req.method === "GET") {
-    const [settings, { data: referralsRaw }, { data: giftsRaw }] = await Promise.all([
+    const [settings, { data: referralsRaw }, { data: giftsRaw }, { data: metaRows }] = await Promise.all([
       getReferralSettings(),
       supabaseAdmin
         .from("referrals")
@@ -20,7 +20,17 @@ export default async function handler(req, res) {
         .select("id, owner_user_id, referrer_user_id, referred_user_id, reward_type, reward_quantity, status, created_at, available_at, redeemed_at, order_id, revoked_at, revoked_reason")
         .order("created_at", { ascending: false })
         .limit(200),
+      supabaseAdmin
+        .from("app_meta")
+        .select("key, value")
+        .in("key", ["admin_whitelist_ips", "admin_whitelist_devices"]),
     ]);
+
+    const metaMap = Object.fromEntries((metaRows || []).map((r) => [r.key, r.value]));
+    const currentAdminIp =
+      (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+      req.socket?.remoteAddress ||
+      "";
 
     // Gather usernames and emails for referred and referrer users
     const userIds = new Set();
@@ -59,11 +69,28 @@ export default async function handler(req, res) {
       referred_name: userMap[g.referred_user_id]?.username || "—",
     }));
 
+    // Calculate flagged / banned devices and IPs
+    const flaggedList = referrals.filter((r) => r.status === "flagged_suspicious");
+    const uniqueFlaggedIps = Array.from(new Set(flaggedList.map((r) => r.registration_ip).filter(Boolean)));
+    const uniqueFlaggedDevices = Array.from(new Set(flaggedList.map((r) => r.device_id).filter(Boolean)));
+
+    const flaggedStats = {
+      total_flagged: flaggedList.length,
+      unique_ips_count: uniqueFlaggedIps.length,
+      unique_devices_count: uniqueFlaggedDevices.length,
+      unique_ips: uniqueFlaggedIps,
+      unique_devices: uniqueFlaggedDevices,
+    };
+
     return res.status(200).json({
       success: true,
       settings: settings || {},
       referrals,
       gifts,
+      current_admin_ip: currentAdminIp,
+      whitelist_ips: metaMap.admin_whitelist_ips || "",
+      whitelist_devices: metaMap.admin_whitelist_devices || "",
+      flagged_stats: flaggedStats,
     });
   }
 
@@ -209,6 +236,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, result: data });
     }
 
+    // 5b. Action: Update Admin Whitelist (IPs and Devices)
+    if (action === "update_whitelist") {
+      const { whitelist_ips, whitelist_devices } = req.body;
+      const now = new Date().toISOString();
+      await supabaseAdmin.from("app_meta").upsert([
+        { key: "admin_whitelist_ips", value: String(whitelist_ips || "").trim(), updated_at: now },
+        { key: "admin_whitelist_devices", value: String(whitelist_devices || "").trim(), updated_at: now },
+      ]);
+      return res.status(200).json({ success: true });
+    }
+
     // 6. Update full referral settings
     const {
       referral_enabled,
@@ -220,9 +258,25 @@ export default async function handler(req, res) {
       supplier_cost_per_gift,
       fraud_max_accounts_per_ip,
       fraud_max_accounts_per_device,
+      whitelist_ips,
+      whitelist_devices,
     } = req.body;
 
     const patch = {};
+
+    if (whitelist_ips !== undefined || whitelist_devices !== undefined) {
+      const now = new Date().toISOString();
+      const metaRows = [];
+      if (whitelist_ips !== undefined) {
+        metaRows.push({ key: "admin_whitelist_ips", value: String(whitelist_ips || "").trim(), updated_at: now });
+      }
+      if (whitelist_devices !== undefined) {
+        metaRows.push({ key: "admin_whitelist_devices", value: String(whitelist_devices || "").trim(), updated_at: now });
+      }
+      if (metaRows.length > 0) {
+        await supabaseAdmin.from("app_meta").upsert(metaRows);
+      }
+    }
 
     if (typeof referral_enabled === "boolean") patch.referral_enabled = referral_enabled;
     if (typeof redemption_enabled === "boolean") patch.redemption_enabled = redemption_enabled;

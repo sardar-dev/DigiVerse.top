@@ -64,14 +64,48 @@ export default async function handler(req, res) {
     });
   }
 
-  // 4. Fetch anti-fraud settings
+  // 4. Fetch anti-fraud settings & Admin Whitelist
   const settings = await getReferralSettings();
   const maxDeviceAccounts = Number(settings?.fraud_max_accounts_per_device) || 2;
   const maxIpAccounts = Number(settings?.fraud_max_accounts_per_ip) || 3;
 
-  // 5. Anti-Fraud Check: Device Registration Cap (Same Mobile / Device)
   const cleanDeviceId = String(device_id || "").trim();
-  if (cleanDeviceId) {
+  const clientIp =
+    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    "";
+
+  // Check if current IP or Device is whitelisted by Admin (e.g. for testing)
+  let isWhitelisted = false;
+  try {
+    const { data: metaRows } = await supabaseAdmin
+      .from("app_meta")
+      .select("key, value")
+      .in("key", ["admin_whitelist_ips", "admin_whitelist_devices"]);
+
+    const metaMap = Object.fromEntries((metaRows || []).map((r) => [r.key, r.value]));
+    const whitelistIps = (metaMap.admin_whitelist_ips || "")
+      .split(/[\n,;\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const whitelistDevices = (metaMap.admin_whitelist_devices || "")
+      .split(/[\n,;\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (clientIp && whitelistIps.includes(clientIp)) {
+      isWhitelisted = true;
+    }
+    if (cleanDeviceId && whitelistDevices.includes(cleanDeviceId)) {
+      isWhitelisted = true;
+    }
+  } catch (err) {
+    console.warn("[validate-signup] whitelist check warn:", err.message);
+  }
+
+  // 5. Anti-Fraud Check: Device Registration Cap (Bypassed if whitelisted)
+  if (!isWhitelisted && cleanDeviceId) {
     try {
       const { count: deviceCount } = await supabaseAdmin
         .from("device_registrations")
@@ -90,13 +124,8 @@ export default async function handler(req, res) {
     }
   }
 
-  // 6. Anti-Fraud Check: IP Registration Cap
-  const clientIp =
-    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
-    req.socket?.remoteAddress ||
-    "";
-
-  if (clientIp && clientIp !== "127.0.0.1" && clientIp !== "::1") {
+  // 6. Anti-Fraud Check: IP Registration Cap (Bypassed if whitelisted)
+  if (!isWhitelisted && clientIp && clientIp !== "127.0.0.1" && clientIp !== "::1") {
     try {
       const { count: ipCount } = await supabaseAdmin
         .from("profiles")
@@ -134,8 +163,8 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (inviterProfile) {
-      // Check if trying to refer oneself on the exact same device
-      if (cleanDeviceId && inviterProfile.device_id && inviterProfile.device_id === cleanDeviceId) {
+      // Check if trying to refer oneself on the exact same device (bypassed if whitelisted)
+      if (!isWhitelisted && cleanDeviceId && inviterProfile.device_id && inviterProfile.device_id === cleanDeviceId) {
         return res.status(400).json({
           success: false,
           code: "SAME_DEVICE_REFERRAL",
