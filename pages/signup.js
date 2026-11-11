@@ -128,6 +128,9 @@ export default function Signup() {
 
     // If email confirmation is disabled on Supabase, user is immediately signed in
     if (data?.session) {
+      try {
+        await fetch("/api/referrals/qualify", { method: "POST" });
+      } catch {}
       window.location.href = home;
       return;
     }

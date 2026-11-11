@@ -93,6 +93,73 @@ export default async function handler(req, res) {
       }
     }
 
+    // 2b. Action: Quick Toggle Email Verification Required for Referral
+    if (action === "toggle_email_verification") {
+      const { enabled, qualify_pending = true } = req.body;
+      try {
+        const updated = await updateReferralSettings({ require_email_verification: Boolean(enabled) }, session.user.id);
+
+        let qualifiedCount = 0;
+        // When turning OFF, qualify existing pending referrals so they become valid immediately!
+        if (!enabled && qualify_pending) {
+          const { data: pendingRefs } = await supabaseAdmin
+            .from("referrals")
+            .select("referred_id")
+            .eq("status", "pending_verification")
+            .limit(100);
+
+          if (pendingRefs && pendingRefs.length > 0) {
+            for (const r of pendingRefs) {
+              try {
+                const { data: qRes } = await supabaseAdmin.rpc("qualify_referral", {
+                  p_referred_user_id: r.referred_id,
+                });
+                if (qRes?.success) qualifiedCount++;
+              } catch (qErr) {
+                console.warn("[toggle_email_verification] qualify error:", qErr?.message);
+              }
+            }
+          }
+        }
+
+        return res.status(200).json({
+          success: true,
+          settings: updated,
+          qualified_pending_count: qualifiedCount,
+        });
+      } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+      }
+    }
+
+    // 2c. Action: Qualify all pending referrals on demand
+    if (action === "qualify_all_pending") {
+      try {
+        const { data: pendingRefs } = await supabaseAdmin
+          .from("referrals")
+          .select("referred_id")
+          .eq("status", "pending_verification")
+          .limit(200);
+
+        let qualifiedCount = 0;
+        if (pendingRefs && pendingRefs.length > 0) {
+          for (const r of pendingRefs) {
+            try {
+              const { data: qRes } = await supabaseAdmin.rpc("qualify_referral", {
+                p_referred_user_id: r.referred_id,
+              });
+              if (qRes?.success) qualifiedCount++;
+            } catch (qErr) {
+              console.warn("[qualify_all_pending] error:", qErr?.message);
+            }
+          }
+        }
+        return res.status(200).json({ success: true, count: qualifiedCount });
+      } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+      }
+    }
+
     // 3. Action: Approve flagged referral
     if (action === "approve_referral") {
       const { referral_id } = req.body;
@@ -146,6 +213,7 @@ export default async function handler(req, res) {
     const {
       referral_enabled,
       redemption_enabled,
+      require_email_verification,
       max_lifetime_gifts,
       daily_redemption_limit,
       lock_delay_seconds,
@@ -158,6 +226,7 @@ export default async function handler(req, res) {
 
     if (typeof referral_enabled === "boolean") patch.referral_enabled = referral_enabled;
     if (typeof redemption_enabled === "boolean") patch.redemption_enabled = redemption_enabled;
+    if (typeof require_email_verification === "boolean") patch.require_email_verification = require_email_verification;
     if (Number.isInteger(Number(max_lifetime_gifts))) patch.max_lifetime_gifts = Number(max_lifetime_gifts);
     if (Number.isInteger(Number(daily_redemption_limit))) patch.daily_redemption_limit = Number(daily_redemption_limit);
     if (Number.isInteger(Number(lock_delay_seconds))) patch.lock_delay_seconds = Number(lock_delay_seconds);

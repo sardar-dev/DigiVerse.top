@@ -14,6 +14,7 @@ export default function ReferralsTab() {
   const [settingsForm, setSettingsForm] = useState({
     referral_enabled: true,
     redemption_enabled: true,
+    require_email_verification: true,
     max_lifetime_gifts: 15,
     daily_redemption_limit: 3,
     lock_delay_seconds: 30,
@@ -39,6 +40,7 @@ export default function ReferralsTab() {
           setSettingsForm({
             referral_enabled: json.settings.referral_enabled !== undefined ? Boolean(json.settings.referral_enabled) : true,
             redemption_enabled: json.settings.redemption_enabled !== undefined ? Boolean(json.settings.redemption_enabled) : true,
+            require_email_verification: json.settings.require_email_verification !== undefined ? Boolean(json.settings.require_email_verification) : true,
             max_lifetime_gifts: json.settings.max_lifetime_gifts ?? 15,
             daily_redemption_limit: json.settings.daily_redemption_limit ?? 3,
             lock_delay_seconds: json.settings.lock_delay_seconds ?? 30,
@@ -76,6 +78,7 @@ export default function ReferralsTab() {
             ...prev,
             referral_enabled: json.settings.referral_enabled !== undefined ? Boolean(json.settings.referral_enabled) : prev.referral_enabled,
             redemption_enabled: json.settings.redemption_enabled !== undefined ? Boolean(json.settings.redemption_enabled) : prev.redemption_enabled,
+            require_email_verification: json.settings.require_email_verification !== undefined ? Boolean(json.settings.require_email_verification) : prev.require_email_verification,
             max_lifetime_gifts: json.settings.max_lifetime_gifts ?? prev.max_lifetime_gifts,
             daily_redemption_limit: json.settings.daily_redemption_limit ?? prev.daily_redemption_limit,
             lock_delay_seconds: json.settings.lock_delay_seconds ?? prev.lock_delay_seconds,
@@ -91,6 +94,54 @@ export default function ReferralsTab() {
       setError("Network error while saving settings.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function toggleEmailVerificationQuick(targetState) {
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle_email_verification", enabled: targetState }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSettingsForm((prev) => ({ ...prev, require_email_verification: targetState }));
+        setSuccess(
+          targetState
+            ? "Email Verification Requirement is now ON: Only users who confirm their email will qualify as valid referrals."
+            : `Email Verification Requirement is now OFF: All accounts qualify as valid referrals immediately${json.qualified_pending_count ? ` (${json.qualified_pending_count} pending referrals qualified!)` : "."}`
+        );
+        load();
+      } else {
+        setError(json.error || "Failed to toggle email verification setting.");
+      }
+    } catch {
+      setError("Network error while toggling email verification setting.");
+    }
+  }
+
+  async function handleQualifyAllPending() {
+    if (!confirm("Qualify all currently pending referrals and grant rewards right now?")) return;
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "qualify_all_pending" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccess(`Qualified ${json.count || 0} pending referral(s) successfully!`);
+        load();
+      } else {
+        setError(json.error || "Failed to qualify pending referrals.");
+      }
+    } catch {
+      setError("Network error.");
     }
   }
 
@@ -195,28 +246,63 @@ export default function ReferralsTab() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold ${
-                settingsForm.redemption_enabled
-                  ? "bg-success-soft text-success border border-success/30"
-                  : "bg-danger-soft text-danger border border-danger/30"
-              }`}
-            >
-              {settingsForm.redemption_enabled ? "Redemption: ACTIVE" : "Redemption: DISABLED"}
-            </span>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Email Verification Requirement Quick Toggle */}
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-alt px-3 py-1.5 shadow-sm">
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase font-bold text-muted">Email Verification</span>
+                <span
+                  className={`text-xs font-bold ${
+                    settingsForm.require_email_verification
+                      ? "text-brand"
+                      : "text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  {settingsForm.require_email_verification ? "MANDATORY (Only Verified)" : "OFF (All Accounts Valid)"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleEmailVerificationQuick(!settingsForm.require_email_verification)}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm transition-all cursor-pointer ${
+                  settingsForm.require_email_verification
+                    ? "bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500 hover:text-white"
+                    : "bg-brand text-white border border-brand hover:bg-brand/90"
+                }`}
+                title={
+                  settingsForm.require_email_verification
+                    ? "Click to turn OFF: any account from referral counts as valid immediately without email verification"
+                    : "Click to turn ON: only users who verify their email qualify for referral rewards"
+                }
+              >
+                {settingsForm.require_email_verification ? "Turn OFF (Allow All)" : "Turn ON (Require Email)"}
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => toggleRedemptionQuick(!settingsForm.redemption_enabled)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold shadow-sm transition-all cursor-pointer ${
-                settingsForm.redemption_enabled
-                  ? "bg-danger/10 text-danger border border-danger/30 hover:bg-danger hover:text-white"
-                  : "bg-success text-white border border-success hover:bg-success/90"
-              }`}
-            >
-              {settingsForm.redemption_enabled ? "Turn OFF" : "Turn ON (Enable)"}
-            </button>
+            {/* Gift Redemption Master Switch */}
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-alt px-3 py-1.5 shadow-sm">
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase font-bold text-muted">Gift Redemption</span>
+                <span
+                  className={`text-xs font-bold ${
+                    settingsForm.redemption_enabled ? "text-success" : "text-danger"
+                  }`}
+                >
+                  {settingsForm.redemption_enabled ? "ACTIVE (Enabled)" : "DISABLED"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleRedemptionQuick(!settingsForm.redemption_enabled)}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm transition-all cursor-pointer ${
+                  settingsForm.redemption_enabled
+                    ? "bg-danger/10 text-danger border border-danger/30 hover:bg-danger hover:text-white"
+                    : "bg-success text-white border border-success hover:bg-success/90"
+                }`}
+              >
+                {settingsForm.redemption_enabled ? "Turn OFF" : "Turn ON"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -261,7 +347,25 @@ export default function ReferralsTab() {
       {/* SUB-TAB 1: Referrals List */}
       {activeSubTab === "referrals" && (
         <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
-          <h3 className="text-sm font-bold text-ink mb-3">All Referral Registrations</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+            <div>
+              <h3 className="text-sm font-bold text-ink">All Referral Registrations</h3>
+              <p className="text-[11px] text-muted">
+                {settingsForm.require_email_verification
+                  ? "Email verification is currently REQUIRED (only verified emails qualify)."
+                  : "Email verification is currently OFF (all registered accounts qualify immediately)."}
+              </p>
+            </div>
+            {data.referrals.some((r) => r.status === "pending_verification") && (
+              <button
+                type="button"
+                onClick={handleQualifyAllPending}
+                className="rounded-lg bg-brand-soft text-brand border border-brand/20 px-3 py-1.5 text-xs font-semibold hover:bg-brand hover:text-white transition-colors cursor-pointer self-start sm:self-auto"
+              >
+                ⚡ Qualify All Pending ({data.referrals.filter((r) => r.status === "pending_verification").length})
+              </button>
+            )}
+          </div>
           {data.referrals.length === 0 ? (
             <div className="py-8 text-center text-xs text-muted">No referrals recorded yet.</div>
           ) : (
@@ -326,6 +430,17 @@ export default function ReferralsTab() {
                         })}
                       </td>
                       <td className="py-3 text-end">
+                        {r.status === "pending_verification" && (
+                          <div className="flex justify-end gap-1.5">
+                            <button
+                              onClick={() => handleApproveReferral(r.id)}
+                              className="rounded px-2.5 py-1 text-[11px] font-bold bg-brand text-white hover:bg-brand/90 transition-colors cursor-pointer"
+                              title="Manually qualify this referral without waiting for email verification"
+                            >
+                              Qualify
+                            </button>
+                          </div>
+                        )}
                         {r.status === "flagged_suspicious" && (
                           <div className="flex justify-end gap-1.5">
                             <button
@@ -427,30 +542,58 @@ export default function ReferralsTab() {
         <form onSubmit={saveSettings} className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-card space-y-5">
           <div className="border-b border-border pb-4">
             <h3 className="text-base font-bold text-ink">Master Switches</h3>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <label className="flex items-center gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-surface-alt">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <label className="flex items-start gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-surface-alt">
                 <input
                   type="checkbox"
                   checked={settingsForm.referral_enabled}
                   onChange={(e) => setSettingsForm({ ...settingsForm, referral_enabled: e.target.checked })}
-                  className="h-4 w-4 rounded text-brand focus:ring-brand"
+                  className="h-4 w-4 mt-0.5 rounded text-brand focus:ring-brand"
                 />
                 <div>
                   <div className="text-xs font-bold text-ink">Enable Referral Program</div>
-                  <div className="text-[11px] text-muted">When off, new signups do not track referrals or award gifts.</div>
+                  <div className="text-[11px] text-muted mt-0.5">When off, new signups do not track referrals or award gifts.</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-surface-alt">
+              <label className="flex items-start gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-surface-alt">
+                <input
+                  type="checkbox"
+                  checked={settingsForm.require_email_verification}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, require_email_verification: e.target.checked })}
+                  className="h-4 w-4 mt-0.5 rounded text-brand focus:ring-brand"
+                />
+                <div>
+                  <div className="text-xs font-bold text-ink flex items-center gap-1.5">
+                    <span>Require Email Verification</span>
+                    <span
+                      className={`rounded px-1.5 py-0.2 text-[10px] font-bold ${
+                        settingsForm.require_email_verification
+                          ? "bg-brand/10 text-brand"
+                          : "bg-amber-500/10 text-amber-600"
+                      }`}
+                    >
+                      {settingsForm.require_email_verification ? "ON (Strict)" : "OFF (All Valid)"}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted mt-0.5">
+                    {settingsForm.require_email_verification
+                      ? "Only users who click the email verification link give rewards to inviter."
+                      : "Bhale email verify na kare, har account referral me valid count ho aur reward mile."}
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 rounded-xl border border-border p-3.5 cursor-pointer hover:bg-surface-alt">
                 <input
                   type="checkbox"
                   checked={settingsForm.redemption_enabled}
                   onChange={(e) => setSettingsForm({ ...settingsForm, redemption_enabled: e.target.checked })}
-                  className="h-4 w-4 rounded text-brand focus:ring-brand"
+                  className="h-4 w-4 mt-0.5 rounded text-brand focus:ring-brand"
                 />
                 <div>
-                  <div className="text-xs font-bold text-ink">Enable Free Muse AI Gift Redemption</div>
-                  <div className="text-[11px] text-muted">Master Switch: When OFF, checkout blocks all gift redemptions.</div>
+                  <div className="text-xs font-bold text-ink">Enable Gift Redemption</div>
+                  <div className="text-[11px] text-muted mt-0.5">Master Switch: When OFF, checkout blocks all gift redemptions.</div>
                 </div>
               </label>
             </div>

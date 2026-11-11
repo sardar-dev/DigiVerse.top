@@ -1,5 +1,6 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { getReferralSettings } from "../../../lib/referralSettings";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -23,7 +24,11 @@ export default async function handler(req, res) {
     return res.status(404).json({ success: false, error: "user_not_found" });
   }
 
-  if (!authUser.user.email_confirmed_at) {
+  // Check if email verification is required by admin settings
+  const settings = await getReferralSettings();
+  const requireEmail = settings?.require_email_verification !== false;
+
+  if (requireEmail && !authUser.user.email_confirmed_at) {
     return res.status(400).json({
       success: false,
       error: "email_not_verified",
