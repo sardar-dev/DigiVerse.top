@@ -11,7 +11,7 @@ import { useT } from "../lib/i18n";
 // (resuming a payment after a closed tab / refresh / lost connection).
 // order needs: { id, total, payout_wallet }. Calls onDone(items) once
 // the order is fulfilled.
-export default function PaymentPanel({ order, onDone }) {
+export default function PaymentPanel({ order, onDone, onBack }) {
   const { t } = useT();
   const [method, setMethod] = useState(null); // 'wallet' | 'onchain' | null
   const [balance, setBalance] = useState(null);
@@ -164,13 +164,20 @@ export default function PaymentPanel({ order, onDone }) {
           </Alert>
         )}
         <Alert variant="error">{error}</Alert>
-        <PrimaryButton
-          onClick={payWithBalance}
-          disabled={busy || isPaymentBlocked || buffLoading}
-          className="w-full py-3 text-sm font-bold"
-        >
-          {busy ? t("Redeeming Free Tokens…") : t("Claim Free Tokens Now ✨")}
-        </PrimaryButton>
+        <div className="flex gap-3">
+          {onBack && (
+            <SecondaryButton onClick={onBack} className="flex-1">
+              ← {t("Back")}
+            </SecondaryButton>
+          )}
+          <PrimaryButton
+            onClick={payWithBalance}
+            disabled={busy || isPaymentBlocked || buffLoading}
+            className={`${onBack ? "flex-1" : "w-full"} py-3 text-sm font-bold`}
+          >
+            {busy ? t("Redeeming Free Tokens…") : t("Claim Free Tokens Now ✨")}
+          </PrimaryButton>
+        </div>
       </div>
     );
   }
@@ -238,6 +245,14 @@ export default function PaymentPanel({ order, onDone }) {
             <span className="text-muted">{t("Pay on-chain")}</span>
           </button>
         </div>
+
+        {onBack && (
+          <div className="pt-2">
+            <SecondaryButton onClick={onBack} className="w-full">
+              ← {t("Back to quantity selection")}
+            </SecondaryButton>
+          </div>
+        )}
       </div>
     );
   }

@@ -619,9 +619,20 @@ function BuyModal({ product, onClose, ticker }) {
       )}
 
       {step !== "done" && (
-        <p className="mb-4 text-xs font-medium uppercase tracking-wide text-muted">
-          {stepLabels[step]}
-        </p>
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            {stepLabels[step]}
+          </p>
+          {(step === "summary" || step === "order") && (
+            <button
+              type="button"
+              onClick={() => setStep("form")}
+              className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline cursor-pointer"
+            >
+              ← {t("Change quantity")}
+            </button>
+          )}
+        </div>
       )}
 
       {product.description && step === "form" && (
@@ -822,6 +833,7 @@ function BuyModal({ product, onClose, ticker }) {
       {step === "order" && order && (
         <PaymentPanel
           order={order}
+          onBack={() => setStep("form")}
           onDone={(result) => {
             fpixel.event("Purchase", {
               content_name: product.title,
