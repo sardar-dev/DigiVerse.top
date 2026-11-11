@@ -242,8 +242,9 @@ export default async function handler(req, res) {
       status: "pending_payment",
       payout_wallet: process.env.PAYOUT_WALLET_ADDRESS,
       expected_amount: total,
-      gifts_redeemed: giftsCount,
-      gift_discount: giftDiscount,
+      // Only sent when gifts are actually redeemed, so normal orders keep working
+      // even before migration_036 has been run.
+      ...(giftsCount > 0 ? { gifts_redeemed: giftsCount, gift_discount: giftDiscount } : {}),
       // Only sent when a coupon is used, so normal orders keep working
       // even before migration_010 has been run.
       ...(coupon
@@ -253,13 +254,24 @@ export default async function handler(req, res) {
   // unit_cost = cost at the time of sale (migration 015). Falls back to a
   // plain insert if that column doesn't exist yet.
   const costField = Number.isFinite(unitCost) ? { unit_cost: unitCost } : {};
+  let insertPayload = { ...orderRow, ...costField };
+
   let { data: order, error: orderErr } = await supabaseAdmin
     .from("orders")
-    .insert({ ...orderRow, ...costField })
+    .insert(insertPayload)
     .select()
     .single();
+
+  // Gracefully fallback if migration 036 or 015 columns haven't been created yet
+  if (orderErr && /gift_discount|gifts_redeemed/i.test(orderErr.message)) {
+    delete insertPayload.gift_discount;
+    delete insertPayload.gifts_redeemed;
+    ({ data: order, error: orderErr } = await supabaseAdmin.from("orders").insert(insertPayload).select().single());
+  }
+
   if (orderErr && /unit_cost/i.test(orderErr.message)) {
-    ({ data: order, error: orderErr } = await supabaseAdmin.from("orders").insert(orderRow).select().single());
+    delete insertPayload.unit_cost;
+    ({ data: order, error: orderErr } = await supabaseAdmin.from("orders").insert(insertPayload).select().single());
   }
 
   if (orderErr) {
