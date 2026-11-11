@@ -957,6 +957,8 @@ function describeError(t, code, available, minOrder, maxQty, minQty) {
       return t("Invalid invite code or service is currently unavailable. Please verify your invite code.");
     case "invalid_invite_code":
       return t("Please enter a valid Muse AI invite code (4–20 alphanumeric characters).");
+    case "stock_check_failed":
+      return t("Unable to verify supplier stock right now. Please try again in a few moments.");
     default:
       return code ? code.replaceAll("_", " ") : "";
   }

@@ -172,7 +172,23 @@ export default async function handler(req, res) {
         }
       }
     } catch (e) {
-      return res.status(502).json({ success: false, error: "stock_check_failed" });
+      console.warn("[orders/create] live supplier stock check failed, trying cached stock fallback:", e?.message);
+      // Graceful fallback: If live check threw (e.g. supplier API timeout or transient error),
+      // check if we have cached available_stock in localProduct. If cached stock is sufficient, allow order.
+      if (
+        localProduct.available_stock !== undefined &&
+        localProduct.available_stock !== null &&
+        Number(localProduct.available_stock) >= quantity
+      ) {
+        availableNow = Number(localProduct.available_stock);
+        unitCost = Number(localProduct.cost_price) || null;
+      } else {
+        return res.status(502).json({
+          success: false,
+          error: "stock_check_failed",
+          message: "Unable to verify supplier stock right now. Please try again shortly.",
+        });
+      }
     }
   }
 

@@ -428,6 +428,8 @@ function describeError(t, code, data) {
       return t("Delivery failed — your wallet balance has been refunded automatically.");
     case "order_not_available":
       return t("This order is no longer available for payment. Please refresh and try again.");
+    case "stock_check_failed":
+      return data?.message || t("Unable to verify supplier stock right now. Please try again shortly.");
     case "supplier_balance_limit":
       return data?.message || (data?.max_qty > 0
         ? t("You can order up to {n}B tokens right now. Please lower your quantity.", { n: data.max_qty })
