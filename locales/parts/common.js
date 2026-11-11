@@ -38,6 +38,8 @@ const part = {
     "Continue with Google": "المتابعة باستخدام Google",
     "Connecting to Google…": "جارٍ الاتصال بـ Google…",
     "or": "أو",
+    "Multiple accounts from the same mobile or device are not allowed. Please log in to your existing account.":
+      "غير مسموح بإنشاء حسابات متعددة من نفس الهاتف أو الجهاز. يرجى تسجيل الدخول إلى حسابك الحالي.",
   },
   ru: {
     "Store": "Магазин",
@@ -77,6 +79,8 @@ const part = {
     "Continue with Google": "Продолжить с Google",
     "Connecting to Google…": "Подключение к Google…",
     "or": "или",
+    "Multiple accounts from the same mobile or device are not allowed. Please log in to your existing account.":
+      "Создание нескольких аккаунтов с одного устройства запрещено. Пожалуйста, войдите в свой существующий аккаунт.",
   },
 };
 export default part;

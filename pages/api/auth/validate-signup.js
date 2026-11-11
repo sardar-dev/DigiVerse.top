@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { validateRegistrationEmail } from "../../../lib/emailAllowlist";
+import { getReferralSettings } from "../../../lib/referralSettings";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -22,7 +23,7 @@ export default async function handler(req, res) {
   }
 
   // Check username uniqueness (case-insensitive)
-  const { data: existingUser, error: userErr } = await supabaseAdmin
+  const { data: existingUser } = await supabaseAdmin
     .from("profiles")
     .select("id")
     .ilike("username", cleanUsername)
@@ -55,7 +56,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // 3. Password validation: Allow any password format/length chosen by the user
+  // 3. Password validation: Allow any password chosen by user
   if (!password || typeof password !== "string") {
     return res.status(400).json({
       success: false,
@@ -63,11 +64,62 @@ export default async function handler(req, res) {
     });
   }
 
-  // 4. Resolve inviter if referral code is present
+  // 4. Fetch anti-fraud settings
+  const settings = await getReferralSettings();
+  const maxDeviceAccounts = Number(settings?.fraud_max_accounts_per_device) || 2;
+  const maxIpAccounts = Number(settings?.fraud_max_accounts_per_ip) || 3;
+
+  // 5. Anti-Fraud Check: Device Registration Cap (Same Mobile / Device)
+  const cleanDeviceId = String(device_id || "").trim();
+  if (cleanDeviceId) {
+    try {
+      const { count: deviceCount } = await supabaseAdmin
+        .from("device_registrations")
+        .select("id", { count: "exact", head: true })
+        .eq("device_id", cleanDeviceId);
+
+      if (typeof deviceCount === "number" && deviceCount >= maxDeviceAccounts) {
+        return res.status(400).json({
+          success: false,
+          code: "DEVICE_LIMIT_EXCEEDED",
+          error: "Multiple accounts from the same mobile/device are not allowed. Please log in to your existing account.",
+        });
+      }
+    } catch (e) {
+      console.warn("[validate-signup] device check error:", e.message);
+    }
+  }
+
+  // 6. Anti-Fraud Check: IP Registration Cap
+  const clientIp =
+    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    "";
+
+  if (clientIp && clientIp !== "127.0.0.1" && clientIp !== "::1") {
+    try {
+      const { count: ipCount } = await supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("registration_ip", clientIp);
+
+      if (typeof ipCount === "number" && ipCount >= maxIpAccounts) {
+        return res.status(400).json({
+          success: false,
+          code: "IP_LIMIT_EXCEEDED",
+          error: "Account registration limit reached for this network/IP address. Multiple accounts are not allowed. Please log in.",
+        });
+      }
+    } catch (e) {
+      console.warn("[validate-signup] ip check error:", e.message);
+    }
+  }
+
+  // 7. Resolve inviter if referral code is present & Anti-Self-Referral
   let inviter = null;
   const cleanRef = String(ref || "").trim();
   if (cleanRef) {
-    // Prevent self-referral using same username
+    // Prevent self-referral by username
     if (cleanRef.toLowerCase() === cleanUsername.toLowerCase()) {
       return res.status(400).json({
         success: false,
@@ -77,20 +129,23 @@ export default async function handler(req, res) {
 
     const { data: inviterProfile } = await supabaseAdmin
       .from("profiles")
-      .select("id, username")
+      .select("id, username, device_id")
       .ilike("username", cleanRef)
       .maybeSingle();
 
     if (inviterProfile) {
+      // Check if trying to refer oneself on the exact same device
+      if (cleanDeviceId && inviterProfile.device_id && inviterProfile.device_id === cleanDeviceId) {
+        return res.status(400).json({
+          success: false,
+          code: "SAME_DEVICE_REFERRAL",
+          error: "Self-referral is not allowed. You cannot register using your own referral link on the same mobile/device.",
+        });
+      }
+
       inviter = { id: inviterProfile.id, username: inviterProfile.username };
     }
   }
-
-  // 5. Anti-fraud IP & Device registration checks
-  const clientIp =
-    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
-    req.socket?.remoteAddress ||
-    "";
 
   return res.status(200).json({
     success: true,
@@ -100,4 +155,3 @@ export default async function handler(req, res) {
     clientIp,
   });
 }
-

@@ -156,8 +156,14 @@ export default function Signup() {
     setLoading(false);
 
     if (signUpError) {
-      if (signUpError.message?.toLowerCase().includes("rate limit")) {
+      const msg = (signUpError.message || "").toLowerCase();
+      if (msg.includes("rate limit")) {
         return setError(t("Too many signups right now — please wait a few minutes and try again."));
+      }
+      if (msg.includes("database error saving new user") || msg.includes("saving new user")) {
+        return setError(
+          t("Multiple accounts from the same mobile or device are not allowed. Please log in to your existing account.")
+        );
       }
       return setError(signUpError.message);
     }

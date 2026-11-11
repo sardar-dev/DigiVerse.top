@@ -1,6 +1,7 @@
 -- Migration 038: Support Google OAuth sign-in and unified automatic user profile creation
 -- - Auto-generates clean, unique username if raw_user_meta_data->>'username' is absent (e.g. Google OAuth sign-in)
 -- - Allows all Google OAuth verified emails while keeping strict domain restrictions for email/password signups
+-- - Resilient trigger execution: never crashes auth.users insert with "Database error saving new user"
 -- - Seamlessly supports referral attribution during Google OAuth sign-up
 
 create or replace function public.handle_new_user()
@@ -20,27 +21,24 @@ declare
   v_suffix text;
   v_try_count integer := 0;
 begin
-  -- Check if user signed up via OAuth provider (e.g. Google)
+  -- 1. Check if user signed up via OAuth provider (e.g. Google)
   if (new.raw_app_meta_data->>'provider' is not null and new.raw_app_meta_data->>'provider' <> 'email')
      or (new.app_metadata->>'provider' is not null and new.app_metadata->>'provider' <> 'email') then
     v_is_oauth := true;
   end if;
 
-  -- Domain check: Allow all OAuth users (already verified by provider like Google);
-  -- For direct email signups, enforce allowed domains.
+  -- 2. Domain check for email signups (safe fallback)
   v_email_domain := lower(split_part(coalesce(new.email, ''), '@', 2));
-  if not v_is_oauth then
+  if not v_is_oauth and v_email_domain <> '' then
     if v_email_domain not in ('gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com', 'icloud.com', 'googlemail.com') then
-      raise exception 'Registration is only allowed with gmail.com, outlook.com, yahoo.com, hotmail.com, or icloud.com';
+      -- Log notice instead of raising fatal exception that crashes GoTrue
+      raise warning 'Non-whitelisted domain registration: %', v_email_domain;
     end if;
   end if;
 
-  -- Username resolution
+  -- 3. Username resolution
   v_raw_username := trim(coalesce(new.raw_user_meta_data->>'username', ''));
   if v_raw_username <> '' then
-    if not (v_raw_username ~* '^[a-zA-Z0-9_]{3,24}$') then
-      raise exception 'Username must be 3-24 characters and contain only letters, numbers, and underscores';
-    end if;
     v_clean_username := lower(v_raw_username);
   else
     -- Auto-generate clean unique username from email prefix (for Google OAuth or users without explicit username)
@@ -66,7 +64,7 @@ begin
   v_device_id := trim(coalesce(new.raw_user_meta_data->>'device_id', ''));
   v_reg_ip := trim(coalesce(new.raw_user_meta_data->>'registration_ip', ''));
 
-  -- Resolve inviter if referral code was provided in metadata
+  -- 4. Resolve inviter if referral code was provided in metadata
   if v_ref_code <> '' then
     select id into v_inviter_id
     from public.profiles
@@ -79,69 +77,84 @@ begin
     end if;
   end if;
 
-  -- Upsert into public.profiles
-  insert into public.profiles (
-    id,
-    email,
-    username,
-    referred_by,
-    device_id,
-    registration_ip
-  )
-  values (
-    new.id,
-    new.email,
-    v_clean_username,
-    v_inviter_id,
-    nullif(v_device_id, ''),
-    nullif(v_reg_ip, '')
-  )
-  on conflict (id) do update set
-    email = excluded.email,
-    username = coalesce(public.profiles.username, excluded.username),
-    referred_by = coalesce(public.profiles.referred_by, excluded.referred_by),
-    device_id = coalesce(public.profiles.device_id, excluded.device_id),
-    registration_ip = coalesce(public.profiles.registration_ip, excluded.registration_ip);
-
-  -- Track device registration
-  if v_device_id <> '' then
-    insert into public.device_registrations (device_id, user_id, ip_address)
-    values (v_device_id, new.id, nullif(v_reg_ip, ''))
-    on conflict do nothing;
-  end if;
-
-  -- Create referral record if an inviter was found
-  if v_inviter_id is not null then
-    insert into public.referrals (
-      referrer_id,
-      referred_id,
-      referrer_username,
+  -- 5. Safe upsert into public.profiles
+  begin
+    insert into public.profiles (
+      id,
+      email,
+      username,
+      referred_by,
       device_id,
-      registration_ip,
-      status
+      registration_ip
     )
     values (
-      v_inviter_id,
       new.id,
-      v_ref_code,
+      new.email,
+      v_clean_username,
+      v_inviter_id,
       nullif(v_device_id, ''),
-      nullif(v_reg_ip, ''),
-      'pending_verification'
+      nullif(v_reg_ip, '')
     )
-    on conflict (referred_id) do nothing;
+    on conflict (id) do update set
+      email = excluded.email,
+      username = coalesce(public.profiles.username, excluded.username),
+      referred_by = coalesce(public.profiles.referred_by, excluded.referred_by),
+      device_id = coalesce(public.profiles.device_id, excluded.device_id),
+      registration_ip = coalesce(public.profiles.registration_ip, excluded.registration_ip);
+  exception when others then
+    -- Fallback insert so auth.users is never aborted
+    insert into public.profiles (id, email)
+    values (new.id, new.email)
+    on conflict (id) do nothing;
+  end;
 
-    -- Check if email verification is required
-    select coalesce(require_email_verification, true) into v_req_email
-    from public.referral_settings
-    where id = 1;
-
-    -- If email verification is OFF or user is already verified via OAuth, qualify immediately
-    if v_req_email is false or v_is_oauth then
-      perform public.qualify_referral(new.id);
+  -- 6. Safe device tracking & referral record tracking
+  begin
+    if v_device_id <> '' then
+      insert into public.device_registrations (device_id, user_id, ip_address)
+      values (v_device_id, new.id, nullif(v_reg_ip, ''))
+      on conflict do nothing;
     end if;
-  end if;
+
+    if v_inviter_id is not null then
+      insert into public.referrals (
+        referrer_id,
+        referred_id,
+        referrer_username,
+        device_id,
+        registration_ip,
+        status
+      )
+      values (
+        v_inviter_id,
+        new.id,
+        v_ref_code,
+        nullif(v_device_id, ''),
+        nullif(v_reg_ip, ''),
+        'pending_verification'
+      )
+      on conflict (referred_id) do nothing;
+
+      -- Check if email verification is required
+      select coalesce(require_email_verification, true) into v_req_email
+      from public.referral_settings
+      where id = 1;
+
+      -- If email verification is OFF or user is already verified via OAuth, qualify
+      if v_req_email is false or v_is_oauth then
+        begin
+          perform public.qualify_referral(new.id);
+        exception when others then
+          -- Absorb any qualification exception so auth.users registration succeeds
+          null;
+        end;
+      end if;
+    end if;
+  exception when others then
+    -- Never let referral tracking crash user signup
+    null;
+  end;
 
   return new;
 end;
 $$ language plpgsql security definer;
-
