@@ -46,16 +46,21 @@ export default function Signup() {
 
   // Capture referral parameter from URL or persistent storage
   useEffect(() => {
-    let code = (router.query.ref || "").toString().trim();
+    let code = (router.query.ref || "").toString().trim().replace(/^@+/, "");
+    if (!code) {
+      try {
+        const stored = localStorage.getItem(REF_STORAGE_KEY);
+        if (stored) code = stored.trim().replace(/^@+/, "");
+      } catch {}
+    }
+    if (!code && typeof document !== "undefined") {
+      const match = document.cookie.match(/(?:^|;\s*)dg_ref_inviter=([^;]+)/);
+      if (match) code = decodeURIComponent(match[1]).trim().replace(/^@+/, "");
+    }
     if (code) {
       setRefInviter(code);
       try {
         localStorage.setItem(REF_STORAGE_KEY, code);
-      } catch {}
-    } else {
-      try {
-        const stored = localStorage.getItem(REF_STORAGE_KEY);
-        if (stored) setRefInviter(stored);
       } catch {}
     }
   }, [router.query.ref]);
@@ -125,6 +130,7 @@ export default function Signup() {
 
     // 4. Backend Pre-check for Uniqueness and Anti-Fraud
     const deviceId = getDeviceId();
+    const cleanRef = refInviter ? refInviter.trim().replace(/^@+/, "") : null;
     let backendValidation;
     try {
       const res = await fetch("/api/auth/validate-signup", {
@@ -134,7 +140,7 @@ export default function Signup() {
           username: cleanUser,
           email: emailCheck.normalizedEmail,
           password,
-          ref: refInviter || undefined,
+          ref: cleanRef || undefined,
           device_id: deviceId,
         }),
       });
@@ -157,7 +163,7 @@ export default function Signup() {
       options: {
         data: {
           username: cleanUser,
-          ref: refInviter || null,
+          ref: cleanRef || null,
           device_id: deviceId,
           registration_ip: backendValidation?.clientIp || null,
         },
@@ -180,11 +186,23 @@ export default function Signup() {
       return setError(signUpError.message);
     }
 
+    // Auto-link and qualify referral immediately (dual gift reward for inviter + new user)
+    if (data?.user?.id) {
+      try {
+        await fetch("/api/referrals/qualify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: data.user.id,
+            ref: cleanRef,
+            device_id: deviceId,
+          }),
+        });
+      } catch {}
+    }
+
     // If email confirmation is disabled on Supabase, user is immediately signed in
     if (data?.session) {
-      try {
-        await fetch("/api/referrals/qualify", { method: "POST" });
-      } catch {}
       window.location.href = home;
       return;
     }
@@ -269,7 +287,11 @@ export default function Signup() {
         {refInviter && (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-brand/30 bg-brand-soft px-3.5 py-2.5 text-xs font-semibold text-brand">
             <span className="text-base">🎁</span>
-            <span>{t("Referred by {user} — Earn free Muse AI gifts!", { user: `@${refInviter}` })}</span>
+            <span>
+              {t("Referred by {user} — Both of you get 1B Muse AI tokens (1 Gift Box each)!", {
+                user: `@${refInviter.replace(/^@+/, "")}`,
+              })}
+            </span>
           </div>
         )}
 

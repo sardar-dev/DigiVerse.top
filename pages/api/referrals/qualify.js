@@ -7,36 +7,124 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: "method_not_allowed" });
   }
 
-  const supabaseServer = createPagesServerClient({ req, res });
-  const {
-    data: { session },
-  } = await supabaseServer.auth.getSession();
+  let userId = null;
 
-  if (!session) {
+  // 1. Try session first
+  try {
+    const supabaseServer = createPagesServerClient({ req, res });
+    const {
+      data: { session },
+    } = await supabaseServer.auth.getSession();
+    if (session?.user?.id) {
+      userId = session.user.id;
+    }
+  } catch {}
+
+  // 2. Fallback to payload user_id (e.g. called right after signup before email confirmation)
+  if (!userId && req.body?.user_id) {
+    userId = String(req.body.user_id).trim();
+  }
+
+  if (!userId) {
     return res.status(401).json({ success: false, error: "login_required" });
   }
 
-  const userId = session.user.id;
-
-  // Verify email status directly from auth.users (never trust client)
+  // Verify user exists directly from auth.users
   const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.getUserById(userId);
   if (authErr || !authUser?.user) {
     return res.status(404).json({ success: false, error: "user_not_found" });
+  }
+
+  const clientIp =
+    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    "";
+
+  // Check Admin Whitelist
+  let isWhitelisted = false;
+  try {
+    const { data: metaRows } = await supabaseAdmin
+      .from("app_meta")
+      .select("key, value")
+      .in("key", ["admin_whitelist_ips", "admin_whitelist_devices"]);
+
+    const metaMap = Object.fromEntries((metaRows || []).map((r) => [r.key, r.value]));
+    const whitelistIps = (metaMap.admin_whitelist_ips || "").toLowerCase();
+    const whitelistDevices = (metaMap.admin_whitelist_devices || "").toLowerCase();
+
+    const devId = (req.body?.device_id || authUser.user.user_metadata?.device_id || "").toLowerCase();
+
+    if (clientIp && whitelistIps.includes(clientIp.toLowerCase())) isWhitelisted = true;
+    if (devId && whitelistDevices.includes(devId)) isWhitelisted = true;
+  } catch {}
+
+  // Check if referral record exists in public.referrals
+  const { data: existingRef } = await supabaseAdmin
+    .from("referrals")
+    .select("id, status")
+    .eq("referred_id", userId)
+    .maybeSingle();
+
+  if (!existingRef) {
+    const rawRef = (
+      req.body?.ref ||
+      authUser.user.user_metadata?.ref ||
+      ""
+    ).toString().trim().replace(/^@+/, "");
+
+    const { data: userProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("id, referred_by, device_id, registration_ip")
+      .eq("id", userId)
+      .maybeSingle();
+
+    let inviterId = userProfile?.referred_by;
+    let inviterUsername = rawRef;
+
+    if (!inviterId && rawRef) {
+      const { data: inviterProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id, username")
+        .ilike("username", rawRef)
+        .neq("id", userId)
+        .maybeSingle();
+
+      if (inviterProfile) {
+        inviterId = inviterProfile.id;
+        inviterUsername = inviterProfile.username;
+        await supabaseAdmin
+          .from("profiles")
+          .update({ referred_by: inviterId })
+          .eq("id", userId);
+      }
+    }
+
+    if (inviterId) {
+      await supabaseAdmin.from("referrals").insert({
+        referrer_id: inviterId,
+        referred_id: userId,
+        referrer_username: inviterUsername,
+        device_id: userProfile?.device_id || authUser.user.user_metadata?.device_id || req.body?.device_id || null,
+        registration_ip: userProfile?.registration_ip || authUser.user.user_metadata?.registration_ip || clientIp || null,
+        status: "pending_verification",
+      });
+    }
   }
 
   // Check if email verification is required by admin settings
   const settings = await getReferralSettings();
   const requireEmail = settings?.require_email_verification !== false;
 
-  if (requireEmail && !authUser.user.email_confirmed_at) {
-    return res.status(400).json({
-      success: false,
-      error: "email_not_verified",
-      message: "Please click the confirmation link in your verification email before qualifying.",
+  // If email verification is required, user is not confirmed yet, and not whitelisted
+  if (requireEmail && !authUser.user.email_confirmed_at && !isWhitelisted) {
+    return res.status(200).json({
+      success: true,
+      pending_email: true,
+      message: "Referral recorded as pending. Rewards will unlock once email is confirmed.",
     });
   }
 
-  // Call the atomic PostgreSQL RPC function
+  // Call the atomic PostgreSQL RPC function (Dual Gift Reward)
   const { data, error } = await supabaseAdmin.rpc("qualify_referral", {
     p_referred_user_id: userId,
   });
@@ -48,4 +136,3 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ success: true, result: data });
 }
-

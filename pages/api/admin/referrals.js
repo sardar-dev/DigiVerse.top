@@ -225,13 +225,14 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2c. Action: Qualify all pending referrals on demand
-    if (action === "qualify_all_pending") {
+    // 2c. Action: Qualify all unrewarded referrals on demand (Dual gift rewards issued)
+    if (action === "qualify_all_pending" || action === "qualify_all_unrewarded") {
       try {
         const { data: pendingRefs } = await supabaseAdmin
           .from("referrals")
           .select("referred_id")
-          .eq("status", "pending_verification")
+          .neq("status", "rejected")
+          .or("reward_issued.is.null,reward_issued.eq.false,status.eq.pending_verification,status.eq.flagged_suspicious")
           .limit(200);
 
         let qualifiedCount = 0;

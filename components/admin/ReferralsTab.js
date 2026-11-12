@@ -579,13 +579,14 @@ export default function ReferralsTab() {
                   : "Email verification is currently OFF (all registered accounts qualify immediately)."}
               </p>
             </div>
-            {data.referrals.some((r) => r.status === "pending_verification") && (
+            {data.referrals.some((r) => !r.reward_issued) && (
               <button
                 type="button"
                 onClick={handleQualifyAllPending}
                 className="rounded-lg bg-brand-soft text-brand border border-brand/20 px-3 py-1.5 text-xs font-semibold hover:bg-brand hover:text-white transition-colors cursor-pointer self-start sm:self-auto"
+                title="Qualify all unrewarded referrals and issue dual 1B tokens gifts to both inviter and new user"
               >
-                ⚡ Qualify All Pending ({data.referrals.filter((r) => r.status === "pending_verification").length})
+                ⚡ Qualify & Issue Rewards ({data.referrals.filter((r) => !r.reward_issued).length})
               </button>
             )}
           </div>

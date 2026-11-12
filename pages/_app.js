@@ -37,6 +37,21 @@ export default function App({ Component, pageProps }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Global Referral Tracker: Capture ?ref= from ANY landing URL and persist it across site navigation
+  useEffect(() => {
+    if (!router.isReady) return;
+    const refParam = router.query.ref;
+    if (refParam && typeof refParam === "string") {
+      const cleanRef = refParam.trim().replace(/^@+/, "");
+      if (cleanRef) {
+        try {
+          localStorage.setItem("dg_ref_inviter", cleanRef);
+          document.cookie = `dg_ref_inviter=${encodeURIComponent(cleanRef)}; path=/; max-age=2592000; SameSite=Lax`;
+        } catch {}
+      }
+    }
+  }, [router.isReady, router.query.ref]);
+
   return (
     <>
       {/* Global Meta Pixel (Facebook) Script */}

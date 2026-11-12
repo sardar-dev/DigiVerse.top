@@ -125,7 +125,7 @@ export default function ReferralsPage() {
               {t("Invite Friends, Get Free Muse AI Tokens")}
             </h1>
             <p className="mt-2 text-sm sm:text-base text-muted leading-relaxed">
-              {t("Every friend who registers with your link and confirms their email unlocks 1 Muse AI Gift Box (1 Billion tokens) for you! Maximum 15 lifetime gifts.")}
+              {t("Invite friends to DigiVerse! When a friend registers using your link, BOTH of you get 1 Billion Muse AI Tokens (1 Gift Box each)! Maximum 15 lifetime gifts.")}
             </p>
           </div>
 
