@@ -22,6 +22,15 @@ import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/site
 import { useT } from "../lib/i18n";
 import * as fpixel from "../lib/fpixel";
 
+function cleanSeoText(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/\bbuff\s*tokens?\b/gi, "Muse AI Tokens")
+    .replace(/\bbuff\b/gi, "Tokens")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // Server-rendered so search engines (and the first paint) see the
 // actual product list immediately, not an empty page that fills in
 // after a client-side fetch.
@@ -41,10 +50,11 @@ export async function getServerSideProps({ query, res }) {
   const sharedMeta = shared
     ? {
         id: String(shared.id),
-        title: shared.title,
-        description: (shared.short_description || shared.description || "").slice(0, 200),
+        title: cleanSeoText(shared.title),
+        description: cleanSeoText((shared.short_description || shared.description || "").slice(0, 250)),
         image: shared.image_url || null,
         price: Number(shared.sell_price),
+        category: shared.category || "Software",
       }
     : null;
 
@@ -168,32 +178,92 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     });
   }, [products, search, category]);
 
+  const productJsonLd = sharedMeta
+    ? {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Product",
+            name: sharedMeta.title,
+            description:
+              sharedMeta.description ||
+              `Buy ${sharedMeta.title} with 0-second instant delivery on DigiVerse.`,
+            image: sharedMeta.image ? [sharedMeta.image] : [`${SITE_URL}/og-preview.jpg`],
+            category: sharedMeta.category || "Software",
+            offers: {
+              "@type": "Offer",
+              url: `${SITE_URL}/?product=${toProductCode(sharedMeta.id)}`,
+              priceCurrency: "USD",
+              price: sharedMeta.price ? sharedMeta.price.toFixed(2) : "0.00",
+              priceValidUntil: "2027-12-31",
+              availability: "https://schema.org/InStock",
+              itemCondition: "https://schema.org/NewCondition",
+              seller: {
+                "@type": "Organization",
+                name: "DigiVerse",
+                url: SITE_URL,
+              },
+            },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: t("Home"), item: SITE_URL },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: sharedMeta.title,
+                item: `${SITE_URL}/?product=${toProductCode(sharedMeta.id)}`,
+              },
+            ],
+          },
+        ],
+      }
+    : null;
+
+  const storeJsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "DigiVerse",
+        url: SITE_URL,
+        logo: `${SITE_URL}/logo-mark.png`,
+        description: SITE_DESCRIPTION,
+        sameAs: ["https://t.me/digiverse_top"],
+      },
+      {
+        "@type": "WebSite",
+        name: "DigiVerse",
+        url: SITE_URL,
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${SITE_URL}/?q={search_term_string}#catalog`,
+          "query-input": "required name=search_term_string",
+        },
+      },
+    ],
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-bg font-body text-ink">
       {sharedMeta ? (
         <SEO
-          title={sharedMeta.title}
-          description={`${sharedMeta.description ? sharedMeta.description + " — " : ""}${t("{price} on DigiVerse. Instant delivery and secure checkout.", { price: `$${sharedMeta.price.toFixed(2)}` })}`}
+          title={`Buy ${sharedMeta.title} | Instant Delivery`}
+          description={`${sharedMeta.description ? sharedMeta.description + " — " : ""}${t("{price} on DigiVerse. Instant 0-second delivery and secure checkout.", { price: `$${sharedMeta.price.toFixed(2)}` })}`}
           path={`/?product=${toProductCode(sharedMeta.id)}`}
           image={sharedMeta.image || undefined}
+          keywords={`${sharedMeta.title}, buy ${sharedMeta.title}, instant software license, digital goods, DigiVerse`}
+          jsonLd={productJsonLd}
         />
       ) : (
-        <SEO />
-      )}
-      <Head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@graph": [
-                { "@type": "Organization", name: "DigiVerse", url: SITE_URL, description: SITE_DESCRIPTION },
-                { "@type": "WebSite", name: "DigiVerse", url: SITE_URL },
-              ],
-            }),
-          }}
+        <SEO
+          title="Buy Digital Software Licenses & Muse AI Tokens"
+          description="Instant digital goods marketplace. Buy Muse AI tokens, premium software license keys, and accounts with 0-second delivery. 100% warranty, pay securely with USDT & crypto."
+          keywords="digital software licenses, Muse AI tokens, buy Muse AI tokens, cheap license keys, Windows keys, office licenses, crypto software store, USDT digital goods, instant digital delivery, DigiVerse"
+          jsonLd={storeJsonLd}
         />
-      </Head>
+      )}
       <SiteHeader session={session} onSignOut={() => supabase.auth.signOut()} />
 
       <main className="flex-1">

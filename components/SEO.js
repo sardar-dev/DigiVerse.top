@@ -16,13 +16,19 @@ export default function SEO({
   cardType = "summary", // compact summary card so no massive banner appears!
   imageWidth,
   imageHeight,
+  keywords,
+  jsonLd,
 }) {
   const { locale = "en" } = useRouter();
 
   // Clean, high-CTR title without trailing raw emoji that break chat crawler decoders
   const fullTitle = title
     ? `${title} | ${BRAND_NAME}`
-    : `${BRAND_NAME} — Instant Digital Products & Subscriptions`;
+    : `${BRAND_NAME} — Buy Digital Software Licenses & Muse AI Tokens`;
+
+  const defaultKeywords =
+    "digital software licenses, Muse AI tokens, buy Muse AI tokens, cheap license keys, Windows keys, office licenses, crypto software store, USDT digital goods, instant digital delivery, DigiVerse";
+  const kw = keywords || defaultKeywords;
 
   const prefix = (l) => (l === "en" ? "" : `/${l}`);
   const url = `${SITE_URL}${prefix(locale)}${path}`;
@@ -49,6 +55,7 @@ export default function SEO({
       <title>{fullTitle}</title>
       <meta name="title" content={fullTitle} />
       <meta name="description" content={desc} />
+      <meta name="keywords" content={kw} />
       <link rel="canonical" href={url} />
 
       {/* Multilingual alternates */}
@@ -109,6 +116,16 @@ export default function SEO({
       <link rel="manifest" href="/manifest.webmanifest" />
       {/* viewport meta lives in pages/_document.js — Next.js requires it
           there, not per-page, so it isn't duplicated here. */}
+
+      {/* Structured Data (JSON-LD for Google Rich Results) */}
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd),
+          }}
+        />
+      )}
     </Head>
   );
 }

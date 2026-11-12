@@ -85,3 +85,12 @@ DigiVerse.top/
   - Ensure the build exits with code `0`.
 - **Search Exclusions**:
   - During codebase searches, ignore `.next/`, `node_modules/`, `.git/`, and build artifacts.
+
+---
+
+## 6. SEO & Customer-Facing Terminology Standards
+- **Strict Terminology Rule**: NEVER use supplier jargon like "buff" or "buff token" in customer-facing UI, SEO titles, meta descriptions, alt tags, or marketing copy. Always use clean, professional terms: **"Muse AI Tokens"**, **"Meta Muse AI Tokens"**, **"1 Billion Muse AI Tokens"**.
+- **Dynamic Sitemap Indexing (`pages/sitemap.xml.js`)**: All active storefront products are dynamically rendered into the sitemap with `daily` change frequency and `0.9` priority so Google crawls and indexes every product.
+- **Google Rich Results Schema**: Storefront and individual product pages inject structured `schema.org/Product`, `Offer` (`price`, `priceCurrency: "USD"`, `availability: "InStock"`), `BreadcrumbList`, and `WebSite` with `SearchAction` for Google rich snippets.
+
+
