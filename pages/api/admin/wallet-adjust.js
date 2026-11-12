@@ -15,13 +15,42 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: "email_amount_reason_required" });
   }
 
-  const { data: profile, error: profileErr } = await supabaseAdmin
+  let { data: profile, error: profileErr } = await supabaseAdmin
     .from("profiles")
     .select("id, balance")
     .eq("email", email)
     .maybeSingle();
 
-  if (profileErr || !profile) {
+  if (!profile) {
+    // Check auth.users and auto-create profile
+    try {
+      const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+      const authUser = (userList?.users || []).find(
+        (u) => u.email && u.email.toLowerCase() === email.toLowerCase()
+      );
+      if (authUser) {
+        const { data: createdProf } = await supabaseAdmin
+          .from("profiles")
+          .upsert(
+            {
+              id: authUser.id,
+              email: authUser.email,
+              username:
+                authUser.user_metadata?.username ||
+                (authUser.email ? authUser.email.split("@")[0] : `user_${authUser.id.slice(0, 5)}`),
+              balance: 0,
+              created_at: authUser.created_at || new Date().toISOString(),
+            },
+            { onConflict: "id" }
+          )
+          .select("id, balance")
+          .single();
+        profile = createdProf;
+      }
+    } catch {}
+  }
+
+  if (!profile) {
     return res.status(404).json({ success: false, error: "user_not_found" });
   }
 

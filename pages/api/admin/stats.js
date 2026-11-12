@@ -6,9 +6,98 @@ import { requireAdmin } from "../../../lib/requireAdmin";
 // database (admin_order_stats, migration 021) so only a few numbers cross
 // the wire. Without that migration it falls back to reading the rows.
 const ORDER_ROW_CAP = 10000;
-const RECENT_USERS = 15;
+const RECENT_USERS = 25;
 const round = (n) => Number(Number(n || 0).toFixed(2));
 const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
+
+// Combines Supabase Auth users (source of truth for signups) with public.profiles (balances)
+// and auto-heals any users who don't yet have a public.profiles row.
+async function getRecentUsers(limit = 25) {
+  try {
+    const [authListRes, profileListRes] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: limit }),
+      supabaseAdmin
+        .from("profiles")
+        .select("id, email, balance, created_at")
+        .order("created_at", { ascending: false, nullsFirst: false })
+        .limit(limit),
+    ]);
+
+    const authUsers = authListRes.data?.users || [];
+    const profiles = profileListRes.data || [];
+
+    const profileById = new Map();
+    const profileByEmail = new Map();
+    for (const p of profiles) {
+      if (p.id) profileById.set(p.id, p);
+      if (p.email) profileByEmail.set(p.email.toLowerCase(), p);
+    }
+
+    const seenEmails = new Set();
+    const merged = [];
+
+    // 1. Process auth users first (Supabase Auth records all signups immediately)
+    for (const u of authUsers) {
+      const email = (u.email || "").toLowerCase();
+      if (!email || seenEmails.has(email)) continue;
+      seenEmails.add(email);
+
+      const prof = profileById.get(u.id) || profileByEmail.get(email);
+      const createdAt = u.created_at || prof?.created_at || new Date().toISOString();
+      merged.push({
+        id: u.id,
+        email: u.email,
+        balance: prof ? Number(prof.balance || 0) : 0,
+        created_at: createdAt,
+      });
+
+      // Auto-heal missing profile in background
+      if (!prof) {
+        supabaseAdmin
+          .from("profiles")
+          .upsert(
+            {
+              id: u.id,
+              email: u.email,
+              username:
+                u.user_metadata?.username ||
+                (u.email ? u.email.split("@")[0] : `user_${u.id.slice(0, 5)}`),
+              balance: 0,
+              created_at: createdAt,
+            },
+            { onConflict: "id" }
+          )
+          .then(() => {})
+          .catch(() => {});
+      }
+    }
+
+    // 2. Add any profiles not in the auth.users response
+    for (const p of profiles) {
+      const email = (p.email || "").toLowerCase();
+      if (!email || seenEmails.has(email)) continue;
+      seenEmails.add(email);
+      merged.push({
+        id: p.id,
+        email: p.email,
+        balance: Number(p.balance || 0),
+        created_at: p.created_at || new Date().toISOString(),
+      });
+    }
+
+    // Sort descending by created_at so newest signups are strictly at the top
+    merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return merged.slice(0, limit);
+  } catch (e) {
+    console.error("[getRecentUsers] error, falling back to profiles:", e.message);
+    const { data: fallback } = await supabaseAdmin
+      .from("profiles")
+      .select("email, balance, created_at")
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(limit);
+    return fallback || [];
+  }
+}
 
 // Same totals as the SQL function, computed from rows (fallback path).
 async function statsFromRows(since7, since30) {
@@ -96,7 +185,7 @@ export default async function handler(req, res) {
       count("products", (q) => q.eq("provider", "manual")),
       count("wallet_deposit_invoices", (q) => q.eq("status", "pending")),
       count("wallet_adjustments"),
-      supabaseAdmin.from("profiles").select("email, balance, created_at").order("created_at", { ascending: false }).limit(RECENT_USERS),
+      getRecentUsers(RECENT_USERS),
       // Supplier-side movers: biggest stock drops first (migration 020).
       supabaseAdmin
         .from("product_sources")
@@ -119,7 +208,7 @@ export default async function handler(req, res) {
       last7: users7.count ?? 0,
       last30: users30.count ?? 0,
       buyers: Number(st.buyers) || 0,
-      recent: recentUsers.data || [],
+      recent: Array.isArray(recentUsers) ? recentUsers : (recentUsers?.data || []),
     },
     orders: {
       total: Number(st.total) || 0,

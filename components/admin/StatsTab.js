@@ -258,8 +258,8 @@ export default function StatsTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {users.recent.map((u) => (
-              <UserRow key={u.email + u.created_at} user={u} />
+            {(users.recent || []).map((u) => (
+              <UserRow key={u.id || (u.email + u.created_at)} user={u} />
             ))}
           </tbody>
         </DataTable>

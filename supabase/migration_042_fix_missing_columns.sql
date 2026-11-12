@@ -72,5 +72,33 @@ alter table if exists public.referral_settings
   add column if not exists whitelisted_ips text default '',
   add column if not exists whitelisted_device_ids text default '';
 
--- 5. Notify PostgREST schema cache to reload
+-- 5. Backfill any missing profiles from auth.users and fix null created_at
+alter table if exists public.profiles
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists balance numeric not null default 0,
+  add column if not exists is_admin boolean not null default false;
+
+insert into public.profiles (id, email, username, created_at, balance)
+select
+  u.id,
+  u.email,
+  coalesce(
+    u.raw_user_meta_data->>'username',
+    split_part(u.email, '@', 1)
+  ),
+  coalesce(u.created_at, now()),
+  0
+from auth.users u
+where not exists (
+  select 1 from public.profiles p where p.id = u.id
+)
+on conflict (id) do nothing;
+
+update public.profiles p
+set created_at = coalesce(u.created_at, now())
+from auth.users u
+where p.id = u.id and p.created_at is null;
+
+-- 6. Notify PostgREST schema cache to reload
 notify pgrst, 'reload schema';
+

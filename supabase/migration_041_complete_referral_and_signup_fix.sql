@@ -384,7 +384,8 @@ begin
       username,
       referred_by,
       device_id,
-      registration_ip
+      registration_ip,
+      created_at
     )
     values (
       new.id,
@@ -392,18 +393,20 @@ begin
       v_clean_username,
       v_inviter_id,
       nullif(v_device_id, ''),
-      nullif(v_reg_ip, '')
+      nullif(v_reg_ip, ''),
+      coalesce(new.created_at, now())
     )
     on conflict (id) do update set
       email = excluded.email,
       username = coalesce(public.profiles.username, excluded.username),
       referred_by = coalesce(public.profiles.referred_by, excluded.referred_by),
       device_id = coalesce(public.profiles.device_id, excluded.device_id),
-      registration_ip = coalesce(public.profiles.registration_ip, excluded.registration_ip);
+      registration_ip = coalesce(public.profiles.registration_ip, excluded.registration_ip),
+      created_at = coalesce(public.profiles.created_at, excluded.created_at, now());
   exception when others then
     begin
-      insert into public.profiles (id, email)
-      values (new.id, new.email)
+      insert into public.profiles (id, email, created_at)
+      values (new.id, new.email, coalesce(new.created_at, now()))
       on conflict (id) do nothing;
     exception when others then
       null;

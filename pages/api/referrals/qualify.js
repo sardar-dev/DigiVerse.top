@@ -35,6 +35,29 @@ export default async function handler(req, res) {
     return res.status(404).json({ success: false, error: "user_not_found" });
   }
 
+  // Ensure public.profiles record always exists for this user immediately
+  try {
+    const rawUsername =
+      req.body?.username ||
+      authUser.user.user_metadata?.username ||
+      (authUser.user.email ? authUser.user.email.split("@")[0] : `user_${userId.slice(0, 5)}`);
+    const cleanUsername = rawUsername.toLowerCase().trim();
+
+    await supabaseAdmin.from("profiles").upsert(
+      {
+        id: userId,
+        email: authUser.user.email || req.body?.email || null,
+        username: cleanUsername,
+        device_id: req.body?.device_id || authUser.user.user_metadata?.device_id || null,
+        registration_ip: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || null,
+        created_at: authUser.user.created_at || new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    );
+  } catch (e) {
+    console.warn("[referrals/qualify] ensure profile error:", e.message);
+  }
+
   const clientIp =
     (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
     req.socket?.remoteAddress ||

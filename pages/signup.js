@@ -186,7 +186,7 @@ export default function Signup() {
       return setError(signUpError.message);
     }
 
-    // Auto-link and qualify referral immediately (dual gift reward for inviter + new user)
+    // Auto-link profile and qualify referral immediately (dual gift reward for inviter + new user)
     if (data?.user?.id) {
       try {
         await fetch("/api/referrals/qualify", {
@@ -194,6 +194,8 @@ export default function Signup() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             user_id: data.user.id,
+            email: emailCheck.normalizedEmail,
+            username: cleanUser,
             ref: cleanRef,
             device_id: deviceId,
           }),
