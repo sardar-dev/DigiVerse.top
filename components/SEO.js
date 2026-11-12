@@ -100,7 +100,10 @@ export default function SEO({
       {/* Google Search Console ownership verification */}
       <meta name="google-site-verification" content="sRurRBK_qxB1q-UqsaETPM22-DJDUgYvwrB04Sngv7g" />
 
-      {/* Branded icons (static files in /public) */}
+      {/* Branded icons (static files in /public, compressed/quantized for fast load) */}
+      <link rel="icon" href="/favicon.ico" sizes="any" />
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
       <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/manifest.webmanifest" />

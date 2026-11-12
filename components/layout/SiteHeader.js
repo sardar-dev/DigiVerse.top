@@ -102,14 +102,16 @@ export default function SiteHeader({
     <header className="sticky top-0 z-30 w-full max-w-full border-b border-border bg-surface/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:px-6 sm:py-3">
         <Link href="/" className="flex items-center gap-2 min-w-0" aria-label={`${brandName} home`}>
-          <span className="flex h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-light to-brand-dark shadow-card">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M12 2.5l2.4 6.1 6.1 2.4-6.1 2.4L12 19.5l-2.4-6.1-6.1-2.4 6.1-2.4L12 2.5z"
-                fill="#fff"
-              />
-            </svg>
-          </span>
+          <img
+            src="/logo-mark.png"
+            alt=""
+            width={36}
+            height={36}
+            className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 rounded-xl object-cover shadow-card"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
           <span className="text-base sm:text-lg font-semibold tracking-tight text-ink truncate">{brandName}</span>
         </Link>
 

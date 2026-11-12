@@ -66,9 +66,15 @@ export default function AdminLayout({ tab, onTabChange, dashboard, pendingManual
       <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <a href="/" className="flex items-center gap-2.5" aria-label="Open storefront">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-light to-brand-dark text-white shadow-card">
-              ✦
-            </span>
+            <img
+              src="/logo-mark.png"
+              alt=""
+              width={36}
+              height={36}
+              className="h-9 w-9 flex-none rounded-xl object-cover shadow-card"
+              loading="eager"
+              decoding="async"
+            />
             <span className="text-base font-semibold tracking-tight text-ink">
               DigiVerse <span className="font-normal text-muted">Admin</span>
             </span>
