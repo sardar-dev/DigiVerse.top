@@ -78,7 +78,7 @@ export default function Terms() {
             </Section>
 
             <Section title={t("8. Contact")}>
-              {t("Reach us through the WhatsApp channel linked on the Site.")}
+              {t("Reach us through our official Telegram support channel linked on the Site.")}
             </Section>
           </div>
 

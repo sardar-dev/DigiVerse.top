@@ -70,7 +70,7 @@ export default function Privacy() {
             </Section>
 
             <Section title={t("6. Contact")}>
-              {t("Reach us through the WhatsApp channel linked on the Site.")}
+              {t("Reach us through our official Telegram support channel linked on the Site.")}
             </Section>
           </div>
 

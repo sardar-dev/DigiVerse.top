@@ -89,7 +89,7 @@ const part = {
     "5. Your rights": "5. حقوقك",
     "You can ask us to access, correct, or delete your account data by contacting us through the channel linked on the Site — note that on-chain transaction records themselves cannot be deleted, as they exist on the public blockchain independent of us.": "يمكنك أن تطلب منا الاطلاع على بيانات حسابك أو تصحيحها أو حذفها عبر التواصل معنا من خلال القناة المرتبطة في الموقع — علمًا بأن سجلات المعاملات على البلوكشين نفسها لا يمكن حذفها لأنها موجودة على البلوكشين العام بمعزل عنا.",
     "6. Contact": "6. التواصل",
-    "Reach us through the WhatsApp channel linked on the Site.": "تواصل معنا عبر قناة واتساب المرتبطة في الموقع.",
+    "Reach us through our official Telegram support channel linked on the Site.": "تواصل معنا عبر قناة تيليجرام الرسمية للدعم المرتبطة في الموقع.",
 
     // ---- terms ----
     "Terms of Service for {site} — digital products, USDT (BEP20) payments, delivery and refunds.": "شروط الخدمة لـ {site} — المنتجات الرقمية ومدفوعات USDT (BEP20) والتسليم والاسترداد.",
@@ -199,7 +199,7 @@ const part = {
     "5. Your rights": "5. Ваши права",
     "You can ask us to access, correct, or delete your account data by contacting us through the channel linked on the Site — note that on-chain transaction records themselves cannot be deleted, as they exist on the public blockchain independent of us.": "Вы можете запросить доступ к данным своего аккаунта, их исправление или удаление, связавшись с нами через канал, указанный на Сайте. Обратите внимание: сами записи ончейн-транзакций удалить нельзя, поскольку они существуют в публичном блокчейне независимо от нас.",
     "6. Contact": "6. Контакты",
-    "Reach us through the WhatsApp channel linked on the Site.": "Свяжитесь с нами через канал WhatsApp, указанный на Сайте.",
+    "Reach us through our official Telegram support channel linked on the Site.": "Свяжитесь с нами через наш официальный канал поддержки в Telegram, указанный на Сайте.",
 
     // ---- terms ----
     "Terms of Service for {site} — digital products, USDT (BEP20) payments, delivery and refunds.": "Условия использования {site} — цифровые товары, платежи в USDT (BEP20), доставка и возвраты.",

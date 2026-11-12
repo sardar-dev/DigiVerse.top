@@ -52,18 +52,61 @@ export default async function handler(req, res) {
   // 1. Fetch user profile
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("id, email, username, balance, created_at")
+    .select("id, email, username, balance, referred_by, created_at")
     .eq("id", userId)
     .single();
 
-  // 1b. Auto-reconciliation: ensure gifts exist for all qualified referrals
+  // 1b. Auto-reconciliation: ensure referral records & gifts exist for all qualified referrals
   try {
+    const settings = await getReferralSettings();
+    const requireEmail = settings?.require_email_verification === true;
+
+    // If user was referred by someone (stored in profiles.referred_by), ensure public.referrals has the record
+    if (profile?.referred_by && profile.referred_by !== userId) {
+      const { data: existingUserRef } = await supabaseAdmin
+        .from("referrals")
+        .select("id, status")
+        .eq("referred_id", userId)
+        .maybeSingle();
+
+      if (!existingUserRef) {
+        const { data: inviterProf } = await supabaseAdmin
+          .from("profiles")
+          .select("username")
+          .eq("id", profile.referred_by)
+          .maybeSingle();
+
+        await supabaseAdmin.from("referrals").insert({
+          referrer_id: profile.referred_by,
+          referred_id: userId,
+          referrer_username: inviterProf?.username || "referrer",
+          status: requireEmail ? "pending_verification" : "qualified",
+          reward_issued: !requireEmail,
+          created_at: profile.created_at || new Date().toISOString(),
+          verified_at: requireEmail ? null : (profile.created_at || new Date().toISOString()),
+        });
+      }
+    }
+
     const { data: userRefs } = await supabaseAdmin
       .from("referrals")
       .select("id, referrer_id, referred_id, status, reward_issued, created_at")
       .or(`referrer_id.eq.${userId},referred_id.eq.${userId}`);
 
     for (const ref of userRefs || []) {
+      // Auto-qualify if email verification is not required
+      if (!requireEmail && ref.status === "pending_verification") {
+        await supabaseAdmin
+          .from("referrals")
+          .update({
+            status: "qualified",
+            reward_issued: true,
+            verified_at: ref.created_at || new Date().toISOString(),
+          })
+          .eq("id", ref.id);
+        ref.status = "qualified";
+      }
+
       if (ref.status === "qualified" || ref.status === "pending_verification") {
         const { data: existingGift } = await supabaseAdmin
           .from("referral_gifts")

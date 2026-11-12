@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
 import SEO from "../components/SEO";
 import Alert from "../components/ui/Alert";
@@ -11,8 +12,15 @@ import LanguageSwitcher from "../components/LanguageSwitcher";
 import GoogleIcon from "../components/icons/GoogleIcon";
 
 export default function Login() {
+  const router = useRouter();
   const { t, locale } = useT();
   const home = locale === "en" ? "/" : `/${locale}`;
+  const buying = router.query.buying;
+  const price = router.query.price;
+  const returnTo = router.query.returnTo;
+  const signupLink = buying
+    ? `/signup?buying=${encodeURIComponent(buying)}&price=${encodeURIComponent(price || "")}&returnTo=${encodeURIComponent(returnTo || "")}`
+    : "/signup";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -69,7 +77,8 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) return setError(error.message);
-    window.location.href = home;
+    const safeReturn = (typeof returnTo === "string" && returnTo.startsWith("/")) ? returnTo : home;
+    window.location.href = safeReturn;
   }
 
   async function forgotPassword() {
@@ -109,7 +118,20 @@ export default function Login() {
         <Link href="/" className="mb-1 block text-base font-semibold text-ink">
           {SITE_NAME}
         </Link>
-        <h1 className="mb-5 text-2xl font-semibold text-ink">{t("Log in")}</h1>
+        <h1 className="mb-4 text-2xl font-semibold text-ink">{t("Log in")}</h1>
+
+        {buying && (
+          <div className="mb-4 rounded-xl border border-brand/30 bg-brand-soft/40 p-3.5 text-xs text-ink">
+            <div className="flex items-center gap-2 font-semibold text-brand">
+              <span aria-hidden="true">🛒</span>
+              <span>{t("You were buying {name}", { name: buying })}</span>
+            </div>
+            <p className="mt-1 text-muted">
+              {price ? t("Amount: ${price} · ", { price }) : ""}
+              {t("Log in to pay with your wallet balance.")}
+            </p>
+          </div>
+        )}
 
         {/* Continue with Google (shown only when enabled in Admin Settings) */}
         {googleAuthEnabled && (
@@ -182,7 +204,7 @@ export default function Login() {
 
           <p className="text-sm text-muted">
             {t("No account?")}{" "}
-            <Link href="/signup" className="font-medium text-brand hover:underline">
+            <Link href={signupLink} className="font-medium text-brand hover:underline">
               {t("Sign up")}
             </Link>
           </p>

@@ -72,6 +72,11 @@ alter table if exists public.referral_settings
   add column if not exists whitelisted_ips text default '',
   add column if not exists whitelisted_device_ids text default '';
 
+-- Ensure email verification is OFF by default so referral gifts are awarded on signup
+update public.referral_settings
+set require_email_verification = false
+where id = 1;
+
 -- 5. Backfill any missing profiles from auth.users and fix null created_at
 alter table if exists public.profiles
   add column if not exists created_at timestamptz not null default now(),
@@ -99,6 +104,16 @@ set created_at = coalesce(u.created_at, now())
 from auth.users u
 where p.id = u.id and p.created_at is null;
 
--- 6. Notify PostgREST schema cache to reload
+-- 6. Allow guest orders without user_id
+alter table if exists public.orders
+  alter column user_id drop not null;
+
+alter table if exists public.orders
+  drop constraint if exists orders_user_id_fkey;
+
+alter table if exists public.orders
+  add constraint orders_user_id_fkey foreign key (user_id) references auth.users(id) on delete set null;
+
+-- 7. Notify PostgREST schema cache to reload
 notify pgrst, 'reload schema';
 

@@ -39,8 +39,12 @@ export default function App({ Component, pageProps }) {
 
   // Global Referral Tracker: Capture ?ref= from ANY landing URL and persist it across site navigation
   useEffect(() => {
-    if (!router.isReady) return;
-    const refParam = router.query.ref;
+    let refParam = router.query.ref;
+    if (!refParam && typeof window !== "undefined") {
+      try {
+        refParam = new URLSearchParams(window.location.search).get("ref");
+      } catch {}
+    }
     if (refParam && typeof refParam === "string") {
       const cleanRef = refParam.trim().replace(/^@+/, "");
       if (cleanRef) {

@@ -19,6 +19,12 @@ export default function Signup() {
   const router = useRouter();
   const { t, locale } = useT();
   const home = locale === "en" ? "/" : `/${locale}`;
+  const buying = router.query.buying;
+  const price = router.query.price;
+  const returnTo = router.query.returnTo;
+  const loginLink = buying
+    ? `/login?buying=${encodeURIComponent(buying)}&price=${encodeURIComponent(price || "")}&returnTo=${encodeURIComponent(returnTo || "")}`
+    : "/login";
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -47,6 +53,13 @@ export default function Signup() {
   // Capture referral parameter from URL or persistent storage
   useEffect(() => {
     let code = (router.query.ref || "").toString().trim().replace(/^@+/, "");
+    if (!code && typeof window !== "undefined") {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlRef = urlParams.get("ref");
+        if (urlRef) code = urlRef.trim().replace(/^@+/, "");
+      } catch {}
+    }
     if (!code) {
       try {
         const stored = localStorage.getItem(REF_STORAGE_KEY);
@@ -63,7 +76,7 @@ export default function Signup() {
         localStorage.setItem(REF_STORAGE_KEY, code);
       } catch {}
     }
-  }, [router.query.ref]);
+  }, [router.query.ref, router.isReady]);
 
   async function handleGoogleSignIn() {
     setError("");
@@ -205,7 +218,8 @@ export default function Signup() {
 
     // If email confirmation is disabled on Supabase, user is immediately signed in
     if (data?.session) {
-      window.location.href = home;
+      const safeReturn = (typeof returnTo === "string" && returnTo.startsWith("/")) ? returnTo : home;
+      window.location.href = safeReturn;
       return;
     }
 
@@ -285,6 +299,19 @@ export default function Signup() {
         <p className="mb-5 text-xs text-muted">
           {t("Enter your username, email, and password to register.")}
         </p>
+
+        {buying && (
+          <div className="mb-4 rounded-xl border border-brand/30 bg-brand-soft/40 p-3.5 text-xs text-ink">
+            <div className="flex items-center gap-2 font-semibold text-brand">
+              <span aria-hidden="true">🛒</span>
+              <span>{t("You were buying {name}", { name: buying })}</span>
+            </div>
+            <p className="mt-1 text-muted">
+              {price ? t("Amount: ${price} · ", { price }) : ""}
+              {t("Create an account to pay with your wallet balance.")}
+            </p>
+          </div>
+        )}
 
         {refInviter && (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-brand/30 bg-brand-soft px-3.5 py-2.5 text-xs font-semibold text-brand">
@@ -374,7 +401,7 @@ export default function Signup() {
 
           <p className="text-center text-sm text-muted">
             {t("Already have an account?")}{" "}
-            <Link href="/login" className="font-semibold text-brand hover:underline">
+            <Link href={loginLink} className="font-semibold text-brand hover:underline">
               {t("Log in")}
             </Link>
           </p>

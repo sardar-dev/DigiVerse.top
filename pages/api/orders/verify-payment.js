@@ -22,14 +22,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: "method_not_allowed" });
   }
 
-  const supabaseServer = createPagesServerClient({ req, res });
-  const {
-    data: { session },
-  } = await supabaseServer.auth.getSession();
-
-  if (!session) {
-    return res.status(401).json({ success: false, error: "login_required" });
-  }
+  let session = null;
+  try {
+    const supabaseServer = createPagesServerClient({ req, res });
+    const sessionRes = await supabaseServer.auth.getSession();
+    session = sessionRes.data?.session || null;
+  } catch {}
 
   const { order_id, tx_hash: rawTxHash } = req.body || {};
   if (!order_id || !rawTxHash) {
@@ -37,19 +35,25 @@ export default async function handler(req, res) {
   }
   const tx_hash = rawTxHash.toLowerCase();
 
+  const callerKey = session?.user?.id || (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "guest";
+
   // Too many wrong hashes recently → short freeze.
-  const frozen = await frozenSeconds(session.user.id);
+  const frozen = await frozenSeconds(callerKey);
   if (frozen > 0) return res.status(429).json(frozenResponse(frozen));
 
   const { data: order, error: orderErr } = await supabaseAdmin
     .from("orders")
     .select("*")
     .eq("id", order_id)
-    .eq("user_id", session.user.id)
     .single();
 
   if (orderErr || !order) {
     return res.status(404).json({ success: false, error: "order_not_found" });
+  }
+
+  // If order belongs to an authenticated user, only that user can submit payment
+  if (order.user_id && (!session || order.user_id !== session.user.id)) {
+    return res.status(403).json({ success: false, error: "not_your_order" });
   }
 
   // Atomically claim this tx hash before we do anything else. If it's
@@ -96,7 +100,7 @@ export default async function handler(req, res) {
       .update({ status: "pending_payment", updated_at: new Date().toISOString() })
       .eq("id", order.id);
     await releaseTxHash(tx_hash);
-    const lock = isWrongHash(verdict.reason) ? await recordWrongHash(session.user.id) : 0;
+    const lock = isWrongHash(verdict.reason) ? await recordWrongHash(callerKey) : 0;
     return res.status(lock ? 429 : 202).json({
       success: false,
       error: lock ? "too_many_attempts" : verdict.reason,

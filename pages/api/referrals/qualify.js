@@ -136,9 +136,9 @@ export default async function handler(req, res) {
 
   // Check if email verification is required by admin settings
   const settings = await getReferralSettings();
-  const requireEmail = settings?.require_email_verification !== false;
+  const requireEmail = settings?.require_email_verification === true;
 
-  // If email verification is required, user is not confirmed yet, and not whitelisted
+  // If email verification is explicitly required, user is not confirmed yet, and not whitelisted
   if (requireEmail && !authUser.user.email_confirmed_at && !isWhitelisted) {
     return res.status(200).json({
       success: true,

@@ -15,14 +15,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: "method_not_allowed" });
   }
 
-  const supabaseServer = createPagesServerClient({ req, res });
-  const {
-    data: { session },
-  } = await supabaseServer.auth.getSession();
+  let session = null;
+  try {
+    const supabaseServer = createPagesServerClient({ req, res });
+    const sessionRes = await supabaseServer.auth.getSession();
+    session = sessionRes.data?.session || null;
+  } catch {}
 
-  if (!session) {
-    return res.status(401).json({ success: false, error: "login_required" });
-  }
+  const userId = session?.user?.id || null;
+  const isGuest = !userId;
 
   const { product_id, quantity = 1, email, activation_info, coupon_code, gifts_to_redeem = 0 } = req.body || {};
   let finalActivation = activation_info;
@@ -203,6 +204,9 @@ export default async function handler(req, res) {
 
   // Validate referral gift parameters early
   if (giftsCount > 0) {
+    if (isGuest || !userId) {
+      return res.status(401).json({ success: false, error: "login_required_for_gifts" });
+    }
     if (!localProduct.tunvn_buff) {
       return res.status(400).json({ success: false, error: "gifts_only_for_muse_ai" });
     }
@@ -223,7 +227,7 @@ export default async function handler(req, res) {
   if (coupon_code && String(coupon_code).trim() && fullBase > 0) {
     const result = await checkCoupon({
       code: coupon_code,
-      userId: session.user.id,
+      userId: userId,
       productId: product_id,
       base: fullBase,
       unitCost, // live supplier cost (or the manual product's cost)
@@ -248,7 +252,7 @@ export default async function handler(req, res) {
 
   const orderRow = {
       id: orderId,
-      user_id: session.user.id,
+      user_id: userId,
       product_id,
       quantity,
       unit_price: unitPrice,
@@ -296,9 +300,9 @@ export default async function handler(req, res) {
   }
 
   // 2. Now atomically reserve referral gifts with valid order.id
-  if (giftsCount > 0) {
+  if (giftsCount > 0 && userId) {
     const { error: reserveErr } = await supabaseAdmin.rpc("reserve_gifts_for_order", {
-      p_user_id: session.user.id,
+      p_user_id: userId,
       p_order_id: order.id,
       p_product_id: product_id,
       p_gift_count: giftsCount,
@@ -313,7 +317,7 @@ export default async function handler(req, res) {
 
   // Two customers can race for the last use of a limited coupon; the
   // later order is rejected here (and cancelled so it holds no use).
-  if (coupon && !(await orderFitsCouponLimits(coupon, order.id, session.user.id))) {
+  if (coupon && !(await orderFitsCouponLimits(coupon, order.id, userId))) {
     if (giftsCount > 0) {
       await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: order.id });
     }

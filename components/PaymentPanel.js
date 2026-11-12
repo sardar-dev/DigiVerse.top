@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import QRCode from "qrcode";
 import { supabase } from "../lib/supabaseClient";
 import Alert from "./ui/Alert";
@@ -15,6 +16,8 @@ export default function PaymentPanel({ order, onDone, onBack }) {
   const { t } = useT();
   const [method, setMethod] = useState(null); // 'wallet' | 'onchain' | null
   const [balance, setBalance] = useState(null);
+  const [sessionUser, setSessionUser] = useState(null);
+  const [walletLoginPrompt, setWalletLoginPrompt] = useState(false);
   const [txHash, setTxHash] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -62,6 +65,7 @@ export default function PaymentPanel({ order, onDone, onBack }) {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) return;
+      setSessionUser(session.user);
       const { data } = await supabase
         .from("profiles")
         .select("balance")
@@ -228,21 +232,86 @@ export default function PaymentPanel({ order, onDone, onBack }) {
               : "opacity-100 blur-0"
           }`}
         >
+          {walletLoginPrompt && !sessionUser && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2 text-xs text-ink">
+              <div className="flex items-start gap-2">
+                <span className="text-base">👛</span>
+                <div>
+                  <p className="font-semibold text-amber-700 dark:text-amber-300">
+                    {t("Wallet payment requires an account")}
+                  </p>
+                  <p className="text-muted mt-0.5 leading-relaxed">
+                    {t("Log in or create an account to use store wallet balance, or select 'Pay on-chain' below to checkout immediately as guest.")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Link
+                  href={`/login?returnTo=/?product=${order.product_id}&buying=${encodeURIComponent(order.products?.title || 'product')}&price=${order.total}`}
+                  className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-hover shadow-sm"
+                >
+                  {t("Log In")}
+                </Link>
+                <Link
+                  href={`/signup?returnTo=/?product=${order.product_id}&buying=${encodeURIComponent(order.products?.title || 'product')}&price=${order.total}`}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:bg-brand-soft shadow-sm"
+                >
+                  {t("Sign Up")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWalletLoginPrompt(false);
+                    setMethod("onchain");
+                  }}
+                  className="ms-auto text-xs font-semibold text-brand underline cursor-pointer"
+                >
+                  {t("Pay on-chain instead →")}
+                </button>
+              </div>
+            </div>
+          )}
+
           <button
-            onClick={() => setMethod("wallet")}
-            className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"
-            disabled={balance === null || isChecking || isPaymentBlocked}
-          >
-            <span className="font-medium text-ink">{t("Pay with wallet")}</span>
-            <span className="font-mono text-sm" dir="ltr">{t("{amount} balance", { amount: `$${(balance ?? 0).toFixed(2)}` })}</span>
-          </button>
-          <button
-            onClick={() => setMethod("onchain")}
-            className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft"
+            type="button"
+            onClick={() => {
+              if (!sessionUser) {
+                setWalletLoginPrompt((p) => !p);
+              } else {
+                setMethod("wallet");
+              }
+            }}
+            className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft transition-all"
             disabled={isChecking || isPaymentBlocked}
           >
-            <span className="font-medium text-ink">{t("USDT (BEP20) deposit")}</span>
-            <span className="text-muted">{t("Pay on-chain")}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-ink">{t("Pay with wallet")}</span>
+              {!sessionUser && (
+                <span className="rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                  {t("Sign up required")}
+                </span>
+              )}
+            </div>
+            {sessionUser ? (
+              <span className="font-mono text-sm" dir="ltr">{t("{amount} balance", { amount: `$${(balance ?? 0).toFixed(2)}` })}</span>
+            ) : (
+              <span className="text-xs text-muted font-normal">{t("Click to log in")}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMethod("onchain")}
+            className="flex w-full items-center justify-between rounded-lg border border-brand/40 bg-brand-soft/20 px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft/40 transition-all"
+            disabled={isChecking || isPaymentBlocked}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-ink">{t("USDT (BEP20) deposit")}</span>
+              <span className="rounded-md bg-success-soft border border-success/30 px-2 py-0.5 text-[10px] font-bold text-success">
+                {sessionUser ? t("Instant Verification") : t("Guest checkout · No login needed")}
+              </span>
+            </div>
+            <span className="text-brand font-medium">{t("Pay on-chain")}</span>
           </button>
         </div>
 

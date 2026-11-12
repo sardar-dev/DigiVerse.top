@@ -107,20 +107,22 @@ export default function Storefront({ initialProducts, sharedMeta }) {
 
   useEffect(() => {
     if (!router.isReady) return;
-    const productId = router.query.product;
-    if (!productId || active) return;
+    const rawParam = router.query.product || router.query.buy;
+    if (!rawParam || active) return;
     if (products.length === 0) return; // wait for the list to load first
 
-    const match = products.find((p) => String(p.id) === fromProductCode(productId));
+    const match = products.find(
+      (p) => String(p.id) === fromProductCode(rawParam) || String(p.id) === String(rawParam)
+    );
     if (match && match.available_stock <= 0) {
       setSharedNotFound(true); // sold out: don't open a buy popup for it
     } else if (match) {
-      if (session) setActive(match);
+      setActive(match);
     } else {
       setSharedNotFound(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady, router.query.product, products, session]);
+  }, [router.isReady, router.query.product, router.query.buy, products]);
 
   function loadProducts(showLoadingState = true) {
     if (showLoadingState) setLoading(true);
@@ -329,7 +331,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                 <ProductCard
                   key={p.id}
                   product={p}
-                  onBuy={() => (session ? setActive(p) : router.push("/login"))}
+                  onBuy={() => setActive(p)}
                   onShare={() => shareProduct(p, notify, t, locale)}
                 />
               ))}
@@ -345,6 +347,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       {active && (
         <BuyModal
           product={active}
+          session={session}
           ticker={buyModalTicker}
           onClose={() => {
             setActive(null);
@@ -374,7 +377,7 @@ function shareProduct(product, notify, t, locale) {
     .catch(() => window.prompt(t("Copy this link:"), url));
 }
 
-function BuyModal({ product, onClose, ticker }) {
+function BuyModal({ product, onClose, ticker, session }) {
   const { t } = useT();
   const [step, setStep] = useState("form"); // form | summary | order | done
   const [quantity, setQuantity] = useState("1"); // string so input can be cleared while typing
@@ -392,6 +395,12 @@ function BuyModal({ product, onClose, ticker }) {
   const [availableGiftsData, setAvailableGiftsData] = useState(null);
   const [giftsToRedeem, setGiftsToRedeem] = useState(0);
   const [buffState, setBuffState] = useState(null);
+
+  useEffect(() => {
+    if (session?.user?.email && !email) {
+      setEmail(session.user.email);
+    }
+  }, [session?.user?.email]);
 
   useEffect(() => {
     if (step !== "done" || !product?.tunvn_buff || !order?.id) return;
@@ -706,6 +715,15 @@ function BuyModal({ product, onClose, ticker }) {
               onChange={(e) => setEmail(e.target.value)}
             />
           )}
+          {!session && !(product.requires_email && product.provider !== "manual") && (
+            <FormInput
+              label={t("Email address (optional, for receipt & order tracking)")}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@gmail.com"
+            />
+          )}
           {activationLabel && (
             <FormInput
               label={activationLabel}
@@ -729,7 +747,7 @@ function BuyModal({ product, onClose, ticker }) {
             <Row label={t("Product")} value={product.title} />
             <Row label={t("Quantity")} value={currentTotalQty} mono />
             <Row label={t("Unit price")} value={`$${Number(product.sell_price).toFixed(2)}`} mono />
-            {product.requires_email && product.provider !== "manual" && <Row label={t("Delivery email")} value={email} />}
+            {email && <Row label={t("Contact / Delivery email")} value={email} />}
             {activationLabel && (
               <Row label={activationShort} value={activationInfo} />
             )}

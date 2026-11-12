@@ -226,7 +226,7 @@ export default function ReferralsPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold text-ink">{t("Your Gift Box Wallet")}</h2>
-              <p className="text-xs text-muted">{t("1 Gift Box = 1 Billion Muse AI Tokens. Automatically unlocked 30s after your friend verifies.")}</p>
+              <p className="text-xs text-muted">{t("1 Gift Box = 1 Billion Muse AI Tokens. Automatically unlocked 30s after signup.")}</p>
             </div>
             <Link
               href="/"

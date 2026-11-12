@@ -571,12 +571,14 @@ begin
   -- 2. Load referral settings
   select * into v_settings from public.referral_settings where id = 1;
   if found then
-    v_req_email := coalesce(v_settings.require_email_verification, true);
+    v_req_email := coalesce(v_settings.require_email_verification, false);
     v_lock_seconds := coalesce(v_settings.lock_delay_seconds, 30);
     v_tokens := coalesce(v_settings.tokens_per_gift, 1000000000);
     if not coalesce(v_settings.referral_enabled, true) then
       return jsonb_build_object('success', false, 'reason', 'referral_system_disabled');
     end if;
+  else
+    v_req_email := false;
   end if;
 
   -- 3. Check Admin Whitelist (bypasses email check and anti-fraud checks for testing)
