@@ -110,7 +110,7 @@ export default function SiteHeader({
             className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 rounded-xl object-cover shadow-card"
             loading="eager"
             decoding="async"
-            fetchPriority="high"
+            fetchpriority="high"
           />
           <span className="text-base sm:text-lg font-semibold tracking-tight text-ink truncate">{brandName}</span>
         </Link>
