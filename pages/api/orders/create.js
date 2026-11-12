@@ -216,6 +216,12 @@ export default async function handler(req, res) {
       p_gift_count: giftsCount,
     });
     if (reserveErr) {
+      if (/schema cache|function public\.reserve/i.test(reserveErr.message)) {
+        return res.status(400).json({
+          success: false,
+          error: "Gift redemption database function is updating. Please ensure migration 041 is executed in Supabase.",
+        });
+      }
       return res.status(400).json({ success: false, error: reserveErr.message });
     }
   }

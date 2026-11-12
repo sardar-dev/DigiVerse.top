@@ -180,7 +180,7 @@ export default function Signup() {
       }
       if (msg.includes("database error saving new user") || msg.includes("saving new user")) {
         return setError(
-          t("Multiple accounts from the same mobile or device are not allowed. Please log in to your existing account.")
+          t("Unable to save user profile in database. Please run migration 041 in Supabase SQL editor or try again.")
         );
       }
       return setError(signUpError.message);

@@ -80,10 +80,10 @@ export default function EmailVerified() {
           <div className="mt-5 rounded-xl border border-brand/30 bg-brand-soft/60 p-4 text-xs font-medium text-brand text-start">
             <div className="flex items-center gap-2 font-semibold text-sm mb-1">
               <span>🎁</span>
-              <span>{t("Referral Reward Qualified!")}</span>
+              <span>{t("Dual Referral Reward Qualified!")}</span>
             </div>
             <p className="text-muted leading-relaxed">
-              {t("Your invitation helped unlock 1 Muse AI Gift Box for your inviter (unlocks in 30 seconds).")}
+              {t("Both you and your inviter have received 1 Muse AI Gift Box (1 Billion Tokens each)!")}
             </p>
           </div>
         )}
