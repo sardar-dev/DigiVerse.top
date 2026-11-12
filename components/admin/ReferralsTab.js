@@ -86,7 +86,11 @@ export default function ReferralsTab() {
       });
       const json = await res.json();
       if (json.success) {
-        setSuccess("Referral settings and admin whitelist saved successfully!");
+        const extra = json.enforcement?.flaggedCount
+          ? ` Enforced limits: ${json.enforcement.flaggedCount} excess accounts flagged as suspicious.`
+          : "";
+        setSuccess("Referral settings and admin whitelist saved successfully!" + extra);
+        load();
         if (json.settings) {
           setSettingsForm((prev) => ({
             ...prev,
@@ -106,6 +110,36 @@ export default function ReferralsTab() {
       }
     } catch {
       setError("Network error while saving settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEnforceLimits() {
+    setError("");
+    setSuccess("");
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "enforce_anti_fraud",
+          fraud_max_accounts_per_device: settingsForm.fraud_max_accounts_per_device,
+          fraud_max_accounts_per_ip: settingsForm.fraud_max_accounts_per_ip,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccess(
+          `Anti-Fraud Enforced! Flagged ${json.flaggedCount || 0} excess referrals and auto-banned ${json.newlyBannedCount || 0} entities.`
+        );
+        load();
+      } else {
+        setError(json.error || "Failed to enforce limits.");
+      }
+    } catch (e) {
+      setError("Network error: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -1072,8 +1106,17 @@ export default function ReferralsTab() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-3">
-            <PrimaryButton disabled={saving} className="px-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3">
+            <button
+              type="button"
+              onClick={handleEnforceLimits}
+              disabled={saving}
+              className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all cursor-pointer shadow-sm disabled:opacity-50"
+              title="Scan all existing accounts and flag any that exceed current device or IP limits"
+            >
+              🛡️ Enforce Anti-Fraud on Existing Accounts Now
+            </button>
+            <PrimaryButton disabled={saving} className="px-6 w-full sm:w-auto">
               {saving ? "Saving…" : "Save Referral Settings"}
             </PrimaryButton>
           </div>

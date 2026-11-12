@@ -414,6 +414,20 @@ export default async function handler(req, res) {
       }
     }
 
+    // 5f. Action: Enforce Anti-Fraud Limits on all existing referrals
+    if (action === "enforce_anti_fraud") {
+      try {
+        const curSettings = await getReferralSettings();
+        const maxDev = Number(req.body?.fraud_max_accounts_per_device || curSettings?.fraud_max_accounts_per_device) || 1;
+        const maxIp = Number(req.body?.fraud_max_accounts_per_ip || curSettings?.fraud_max_accounts_per_ip) || 2;
+
+        const result = await enforceAntiFraudLimits(maxDev, maxIp, session.user.id);
+        return res.status(200).json({ success: true, ...result });
+      } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+      }
+    }
+
     // 6. Update full referral settings
     const {
       referral_enabled,
@@ -473,7 +487,18 @@ export default async function handler(req, res) {
 
     try {
       const savedSettings = await updateReferralSettings(patch, session.user.id);
-      return res.status(200).json({ success: true, settings: savedSettings });
+      // Auto-enforce limits if fraud thresholds were updated
+      let enforcement = null;
+      if (patch.fraud_max_accounts_per_device || patch.fraud_max_accounts_per_ip) {
+        try {
+          enforcement = await enforceAntiFraudLimits(
+            patch.fraud_max_accounts_per_device || savedSettings.fraud_max_accounts_per_device,
+            patch.fraud_max_accounts_per_ip || savedSettings.fraud_max_accounts_per_ip,
+            session.user.id
+          );
+        } catch {}
+      }
+      return res.status(200).json({ success: true, settings: savedSettings, enforcement });
     } catch (e) {
       console.error("[admin/referrals] update settings error:", e?.message);
       return res.status(500).json({ success: false, error: e?.message || "Failed to save settings" });
@@ -481,5 +506,101 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ success: false, error: "method_not_allowed" });
+}
+
+/**
+ * Scans all referrals chronologically and flags any that exceed device/IP limits,
+ * revoking excess gifts and auto-banning offending devices and IPs.
+ */
+async function enforceAntiFraudLimits(maxDevice, maxIp, adminId) {
+  const { data: allRefs } = await supabaseAdmin
+    .from("referrals")
+    .select("id, referrer_id, referred_id, device_id, registration_ip, status, reward_issued, created_at")
+    .neq("status", "rejected")
+    .order("created_at", { ascending: true });
+
+  const { data: metaRows } = await supabaseAdmin
+    .from("app_meta")
+    .select("key, value")
+    .in("key", ["admin_whitelist_ips", "admin_whitelist_devices"]);
+
+  const metaMap = Object.fromEntries((metaRows || []).map((r) => [r.key, r.value]));
+  const whitelistIps = (metaMap.admin_whitelist_ips || "").toLowerCase();
+  const whitelistDevices = (metaMap.admin_whitelist_devices || "").toLowerCase();
+
+  const deviceCounts = {};
+  const ipCounts = {};
+  let flaggedCount = 0;
+  const newlyBanned = [];
+
+  for (const ref of allRefs || []) {
+    const devId = (ref.device_id || "").toLowerCase().trim();
+    const regIp = (ref.registration_ip || "").toLowerCase().trim();
+
+    const isWhitelisted =
+      (devId && whitelistDevices.includes(devId)) ||
+      (regIp && whitelistIps.includes(regIp));
+
+    if (isWhitelisted) continue;
+
+    let flagThis = false;
+    let reason = "";
+
+    // Track device count
+    if (devId) {
+      deviceCounts[devId] = (deviceCounts[devId] || 0) + 1;
+      if (deviceCounts[devId] > maxDevice) {
+        flagThis = true;
+        reason = `device_registration_cap_exceeded (Account #${deviceCounts[devId]} on this mobile, limit: ${maxDevice})`;
+        newlyBanned.push({ type: "device", value: ref.device_id, reason });
+      }
+    }
+
+    // Track IP count
+    if (regIp && regIp !== "127.0.0.1" && regIp !== "::1") {
+      ipCounts[regIp] = (ipCounts[regIp] || 0) + 1;
+      if (ipCounts[regIp] > maxIp) {
+        flagThis = true;
+        reason = reason || `ip_registration_cap_exceeded (Account #${ipCounts[regIp]} on this IP, limit: ${maxIp})`;
+        newlyBanned.push({ type: "ip", value: ref.registration_ip, reason });
+      }
+    }
+
+    if (flagThis) {
+      await supabaseAdmin
+        .from("referrals")
+        .update({
+          status: "flagged_suspicious",
+          suspicious_reason: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", ref.id);
+
+      await supabaseAdmin
+        .from("referral_gifts")
+        .update({
+          status: "revoked",
+          revoked_at: new Date().toISOString(),
+          revoked_reason: reason,
+        })
+        .eq("referral_record_id", ref.id)
+        .neq("status", "redeemed");
+
+      flaggedCount++;
+    }
+  }
+
+  for (const b of newlyBanned) {
+    try {
+      await banEntity({
+        type: b.type,
+        value: b.value,
+        reason: b.reason,
+        bannedBy: adminId || "system_anti_fraud",
+      });
+    } catch {}
+  }
+
+  return { flaggedCount, newlyBannedCount: newlyBanned.length };
 }
 

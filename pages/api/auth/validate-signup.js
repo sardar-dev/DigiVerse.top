@@ -141,12 +141,28 @@ export default async function handler(req, res) {
   // 5. Anti-Fraud Check: Device Registration Cap (Bypassed if whitelisted)
   if (!isWhitelisted && cleanDeviceId) {
     try {
-      const { count: deviceCount } = await supabaseAdmin
-        .from("device_registrations")
-        .select("id", { count: "exact", head: true })
-        .eq("device_id", cleanDeviceId);
+      const [devRegRes, refDevRes, profDevRes] = await Promise.all([
+        supabaseAdmin
+          .from("device_registrations")
+          .select("id", { count: "exact", head: true })
+          .eq("device_id", cleanDeviceId),
+        supabaseAdmin
+          .from("referrals")
+          .select("id", { count: "exact", head: true })
+          .eq("device_id", cleanDeviceId),
+        supabaseAdmin
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("device_id", cleanDeviceId),
+      ]);
 
-      if (typeof deviceCount === "number" && deviceCount >= maxDeviceAccounts) {
+      const deviceCount = Math.max(
+        devRegRes.count || 0,
+        refDevRes.count || 0,
+        profDevRes.count || 0
+      );
+
+      if (deviceCount >= maxDeviceAccounts) {
         // Auto-record this device in banned list so it shows in Admin Panel
         try {
           await banEntity({
@@ -160,7 +176,7 @@ export default async function handler(req, res) {
         return res.status(400).json({
           success: false,
           code: "DEVICE_LIMIT_EXCEEDED",
-          error: "Multiple accounts from the same mobile/device are not allowed. Please log in to your existing account.",
+          error: `Multiple accounts from the same mobile/device are not allowed (maximum ${maxDeviceAccounts} per mobile). Please log in to your existing account.`,
         });
       }
     } catch (e) {
@@ -171,12 +187,28 @@ export default async function handler(req, res) {
   // 6. Anti-Fraud Check: IP Registration Cap (Bypassed if whitelisted)
   if (!isWhitelisted && clientIp && clientIp !== "127.0.0.1" && clientIp !== "::1") {
     try {
-      const { count: ipCount } = await supabaseAdmin
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("registration_ip", clientIp);
+      const [refIpRes, profIpRes, devIpRes] = await Promise.all([
+        supabaseAdmin
+          .from("referrals")
+          .select("id", { count: "exact", head: true })
+          .eq("registration_ip", clientIp),
+        supabaseAdmin
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("registration_ip", clientIp),
+        supabaseAdmin
+          .from("device_registrations")
+          .select("id", { count: "exact", head: true })
+          .eq("ip_address", clientIp),
+      ]);
 
-      if (typeof ipCount === "number" && ipCount >= maxIpAccounts) {
+      const ipCount = Math.max(
+        refIpRes.count || 0,
+        profIpRes.count || 0,
+        devIpRes.count || 0
+      );
+
+      if (ipCount >= maxIpAccounts) {
         // Auto-record this IP in banned list so it shows in Admin Panel
         try {
           await banEntity({
@@ -190,7 +222,7 @@ export default async function handler(req, res) {
         return res.status(400).json({
           success: false,
           code: "IP_LIMIT_EXCEEDED",
-          error: "Account registration limit reached for this IP/network. Multiple accounts are not allowed. Please log in.",
+          error: `Account registration limit reached for this IP network (maximum ${maxIpAccounts} per IP). Multiple accounts are not allowed. Please log in.`,
         });
       }
     } catch (e) {

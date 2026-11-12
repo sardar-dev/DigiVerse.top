@@ -546,18 +546,40 @@ begin
       return jsonb_build_object('success', false, 'reason', 'flagged_same_device');
     end if;
 
-    -- Check B: Device registration burst
-    if v_ref.device_id is not null and to_regclass('public.device_registrations') is not null then
-      select count(distinct user_id) into v_device_count
-      from public.device_registrations
-      where device_id = v_ref.device_id;
+    -- Check B: Device registration cap in referrals
+    if v_ref.device_id is not null and v_ref.device_id <> '' then
+      select count(*) into v_device_count
+      from public.referrals
+      where device_id is not null
+        and lower(trim(device_id)) = lower(trim(v_ref.device_id))
+        and id <> v_ref.id;
 
-      if v_device_count > coalesce(v_settings.fraud_max_accounts_per_device, 2) then
+      if v_device_count >= coalesce(v_settings.fraud_max_accounts_per_device, 1) then
         update public.referrals
         set status = 'flagged_suspicious', suspicious_reason = 'device_registration_cap_exceeded', updated_at = v_now
         where id = v_ref.id;
         return jsonb_build_object('success', false, 'reason', 'flagged_device_burst');
       end if;
+    end if;
+
+    -- Check C: IP registration cap in referrals
+    if v_ref.registration_ip is not null and v_ref.registration_ip <> '' then
+      declare
+        v_ip_count int := 0;
+      begin
+        select count(*) into v_ip_count
+        from public.referrals
+        where registration_ip is not null
+          and trim(registration_ip) = trim(v_ref.registration_ip)
+          and id <> v_ref.id;
+
+        if v_ip_count >= coalesce(v_settings.fraud_max_accounts_per_ip, 2) then
+          update public.referrals
+          set status = 'flagged_suspicious', suspicious_reason = 'ip_registration_cap_exceeded', updated_at = v_now
+          where id = v_ref.id;
+          return jsonb_build_object('success', false, 'reason', 'flagged_ip_burst');
+        end if;
+      end;
     end if;
   end if;
 
