@@ -22,7 +22,11 @@ export default function PaymentPanel({ order, onDone, onBack }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
-  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(() => {
+    if (!order?.created_at) return 30 * 60;
+    const elapsed = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 1000);
+    return Math.max(0, 30 * 60 - elapsed);
+  });
   const [buffLoading, setBuffLoading] = useState(true);
   const [buffCheck, setBuffCheck] = useState(null); // { is_buff, max_qty, affordable }
 
@@ -79,17 +83,22 @@ export default function PaymentPanel({ order, onDone, onBack }) {
   }, [order.payout_wallet]);
 
   useEffect(() => {
+    if (timeLeft <= 0) {
+      fetch("/api/orders/cleanup-expired", { method: "POST" }).catch(() => {});
+      return;
+    }
     const interval = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(interval);
+          fetch("/api/orders/cleanup-expired", { method: "POST" }).catch(() => {});
           return 0;
         }
         return t - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [order?.id]);
 
   const isPaymentBlocked = buffCheck?.is_buff && !buffCheck.affordable;
 
@@ -193,7 +202,7 @@ export default function PaymentPanel({ order, onDone, onBack }) {
       <div className="space-y-3">
         {timeExpired && (
           <Alert variant="error">
-            {t("Payment session expired. Please refresh the page to try again.")}
+            {t("This unpaid order expired after 30 minutes and has been deleted. Please start a new order.")}
           </Alert>
         )}
         {!timeExpired && (
@@ -227,7 +236,7 @@ export default function PaymentPanel({ order, onDone, onBack }) {
           className={`space-y-3 transition-all duration-300 ${
             isChecking
               ? "pointer-events-none opacity-50 blur-[1.5px] select-none"
-              : isPaymentBlocked
+              : isPaymentBlocked || timeExpired
               ? "pointer-events-none opacity-40 blur-[1px] select-none cursor-not-allowed"
               : "opacity-100 blur-0"
           }`}
@@ -356,7 +365,7 @@ export default function PaymentPanel({ order, onDone, onBack }) {
           </SecondaryButton>
           <PrimaryButton
             onClick={payWithBalance}
-            disabled={busy || !canPayWithBalance}
+            disabled={busy || !canPayWithBalance || timeExpired}
             className="flex-1"
           >
             {busy ? t("Processing…") : t("Confirm")}
@@ -449,7 +458,7 @@ export default function PaymentPanel({ order, onDone, onBack }) {
             spellCheck={false}
           />
           <Alert variant="error">{error}</Alert>
-          <PrimaryButton onClick={submitPayment} disabled={!txHash || busy} className="w-full">
+          <PrimaryButton onClick={submitPayment} disabled={!txHash || busy || timeExpired} className="w-full">
             {busy ? t("Checking the blockchain…") : t("I've sent it — verify payment")}
           </PrimaryButton>
           <p className="text-center text-xs text-muted">

@@ -41,13 +41,47 @@ export default function Orders() {
       return;
     }
     setSession(session);
+
+    // Clean up expired unpaid orders in the background
+    fetch("/api/orders/cleanup-expired", { method: "POST" }).catch(() => {});
+
     const { data } = await supabase
       .from("orders")
       .select("*, products(title, provider, delivery)")
       .order("created_at", { ascending: false })
       .limit(100);
-    setOrders(data || []);
+
+    const now = Date.now();
+    const activeOrders = (data || []).filter((o) => {
+      if (o.status === "pending_payment") {
+        const age = now - new Date(o.created_at).getTime();
+        return age < 30 * 60 * 1000; // Exclude orders older than 30 minutes
+      }
+      return true;
+    });
+
+    setOrders(activeOrders);
   }
+
+  // Auto-remove expired pending_payment orders in real time after 30 minutes
+  useEffect(() => {
+    if (!orders || orders.length === 0) return;
+    const hasPending = orders.some((o) => o.status === "pending_payment");
+    if (!hasPending) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const anyExpired = orders.some(
+        (o) => o.status === "pending_payment" && now - new Date(o.created_at).getTime() >= 30 * 60 * 1000
+      );
+      if (anyExpired) {
+        fetch("/api/orders/cleanup-expired", { method: "POST" }).catch(() => {});
+        load();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [orders]);
 
   // Buff-token orders finish a minute or two after payment (TunVN credits the
   // invite code asynchronously). While one is open, ask the server to check.

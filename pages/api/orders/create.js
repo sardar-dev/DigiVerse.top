@@ -5,6 +5,7 @@ import { getSupplier, resolveSource, applyBuffer } from "../../../lib/suppliers"
 import { refreshSourceFromLive } from "../../../lib/syncProducts";
 import { checkCoupon, orderFitsCouponLimits } from "../../../lib/coupons";
 import * as tunvn from "../../../lib/suppliers/tunvn";
+import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 
 // Step 1 of checkout: customer picks a product + quantity. We
 // re-check LIVE stock on DigiTrust (not just our cache) before we
@@ -14,6 +15,9 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "method_not_allowed" });
   }
+
+  // Clean up any stale unpaid orders (>30 mins) in the background
+  cleanupExpiredPendingOrders().catch(() => {});
 
   let session = null;
   try {

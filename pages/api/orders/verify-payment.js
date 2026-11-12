@@ -4,6 +4,7 @@ import { verifyUsdtPayment } from "../../../lib/bscscan";
 import { fulfillOrder } from "../../../lib/fulfillOrder";
 import { claimTxHash, confirmTxHash, releaseTxHash } from "../../../lib/claimTxHash";
 import { frozenSeconds, recordWrongHash, isWrongHash, frozenResponse } from "../../../lib/hashLimit";
+import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 
 // Step 2 of checkout: customer submits the tx hash of their USDT
 // (BEP20) transfer. We verify it on-chain, and if it checks out we
@@ -49,6 +50,17 @@ export default async function handler(req, res) {
 
   if (orderErr || !order) {
     return res.status(404).json({ success: false, error: "order_not_found" });
+  }
+
+  // Reject and purge if unpaid order is older than 30 minutes
+  const orderAgeMs = Date.now() - new Date(order.created_at).getTime();
+  if (order.status === "pending_payment" && orderAgeMs >= 30 * 60 * 1000) {
+    cleanupExpiredPendingOrders().catch(() => {});
+    return res.status(410).json({
+      success: false,
+      error: "order_expired",
+      message: "This order has expired after 30 minutes. Please place a new order.",
+    });
   }
 
   // If order belongs to an authenticated user, only that user can submit payment

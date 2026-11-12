@@ -2,12 +2,16 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { supplierLabels } from "../../../lib/suppliers";
 import { settleAllBuffOrders, placeBuffOrder, settleBuffOrder } from "../../../lib/tunvnBuff";
+import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
   if (!session) return;
 
   if (req.method === "GET") {
+    // Purge expired unpaid orders (>30 mins) completely from database
+    await cleanupExpiredPendingOrders().catch(() => {});
+
     // Settle any fulfilling TunVN buff orders in the background
     settleAllBuffOrders(10).catch(() => {});
 
@@ -25,6 +29,11 @@ export default async function handler(req, res) {
         .limit(200));
     }
     if (error) return res.status(500).json({ success: false, error: error.message });
+
+    const now = Date.now();
+    data = (data || []).filter(
+      (o) => o.status !== "pending_payment" || (now - new Date(o.created_at).getTime() < 30 * 60 * 1000)
+    );
 
     // Which account placed each order (orders link to auth users, not
     // profiles, so look the emails up in one extra query).

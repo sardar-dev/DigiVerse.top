@@ -2,6 +2,7 @@ import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { fulfillOrder } from "../../../lib/fulfillOrder";
 import * as tunvn from "../../../lib/suppliers/tunvn";
+import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -20,6 +21,25 @@ export default async function handler(req, res) {
   const { order_id } = req.body || {};
   if (!order_id) {
     return res.status(400).json({ success: false, error: "order_id_required" });
+  }
+
+  // Reject and purge if unpaid order is older than 30 minutes
+  const { data: existingOrder } = await supabaseAdmin
+    .from("orders")
+    .select("id, status, created_at")
+    .eq("id", order_id)
+    .single();
+
+  if (existingOrder) {
+    const ageMs = Date.now() - new Date(existingOrder.created_at).getTime();
+    if (existingOrder.status === "pending_payment" && ageMs >= 30 * 60 * 1000) {
+      cleanupExpiredPendingOrders().catch(() => {});
+      return res.status(410).json({
+        success: false,
+        error: "order_expired",
+        message: "This order has expired after 30 minutes. Please place a new order.",
+      });
+    }
   }
 
   // Atomically claim the order: only succeeds if it's still
