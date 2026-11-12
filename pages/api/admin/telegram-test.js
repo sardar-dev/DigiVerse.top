@@ -1,5 +1,5 @@
 import { requireAdmin } from "../../../lib/requireAdmin";
-import { sendTelegramMessage } from "../../../lib/telegram";
+import { sendTelegramMessage, getTelegramConfig } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
@@ -8,6 +8,16 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "method_not_allowed" });
   }
+
+  const { token } = await getTelegramConfig();
+  let botUsername = "";
+  try {
+    const meRes = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const meData = await meRes.json();
+    if (meData?.ok && meData.result?.username) {
+      botUsername = meData.result.username;
+    }
+  } catch {}
 
   const now = new Date().toLocaleString("en-PK", {
     timeZone: "Asia/Karachi",
@@ -28,8 +38,14 @@ export default async function handler(req, res) {
 
   const result = await sendTelegramMessage(testMsg);
   if (!result.success) {
-    return res.status(500).json({ success: false, error: result.error || "failed_to_send" });
+    let err = result.error || "failed_to_send";
+    if (/chat not found/i.test(err)) {
+      const link = botUsername ? `https://t.me/${botUsername}` : "apne naye bot";
+      err = `Pehle Telegram par apne bot ko open karke START dabayein: ${link}`;
+    }
+    return res.status(400).json({ success: false, error: err, bot_username: botUsername });
   }
 
   return res.status(200).json({ success: true, message: "Test notification sent successfully!" });
 }
+
