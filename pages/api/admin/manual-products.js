@@ -58,6 +58,7 @@ export default async function handler(req, res) {
       activation_placeholder, // optional placeholder text inside the activation input
       tunvn_buff, // true = fulfil via TunVN Buff Token API (needs migration 034)
       auto_delivery, // true = customers get stored text "boxes" instantly after payment
+      delivery_badge, // "auto" | "manual" | null
       new_boxes, // pasted box text to add in the same save (auto-delivery products)
       box_split, // "separator" (--- lines) | "line" (one box per line)
       sell_price_delta_percent, // bulk-only: e.g. 5 for +5%
@@ -148,44 +149,56 @@ export default async function handler(req, res) {
       );
       if (idErr) return res.status(500).json({ success: false, error: idErr.message });
 
-      const { data: inserted, error: insertErr } = await supabaseAdmin
+      const insertPayload = {
+        id: newId,
+        provider: "manual",
+        title: title.trim(),
+        description: description || null,
+        sell_price: sell,
+        cost_price: cost,
+        real_stock: stock,
+        available_stock: stock,
+        requires_email: Boolean(requires_email) || normalizedActivation === "email",
+        delivery: delivery || (auto_delivery === true ? "Instant" : "Within 24 hours"),
+        // Only sent when on, so normal products work before migration_012.
+        ...(auto_delivery === true ? { auto_delivery: true } : {}),
+        ...(tunvn_buff === true ? { tunvn_buff: true } : {}),
+        ...(delivery_badge ? { delivery_badge } : {}),
+        selected: Boolean(selected),
+        activation_field: normalizedActivation,
+        activation_placeholder: normalizedPlaceholder,
+        short_description: short_description || null,
+        image_url: image_url || null,
+        category: category || null,
+        featured: Boolean(featured),
+        low_stock_threshold:
+          low_stock_threshold === undefined || low_stock_threshold === null || low_stock_threshold === ""
+            ? null
+            : Math.max(0, Number(low_stock_threshold) || 0),
+        min_order_qty:
+          min_order_qty === undefined || min_order_qty === null || min_order_qty === ""
+            ? null
+            : Math.max(1, Math.floor(Number(min_order_qty))),
+        max_order_qty:
+          max_order_qty === undefined || max_order_qty === null || max_order_qty === ""
+            ? null
+            : Math.max(1, Math.floor(Number(max_order_qty))),
+      };
+
+      let { data: inserted, error: insertErr } = await supabaseAdmin
         .from("products")
-        .insert({
-          id: newId,
-          provider: "manual",
-          title: title.trim(),
-          description: description || null,
-          sell_price: sell,
-          cost_price: cost,
-          real_stock: stock,
-          available_stock: stock,
-          requires_email: Boolean(requires_email) || normalizedActivation === "email",
-          delivery: delivery || (auto_delivery === true ? "Instant" : "Within 24 hours"),
-          // Only sent when on, so normal products work before migration_012.
-          ...(auto_delivery === true ? { auto_delivery: true } : {}),
-          ...(tunvn_buff === true ? { tunvn_buff: true } : {}),
-          selected: Boolean(selected),
-          activation_field: normalizedActivation,
-          activation_placeholder: normalizedPlaceholder,
-          short_description: short_description || null,
-          image_url: image_url || null,
-          category: category || null,
-          featured: Boolean(featured),
-          low_stock_threshold:
-            low_stock_threshold === undefined || low_stock_threshold === null || low_stock_threshold === ""
-              ? null
-              : Math.max(0, Number(low_stock_threshold) || 0),
-          min_order_qty:
-            min_order_qty === undefined || min_order_qty === null || min_order_qty === ""
-              ? null
-              : Math.max(1, Math.floor(Number(min_order_qty))),
-          max_order_qty:
-            max_order_qty === undefined || max_order_qty === null || max_order_qty === ""
-              ? null
-              : Math.max(1, Math.floor(Number(max_order_qty))),
-        })
+        .insert(insertPayload)
         .select()
         .single();
+
+      if (insertErr && /delivery_badge/i.test(insertErr.message)) {
+        delete insertPayload.delivery_badge;
+        ({ data: inserted, error: insertErr } = await supabaseAdmin
+          .from("products")
+          .insert(insertPayload)
+          .select()
+          .single());
+      }
 
       if (insertErr) return res.status(500).json({ success: false, error: insertErr.message });
 
@@ -280,13 +293,26 @@ export default async function handler(req, res) {
           : Math.max(1, Math.floor(Number(max_order_qty)));
     }
 
-    const { data: updated, error: updateErr } = await supabaseAdmin
+    if (delivery_badge !== undefined) patch.delivery_badge = delivery_badge || null;
+
+    let { data: updated, error: updateErr } = await supabaseAdmin
       .from("products")
       .update(patch)
       .eq("id", id)
       .eq("provider", "manual")
       .select()
       .single();
+
+    if (updateErr && /delivery_badge/i.test(updateErr.message)) {
+      delete patch.delivery_badge;
+      ({ data: updated, error: updateErr } = await supabaseAdmin
+        .from("products")
+        .update(patch)
+        .eq("id", id)
+        .eq("provider", "manual")
+        .select()
+        .single());
+    }
 
     if (updateErr) return res.status(500).json({ success: false, error: updateErr.message });
     let addedBoxes = 0;

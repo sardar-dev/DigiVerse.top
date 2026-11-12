@@ -137,6 +137,7 @@ export default function Admin() {
       available_stock: "",
       requires_email: false,
       delivery: "Within 1-6 hours",
+      delivery_badge: "auto",
       selected: true,
       activation_field: "",
       activation_placeholder: "",
@@ -171,6 +172,7 @@ export default function Admin() {
       available_stock: Number(manualForm.available_stock),
       requires_email: manualForm.requires_email,
       delivery: manualForm.delivery,
+      delivery_badge: manualForm.delivery_badge || "auto",
       selected: manualForm.selected,
       activation_field: manualForm.activation_field || null,
       activation_placeholder: manualForm.activation_placeholder || null,
@@ -231,6 +233,7 @@ export default function Admin() {
       available_stock: p.available_stock,
       requires_email: p.requires_email,
       delivery: p.delivery || "",
+      delivery_badge: p.delivery_badge || (p.auto_delivery ? "auto" : "manual"),
       selected: p.selected,
       activation_field: p.activation_field || "",
       activation_placeholder: p.activation_placeholder || "",
@@ -263,6 +266,17 @@ export default function Admin() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids, ...patch }),
+    });
+    loadManualProducts();
+  }
+
+  async function toggleManualDeliveryBadge(p) {
+    const current = p.delivery_badge || (p.auto_delivery ? "auto" : "manual");
+    const next = current === "auto" ? "manual" : "auto";
+    await fetch("/api/admin/manual-products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: p.id, delivery_badge: next }),
     });
     loadManualProducts();
   }
@@ -642,6 +656,7 @@ export default function Admin() {
           bulkUpdateManualProducts={bulkUpdateManualProducts}
           reloadManualProducts={loadManualProducts}
           boxesVersion={boxesVersion}
+          onToggleDeliveryBadge={toggleManualDeliveryBadge}
         />
       )}
 

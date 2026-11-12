@@ -12,7 +12,12 @@ import { useT } from "../../lib/i18n";
 // on hover. Pure CSS transform/perspective, no JS and no library.
 export default function ProductCard({ product, onBuy, onShare, disabled }) {
   const { t } = useT();
-  const isManual = product.provider === "manual" && !product.auto_delivery;
+  const isManual =
+    product.delivery_badge === "manual"
+      ? true
+      : product.delivery_badge === "auto"
+      ? false
+      : product.provider === "manual" && !product.auto_delivery;
   const threshold =
     product.low_stock_threshold != null ? Number(product.low_stock_threshold) : 3;
   const lowStock = product.available_stock > 0 && product.available_stock <= threshold;

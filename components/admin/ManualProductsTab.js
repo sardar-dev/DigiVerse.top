@@ -21,6 +21,7 @@ export default function ManualProductsTab({
   bulkUpdateManualProducts,
   reloadManualProducts,
   boxesVersion,
+  onToggleDeliveryBadge,
 }) {
   const [selected, setSelected] = useState(() => new Set());
 
@@ -122,6 +123,62 @@ export default function ManualProductsTab({
               disabled={manualForm.auto_delivery}
               placeholder={manualForm.auto_delivery ? "Counted from boxes" : undefined}
             />
+          </div>
+
+          {/* Delivery badge selector for storefront card */}
+          <div className="space-y-3 rounded-xl border border-border bg-bg p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Storefront Card Badge (Delivery Label)
+                </label>
+                <p className="text-xs text-muted mt-0.5">
+                  Select which delivery badge appears on this product's card on the homepage
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted">Preview:</span>
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                    (manualForm.delivery_badge || "auto") === "auto"
+                      ? "bg-success-soft text-success"
+                      : "bg-warning-soft text-warning"
+                  }`}
+                >
+                  {(manualForm.delivery_badge || "auto") === "auto"
+                    ? "Automatic delivery"
+                    : "Manual delivery"}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setManualForm({ ...manualForm, delivery_badge: "auto" })}
+                className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-semibold transition cursor-pointer ${
+                  (manualForm.delivery_badge || "auto") === "auto"
+                    ? "border-success/60 bg-success-soft text-success shadow-sm ring-2 ring-success/20 font-bold"
+                    : "border-border bg-surface text-muted hover:border-success/40 hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-success" />
+                <span>Automatic delivery (Green)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setManualForm({ ...manualForm, delivery_badge: "manual" })}
+                className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-semibold transition cursor-pointer ${
+                  manualForm.delivery_badge === "manual"
+                    ? "border-warning/60 bg-warning-soft text-warning shadow-sm ring-2 ring-warning/20 font-bold"
+                    : "border-border bg-surface text-muted hover:border-warning/40 hover:text-ink"
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-warning" />
+                <span>Manual delivery (Orange)</span>
+              </button>
+            </div>
           </div>
 
           <label className="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-ink">
@@ -351,6 +408,7 @@ export default function ManualProductsTab({
                 />
               </th>
               <th className="py-3 px-4">Title</th>
+              <th className="py-3 px-4">Card Badge</th>
               <th className="py-3 px-4">Stock</th>
               <th className="py-3 px-4">Sell price</th>
               <th className="py-3 px-4">Cost</th>
@@ -374,6 +432,31 @@ export default function ManualProductsTab({
                 <td className="py-3 px-4 text-ink">
                   {p.title}
                   {p.featured && <span className="ml-1.5" title="Featured">⭐</span>}
+                </td>
+                <td className="py-3 px-4 whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => onToggleDeliveryBadge?.(p)}
+                    title="Click to switch delivery badge on storefront card"
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+                      (p.delivery_badge === "auto" || (!p.delivery_badge && p.auto_delivery))
+                        ? "bg-success-soft text-success border border-success/30"
+                        : "bg-warning-soft text-warning border border-warning/30"
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        (p.delivery_badge === "auto" || (!p.delivery_badge && p.auto_delivery))
+                          ? "bg-success"
+                          : "bg-warning"
+                      }`}
+                    />
+                    <span>
+                      {(p.delivery_badge === "auto" || (!p.delivery_badge && p.auto_delivery))
+                        ? "Automatic"
+                        : "Manual"}
+                    </span>
+                  </button>
                 </td>
                 <td className="py-3 px-4 font-mono text-muted">
                   {p.available_stock}

@@ -458,7 +458,12 @@ function BuyModal({ product, onClose, ticker, session }) {
     }
   }, [product?.id, product?.title, product?.sell_price]);
 
-  const isManualDelivery = product.provider === "manual" && !product.auto_delivery;
+  const isManualDelivery =
+    product.delivery_badge === "manual"
+      ? true
+      : product.delivery_badge === "auto"
+      ? false
+      : product.provider === "manual" && !product.auto_delivery;
 
   // activation_field is now a free-text label set by the admin
   // (e.g. "Game ID", "Discord Username"). Legacy values "email"/"username"
