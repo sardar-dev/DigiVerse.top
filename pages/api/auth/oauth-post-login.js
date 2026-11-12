@@ -1,5 +1,6 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { notifyTelegramSignup } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -86,6 +87,14 @@ export default async function handler(req, res) {
           username: currentUsername,
           device_id: cleanDeviceId || null,
         });
+
+        // Notify admin via Telegram on new Google sign up
+        notifyTelegramSignup({
+          username: currentUsername,
+          email: userEmail || "—",
+          referrer: cleanRef || null,
+          clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
+        }).catch((e) => console.warn("[oauth] telegram alert error:", e?.message));
       } else {
         await supabaseAdmin
           .from("profiles")

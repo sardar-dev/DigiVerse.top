@@ -14,7 +14,16 @@ export default async function handler(req, res) {
     const { data } = await supabaseAdmin
       .from("app_meta")
       .select("key, value")
-      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker", "site_notice", "google_auth_enabled"]);
+      .in("key", [
+        "whatsapp_link",
+        "channel_type",
+        "buy_modal_ticker",
+        "site_notice",
+        "google_auth_enabled",
+        "telegram_bot_token",
+        "telegram_chat_id",
+        "telegram_notifications_enabled",
+      ]);
     const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
     let notice = { enabled: false, title: "", message: "", button_label: "", button_url: "", v: "1" };
     try {
@@ -27,11 +36,23 @@ export default async function handler(req, res) {
       channel_type: m.channel_type === "telegram" ? "telegram" : "whatsapp",
       buy_modal_ticker: m.buy_modal_ticker || "",
       google_auth_enabled: m.google_auth_enabled === "true",
+      telegram_bot_token: m.telegram_bot_token || "8959158776:AAGUUjnLeg_hE29j9pNMZ--VQoDnR-_Mnac",
+      telegram_chat_id: m.telegram_chat_id || "1162040243",
+      telegram_notifications_enabled: m.telegram_notifications_enabled !== "false",
     });
   }
 
   if (req.method === "POST") {
-    const { whatsapp_link, channel_type, buy_modal_ticker, notice, google_auth_enabled } = req.body || {};
+    const {
+      whatsapp_link,
+      channel_type,
+      buy_modal_ticker,
+      notice,
+      google_auth_enabled,
+      telegram_bot_token,
+      telegram_chat_id,
+      telegram_notifications_enabled,
+    } = req.body || {};
     const type = channel_type === "telegram" ? "telegram" : "whatsapp";
     const link = String(whatsapp_link || "").trim();
     if (link) {
@@ -77,13 +98,29 @@ export default async function handler(req, res) {
     const changed = ["title", "message", "button_label", "button_url"].some((k) => prev[k] !== noticeClean[k]);
     noticeClean.v = changed || !prev.v ? String(Date.now()) : prev.v;
 
-    const { error } = await supabaseAdmin.from("app_meta").upsert([
+    const upsertRows = [
       { key: "site_notice", value: JSON.stringify(noticeClean), updated_at: now },
       { key: "whatsapp_link", value: link, updated_at: now },
       { key: "channel_type", value: type, updated_at: now },
       { key: "buy_modal_ticker", value: ticker, updated_at: now },
       { key: "google_auth_enabled", value: String(Boolean(google_auth_enabled)), updated_at: now },
-    ]);
+    ];
+
+    if (telegram_bot_token !== undefined) {
+      upsertRows.push({ key: "telegram_bot_token", value: String(telegram_bot_token).trim(), updated_at: now });
+    }
+    if (telegram_chat_id !== undefined) {
+      upsertRows.push({ key: "telegram_chat_id", value: String(telegram_chat_id).trim(), updated_at: now });
+    }
+    if (telegram_notifications_enabled !== undefined) {
+      upsertRows.push({
+        key: "telegram_notifications_enabled",
+        value: String(Boolean(telegram_notifications_enabled)),
+        updated_at: now,
+      });
+    }
+
+    const { error } = await supabaseAdmin.from("app_meta").upsert(upsertRows);
     if (error) return res.status(500).json({ success: false, error: error.message });
     return res.status(200).json({ success: true });
   }

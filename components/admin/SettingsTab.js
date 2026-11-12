@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { FormInput, FormSelect, FormTextarea } from "../ui/FormInput";
-import { PrimaryButton } from "../ui/Button";
+import { PrimaryButton, SecondaryButton } from "../ui/Button";
 import SectionHeading from "../ui/SectionHeading";
 
 const PLACEHOLDER = {
@@ -18,9 +19,34 @@ export default function SettingsTab({
   setNotice,
   googleAuthEnabled,
   setGoogleAuthEnabled,
+  telegramBotToken,
+  setTelegramBotToken,
+  telegramChatId,
+  setTelegramChatId,
+  telegramEnabled,
+  setTelegramEnabled,
   saveSettings,
   settingsMessage,
 }) {
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [testTelegramResult, setTestTelegramResult] = useState("");
+
+  async function sendTestTelegram() {
+    setTestingTelegram(true);
+    setTestTelegramResult("");
+    try {
+      const res = await fetch("/api/admin/telegram-test", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setTestTelegramResult("✅ Test alert sent to Telegram! Check your bot.");
+      } else {
+        setTestTelegramResult(`❌ Error: ${data.error || "Failed"}`);
+      }
+    } catch (e) {
+      setTestTelegramResult(`❌ Error: ${e.message}`);
+    }
+    setTestingTelegram(false);
+  }
   return (
     <div className="max-w-md space-y-4">
       <SectionHeading title="Site settings" />
@@ -102,6 +128,71 @@ export default function SettingsTab({
         <p className="text-xs text-muted leading-relaxed">
           Jab yeh <strong>DISABLED</strong> hoga to login aur signup pages par Continue with Google ka button chhupa rahega. Google Cloud Console credentials set karne ke baad aap ise yahan se <strong>ENABLED</strong> kar sakte hain.
         </p>
+      </div>
+
+      {/* Telegram Private Bot Notifications */}
+      <div className="space-y-3 rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Instant Alerts</p>
+            <p className="text-sm font-semibold text-ink mt-0.5">🤖 Private Telegram Bot</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(telegramEnabled)}
+            aria-label="Toggle Telegram Alerts"
+            onClick={() => setTelegramEnabled(!telegramEnabled)}
+            className={`relative h-6 w-11 rounded-full transition ${telegramEnabled ? "bg-brand" : "bg-border"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                telegramEnabled ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+              telegramEnabled
+                ? "bg-success-soft text-success border border-success/30"
+                : "bg-surface-alt text-muted border border-border"
+            }`}
+          >
+            {telegramEnabled ? "ACTIVE (Orders & Signups)" : "MUTED (Notifications Off)"}
+          </span>
+        </div>
+        <p className="text-xs text-muted leading-relaxed">
+          Har naye <strong>Order</strong> aur naye <strong>User Signup</strong> par aapke private Telegram bot se aapko foran instant alert aayega.
+        </p>
+        <FormInput
+          label="Bot Token"
+          value={telegramBotToken}
+          onChange={(e) => setTelegramBotToken(e.target.value)}
+          placeholder="e.g. 8959158776:AAGUUjn..."
+        />
+        <FormInput
+          label="Your Telegram Chat ID"
+          value={telegramChatId}
+          onChange={(e) => setTelegramChatId(e.target.value)}
+          placeholder="e.g. 1162040243"
+        />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1">
+          <SecondaryButton
+            type="button"
+            onClick={sendTestTelegram}
+            disabled={testingTelegram || !telegramBotToken || !telegramChatId}
+            className="text-xs py-2 px-3 min-h-9"
+          >
+            {testingTelegram ? "Sending..." : "🔔 Send Test Notification"}
+          </SecondaryButton>
+          {testTelegramResult && (
+            <span className={`text-xs ${testTelegramResult.startsWith("✅") ? "text-success font-semibold" : "text-danger"}`}>
+              {testTelegramResult}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Notice popup */}

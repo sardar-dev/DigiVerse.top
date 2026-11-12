@@ -85,6 +85,9 @@ export default function Admin() {
   const [channelType, setChannelType] = useState("whatsapp");
   const [buyModalTicker, setBuyModalTicker] = useState("");
   const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
+  const [telegramBotToken, setTelegramBotToken] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [telegramEnabled, setTelegramEnabled] = useState(true);
   const [notice, setNotice] = useState({ enabled: false, title: "", message: "", button_label: "", button_url: "" });
   const [settingsMessage, setSettingsMessage] = useState("");
 
@@ -96,6 +99,9 @@ export default function Admin() {
       setChannelType(data.channel_type === "telegram" ? "telegram" : "whatsapp");
       setBuyModalTicker(data.buy_modal_ticker || "");
       setGoogleAuthEnabled(Boolean(data.google_auth_enabled));
+      setTelegramBotToken(data.telegram_bot_token || "");
+      setTelegramChatId(data.telegram_chat_id || "");
+      setTelegramEnabled(data.telegram_notifications_enabled !== false);
       if (data.notice) setNotice(data.notice);
     }
   }
@@ -110,6 +116,9 @@ export default function Admin() {
         channel_type: channelType,
         buy_modal_ticker: buyModalTicker,
         google_auth_enabled: googleAuthEnabled,
+        telegram_bot_token: telegramBotToken,
+        telegram_chat_id: telegramChatId,
+        telegram_notifications_enabled: telegramEnabled,
         notice,
       }),
     });
@@ -701,6 +710,12 @@ export default function Admin() {
           setNotice={setNotice}
           googleAuthEnabled={googleAuthEnabled}
           setGoogleAuthEnabled={setGoogleAuthEnabled}
+          telegramBotToken={telegramBotToken}
+          setTelegramBotToken={setTelegramBotToken}
+          telegramChatId={telegramChatId}
+          setTelegramChatId={setTelegramChatId}
+          telegramEnabled={telegramEnabled}
+          setTelegramEnabled={setTelegramEnabled}
           saveSettings={saveSettings}
           settingsMessage={settingsMessage}
         />

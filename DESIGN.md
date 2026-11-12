@@ -140,3 +140,4 @@ All color references **MUST** use these Tailwind classes rather than arbitrary i
 2. **NO Hardcoded Black Texts:** Never use `#000000` or `text-black`. Always use `#17213A` (`text-ink`) which provides softer, professional contrast.
 3. **NO Arbitrary Border Radii:** Stick strictly to `rounded-xl` for buttons/inputs, `rounded-2xl` for cards, and `rounded-full` for pills/badges.
 4. **NO Low-Contrast Alerts:** Every alert must pair its text color with its matching soft background (e.g. `text-success` with `bg-success-soft`).
+

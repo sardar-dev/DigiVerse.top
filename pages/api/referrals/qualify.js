@@ -1,6 +1,7 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getReferralSettings } from "../../../lib/referralSettings";
+import { notifyTelegramSignup } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -43,6 +44,14 @@ export default async function handler(req, res) {
       (authUser.user.email ? authUser.user.email.split("@")[0] : `user_${userId.slice(0, 5)}`);
     const cleanUsername = rawUsername.toLowerCase().trim();
 
+    const { data: existingProf } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const isNewUser = !existingProf;
+
     await supabaseAdmin.from("profiles").upsert(
       {
         id: userId,
@@ -54,6 +63,15 @@ export default async function handler(req, res) {
       },
       { onConflict: "id" }
     );
+
+    if (isNewUser) {
+      notifyTelegramSignup({
+        username: cleanUsername,
+        email: authUser.user.email || req.body?.email || "—",
+        referrer: req.body?.ref || authUser.user.user_metadata?.ref || null,
+        clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
+      }).catch((e) => console.warn("[qualify] telegram alert error:", e?.message));
+    }
   } catch (e) {
     console.warn("[referrals/qualify] ensure profile error:", e.message);
   }
