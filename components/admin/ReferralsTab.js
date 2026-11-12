@@ -878,7 +878,7 @@ export default function ReferralsTab() {
                           </span>
                         ) : g.status === "locked" ? (
                           <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand">
-                            Locked (30s)
+                            Locked
                           </span>
                         ) : g.status === "redeemed" ? (
                           <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-semibold text-muted">
@@ -997,10 +997,10 @@ export default function ReferralsTab() {
               <FormInput
                 label="Reward Lock Delay (Seconds)"
                 type="number"
-                min={5}
+                min={0}
                 value={settingsForm.lock_delay_seconds}
-                onChange={(e) => setSettingsForm({ ...settingsForm, lock_delay_seconds: parseInt(e.target.value, 10) || 30 })}
-                hint="Mandatory countdown lock (default 30s)."
+                onChange={(e) => setSettingsForm({ ...settingsForm, lock_delay_seconds: parseInt(e.target.value, 10) ?? 0 })}
+                hint="Reward lock delay in seconds (0 = Instant unlock upon verification)."
               />
             </div>
           </div>

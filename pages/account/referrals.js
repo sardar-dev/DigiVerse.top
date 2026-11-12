@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
 import SEO from "../../components/SEO";
@@ -8,7 +8,6 @@ import PageContainer from "../../components/layout/PageContainer";
 import Alert from "../../components/ui/Alert";
 import { FormInput } from "../../components/ui/FormInput";
 import { PrimaryButton, SecondaryButton } from "../../components/ui/Button";
-import { EmptyState } from "../../components/ui/States";
 import { useT } from "../../lib/i18n";
 
 export default function ReferralsPage() {
@@ -18,25 +17,29 @@ export default function ReferralsPage() {
   const [stats, setStats] = useState(null);
   const [gifts, setGifts] = useState([]);
   const [referrals, setReferrals] = useState([]);
-  const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [now, setNow] = useState(Date.now());
 
-  // Username creation modal / inline state for legacy users
+  // Username creation state for older accounts without a username
   const [newUsername, setNewUsername] = useState("");
   const [savingUsername, setSavingUsername] = useState(false);
   const [userError, setUserError] = useState("");
 
+  // Direct 1-Click Gift Claim Modal
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimError, setClaimError] = useState("");
+  const [claimSuccess, setClaimSuccess] = useState(null);
+
   useEffect(() => {
     loadData();
-    // 1-second interval to drive live countdowns
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
   }, []);
 
   async function loadData() {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const {
+      data: { session: currentSession },
+    } = await supabase.auth.getSession();
     if (!currentSession) {
       window.location.href = locale === "en" ? "/login" : `/${locale}/login`;
       return;
@@ -51,7 +54,6 @@ export default function ReferralsPage() {
         setStats(json.stats);
         setGifts(json.gifts || []);
         setReferrals(json.referrals || []);
-        setSettings(json.settings);
       }
     } catch (err) {
       console.error("Failed to load referrals:", err);
@@ -94,14 +96,37 @@ export default function ReferralsPage() {
     setTimeout(() => setCopied(false), 2500);
   }
 
-  // Format countdown string: mm:ss
-  function formatCountdown(targetIso) {
-    const targetMs = new Date(targetIso).getTime();
-    const diffSec = Math.max(0, Math.floor((targetMs - now) / 1000));
-    if (diffSec <= 0) return null;
-    const m = Math.floor(diffSec / 60);
-    const s = diffSec % 60;
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  // Pre-formatted viral share messages
+  const shareText = t(
+    "🎁 Get 1 Billion Muse AI Tokens for FREE on DigiVerse! Sign up using my link to claim your reward:"
+  );
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText}\n${referralLink}`)}`;
+  const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
+
+  async function handleClaimGift(e) {
+    if (e) e.preventDefault();
+    setClaimError("");
+    setClaimLoading(true);
+
+    try {
+      const res = await fetch("/api/referrals/claim-gift", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invite_code: inviteCode }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setClaimError(data.message || data.error || "Failed to claim tokens.");
+      } else {
+        setClaimSuccess(data);
+        setInviteCode("");
+        await loadData();
+      }
+    } catch {
+      setClaimError("Network error. Please try again.");
+    } finally {
+      setClaimLoading(false);
+    }
   }
 
   return (
@@ -115,21 +140,65 @@ export default function ReferralsPage() {
       <SiteHeader session={session} />
 
       <PageContainer className="flex-1 py-8 sm:py-10">
-        {/* Hero banner */}
-        <div className="relative overflow-hidden rounded-3xl border border-brand/20 bg-gradient-to-br from-brand-soft via-surface to-surface-alt p-6 sm:p-9 shadow-card mb-8">
+        {/* Hero Banner */}
+        <div className="relative overflow-hidden rounded-3xl border border-brand/20 bg-gradient-to-br from-brand-soft/70 via-surface to-surface p-6 sm:p-9 shadow-card mb-8">
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand mb-3">
               <span>🎁</span> {t("Referral Rewards Program")}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
-              {t("Invite Friends, Get Free Muse AI Tokens")}
+              {t("Invite Friends, Get 1 Billion Muse AI Tokens Free")}
             </h1>
             <p className="mt-2 text-sm sm:text-base text-muted leading-relaxed">
-              {t("Invite friends to DigiVerse! When a friend registers using your link, BOTH of you get 1 Billion Muse AI Tokens (1 Gift Box each)! Maximum 15 lifetime gifts.")}
+              {t(
+                "Share your link with friends. When a friend signs up and verifies their email, BOTH of you get 1 Billion Muse AI Tokens (1 Gift Box each)!"
+              )}
             </p>
           </div>
 
-          {/* Referral link bar */}
+          {/* 3-Step Visual Infographic ("How It Works") */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 my-7">
+            {/* Step 1 */}
+            <div className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition hover:border-brand/40">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand font-extrabold text-base">
+                1
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-ink">{t("Share Your Link")}</h3>
+                <p className="mt-0.5 text-xs text-muted leading-relaxed">
+                  {t("Send your referral link to friends on WhatsApp, Telegram, or social media.")}
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition hover:border-brand/40">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand font-extrabold text-base">
+                2
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-ink">{t("Friend Signs Up Free")}</h3>
+                <p className="mt-0.5 text-xs text-muted leading-relaxed">
+                  {t("Your friend creates a free account and confirms their email address.")}
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex items-start gap-3 rounded-2xl border border-success/30 bg-success-soft/20 p-4 shadow-sm transition hover:border-success/50">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success text-white font-extrabold text-lg">
+                🎁
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-success">{t("Both Get 1B Tokens Free!")}</h3>
+                <p className="mt-0.5 text-xs text-muted leading-relaxed">
+                  {t("Instant reward unlocked! 1B tokens ready in your wallet with zero delay.")}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Referral link & 1-Click Sharing buttons */}
           <div className="mt-6 max-w-xl">
             {profile && !profile.username ? (
               <form onSubmit={handleClaimUsername} className="space-y-3 rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-card">
@@ -151,8 +220,8 @@ export default function ReferralsPage() {
                 {userError && <Alert variant="error">{userError}</Alert>}
               </form>
             ) : (
-              <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5 uppercase tracking-wider">
+              <div className="space-y-3">
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider">
                   {t("Your Unique Referral Link")}
                 </label>
                 <div className="flex items-center gap-2 rounded-xl border border-border bg-surface p-1.5 sm:p-2 shadow-card">
@@ -171,69 +240,131 @@ export default function ReferralsPage() {
                     {copied ? t("Copied! ✓") : t("Copy Link")}
                   </PrimaryButton>
                 </div>
+
+                {/* 1-Click Viral Sharing Buttons */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:bg-[#1EBE5D] active:scale-[0.99]"
+                  >
+                    <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.99.54 1.761.817 2.801.817 3.182 0 5.768-2.587 5.768-5.766.001-3.187-2.575-5.77-5.773-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.112.551 4.095 1.517 5.823l-1.608 5.871 6.027-1.581c1.667.914 3.57 1.439 5.597 1.439 6.627 0 12-5.373 12-12s-5.373-12-12-12z" />
+                    </svg>
+                    <span>{t("Share on WhatsApp")}</span>
+                  </a>
+
+                  <a
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E8EC4] active:scale-[0.99]"
+                  >
+                    <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.34-.674.34l.205-3.048 5.549-5.012c.241-.213-.054-.334-.373-.121l-6.86 4.319-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.946z" />
+                    </svg>
+                    <span>{t("Share on Telegram")}</span>
+                  </a>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Statistics Grid */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 mb-8">
-          <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-card">
-            <span className="text-xs font-semibold text-muted">{t("Total Gifts Earned")}</span>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-ink">
-              {stats?.total_earned ?? 0} <span className="text-xs text-muted font-normal">/ {stats?.max_lifetime_gifts ?? 15}</span>
+        {/* Simplified 3-Card Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
+          {/* Card 1: Available Gift Boxes */}
+          <div className="rounded-2xl border border-success/40 bg-gradient-to-br from-surface to-success-soft/30 p-5 shadow-card flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-success">
+                🎁 {t("Available Gift Boxes")}
+              </span>
+              <div className="mt-2 text-3xl sm:text-4xl font-extrabold text-success">
+                {stats?.available_count ?? 0}
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {t("1 Box = 1 Billion Muse AI Tokens · Ready to claim now")}
+              </p>
             </div>
-            <span className="mt-1 block text-[11px] text-muted">{t("Lifetime reward cap")}</span>
+            {(stats?.available_count ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setClaimSuccess(null);
+                  setClaimError("");
+                  setClaimModalOpen(true);
+                }}
+                className="mt-4 w-full rounded-xl bg-success px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-success/90 active:scale-[0.99]"
+              >
+                ⚡ {t("Claim 1B Free Tokens Now")}
+              </button>
+            )}
           </div>
 
-          <div className="rounded-2xl border border-success/30 bg-success-soft/30 p-4 sm:p-5 shadow-card">
-            <span className="text-xs font-semibold text-success">{t("Available Now")}</span>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-success">
-              {stats?.available_count ?? 0}
+          {/* Card 2: Friends Invited */}
+          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                👥 {t("Friends Invited")}
+              </span>
+              <div className="mt-2 text-3xl sm:text-4xl font-extrabold text-ink">
+                {referrals.length}
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {t("Every verified friend earns you 1 Gift Box")}
+              </p>
             </div>
-            <span className="mt-1 block text-[11px] text-muted">{t("Ready for checkout")}</span>
+            <div className="mt-4 pt-3 border-t border-border/60 text-xs text-muted">
+              {stats?.total_earned ?? 0} {t("total lifetime boxes earned (Max 15)")}
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-brand/30 bg-brand-soft/40 p-4 sm:p-5 shadow-card">
-            <span className="text-xs font-semibold text-brand">{t("Locked (30s)")}</span>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-brand">
-              {stats?.locked_count ?? 0}
+          {/* Card 3: Free Tokens Claimed */}
+          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                ⚡ {t("Free Tokens Claimed")}
+              </span>
+              <div className="mt-2 text-3xl sm:text-4xl font-extrabold text-brand">
+                {stats?.redeemed_count ?? 0}B
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {t("Successfully fulfilled to Muse AI")}
+              </p>
             </div>
-            <span className="mt-1 block text-[11px] text-muted">
-              {stats?.next_unlock_seconds > 0 ? t("Unlocking in {n}s", { n: stats.next_unlock_seconds }) : t("Verified rewards")}
-            </span>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-card">
-            <span className="text-xs font-semibold text-muted">{t("Redeemed")}</span>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-ink">
-              {stats?.redeemed_count ?? 0}
+            <div className="mt-4 pt-3 border-t border-border/60 text-xs text-muted">
+              {t("Up to 3 boxes can be claimed daily")}
             </div>
-            <span className="mt-1 block text-[11px] text-muted">{t("Free tokens claimed")}</span>
-          </div>
-
-          <div className="col-span-2 sm:col-span-1 rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-card">
-            <span className="text-xs font-semibold text-muted">{t("Daily Allowance")}</span>
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-ink">
-              {stats?.remaining_today ?? 3} <span className="text-xs text-muted font-normal">/ {stats?.daily_limit ?? 3}</span>
-            </div>
-            <span className="mt-1 block text-[11px] text-muted">{t("Available today")}</span>
           </div>
         </div>
+
+        <p className="text-xs text-muted mb-8 px-1">
+          💡 {t("Note: You can claim up to 3 gift boxes per day. Lifetime program limit is 15 gifts.")}
+        </p>
 
         {/* Gift Wallet Section */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-ink">{t("Your Gift Box Wallet")}</h2>
-              <p className="text-xs text-muted">{t("1 Gift Box = 1 Billion Muse AI Tokens. Automatically unlocked 30s after signup.")}</p>
+              <h2 className="text-lg font-bold text-ink">{t("Your Gift Boxes")}</h2>
+              <p className="text-xs text-muted">
+                {t("Instant reward boxes earned from referring friends.")}
+              </p>
             </div>
-            <Link
-              href="/"
-              className="text-xs font-semibold text-brand hover:underline"
-            >
-              {t("Redeem in Store →")}
-            </Link>
+            {(stats?.available_count ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setClaimSuccess(null);
+                  setClaimError("");
+                  setClaimModalOpen(true);
+                }}
+                className="text-xs font-bold text-brand hover:underline"
+              >
+                ⚡ {t("Claim 1B Tokens →")}
+              </button>
+            )}
           </div>
 
           {gifts.length === 0 ? (
@@ -241,16 +372,15 @@ export default function ReferralsPage() {
               <span className="text-4xl block mb-2">🎁</span>
               <p className="text-sm font-medium text-ink">{t("No gift boxes yet")}</p>
               <p className="text-xs text-muted mt-1">
-                {t("Share your referral link with friends to start earning free Muse AI tokens.")}
+                {t("Share your referral link with friends to earn your first free gift box!")}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {gifts.map((gift) => {
-                const countdown = gift.status === "locked" ? formatCountdown(gift.available_at) : null;
-                const isAvailable = gift.status === "available" || (gift.status === "locked" && !countdown);
                 const isRedeemed = gift.status === "redeemed";
                 const isRevoked = gift.status === "revoked";
+                const isAvailable = !isRedeemed && !isRevoked;
 
                 return (
                   <div
@@ -258,8 +388,6 @@ export default function ReferralsPage() {
                     className={`relative rounded-2xl border p-4 transition-all shadow-card ${
                       isAvailable
                         ? "border-success/40 bg-gradient-to-br from-surface to-success-soft/20"
-                        : gift.status === "locked" && countdown
-                        ? "border-brand/40 bg-gradient-to-br from-surface to-brand-soft/20"
                         : isRedeemed
                         ? "border-border bg-surface/50 opacity-70"
                         : "border-danger/30 bg-danger-soft/10 opacity-60"
@@ -286,13 +414,7 @@ export default function ReferralsPage() {
                       {/* Status Badges */}
                       {isAvailable && (
                         <span className="rounded-full bg-success/15 px-2.5 py-1 text-[11px] font-bold text-success">
-                          {t("Available")}
-                        </span>
-                      )}
-                      {gift.status === "locked" && countdown && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-brand/15 px-2.5 py-1 text-[11px] font-bold text-brand font-mono">
-                          <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
-                          {countdown}
+                          ✓ {t("Available")}
                         </span>
                       )}
                       {isRedeemed && (
@@ -310,18 +432,24 @@ export default function ReferralsPage() {
                     <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between text-xs">
                       <span className="text-muted">
                         {isAvailable
-                          ? t("Ready to use at checkout")
-                          : gift.status === "locked" && countdown
-                          ? t("Unlocking in {time}", { time: countdown })
+                          ? t("Ready to claim now")
                           : isRedeemed
-                          ? t("Order #{id}", { id: String(gift.order_id || "").slice(0, 8) })
+                          ? t("Order #{id}", { id: String(gift.order_id || "").slice(0, 8).toUpperCase() })
                           : gift.revoked_reason || t("Cancelled")}
                       </span>
 
                       {isAvailable && (
-                        <Link href="/" className="font-semibold text-brand hover:underline">
-                          {t("Use Now →")}
-                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClaimSuccess(null);
+                            setClaimError("");
+                            setClaimModalOpen(true);
+                          }}
+                          className="font-bold text-brand hover:underline"
+                        >
+                          ⚡ {t("Claim Now →")}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -379,7 +507,7 @@ export default function ReferralsPage() {
                       </td>
                       <td className="py-3 text-end font-semibold">
                         {r.reward_issued ? (
-                          <span className="text-success">+1 Gift Box 🎁</span>
+                          <span className="text-success font-bold">+1 Gift Box 🎁</span>
                         ) : r.status === "qualified_cap_reached" ? (
                           <span className="text-muted">{t("Cap Reached (15)")}</span>
                         ) : (
@@ -395,7 +523,100 @@ export default function ReferralsPage() {
         </div>
       </PageContainer>
       <SiteFooter />
+
+      {/* Direct 1-Click Gift Claim Modal */}
+      {claimModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <button
+              type="button"
+              onClick={() => setClaimModalOpen(false)}
+              className="absolute end-4 top-4 text-muted hover:text-ink text-lg font-bold"
+            >
+              ✕
+            </button>
+
+            {claimSuccess ? (
+              <div className="text-center py-4">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-success-soft text-3xl">
+                  ✨
+                </div>
+                <h3 className="text-lg font-extrabold text-ink">
+                  {t("Tokens Delivered Successfully!")}
+                </h3>
+                <p className="mt-2 text-xs text-muted leading-relaxed">
+                  {claimSuccess.message || t("1 Billion Muse AI tokens have been delivered to your account.")}
+                </p>
+                <div className="mt-4 rounded-xl border border-border bg-bg p-3 text-xs text-ink font-mono" dir="ltr">
+                  Order ID: #{claimSuccess.order_id?.slice(0, 8).toUpperCase()}
+                </div>
+                <PrimaryButton
+                  onClick={() => setClaimModalOpen(false)}
+                  className="mt-6 w-full text-xs font-semibold py-2.5"
+                >
+                  {t("Done")}
+                </PrimaryButton>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🎁</span>
+                  <div>
+                    <h3 className="text-base font-extrabold text-ink">
+                      {t("Claim 1 Billion Muse AI Tokens")}
+                    </h3>
+                    <p className="text-xs text-success font-semibold">
+                      {t("100% Free · 1 Gift Box will be used")}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted leading-relaxed mb-4">
+                  {t("Enter your Muse AI Invite Code or paste your full invite link. Your free tokens will be delivered automatically via TunVN!")}
+                </p>
+
+                {claimError && <div className="mb-3"><Alert variant="error">{claimError}</Alert></div>}
+
+                <form onSubmit={handleClaimGift} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      {t("Your Muse AI Invite Code / Link")}
+                    </label>
+                    <FormInput
+                      placeholder="e.g. muse-code-1234 or https://museai.top/?invite=..."
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value)}
+                      required
+                      autoFocus
+                      className="text-xs font-mono"
+                    />
+                    <span className="mt-1 block text-[11px] text-muted">
+                      {t("Paste your Muse AI invite code or invitation link from your Muse AI app.")}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <SecondaryButton
+                      type="button"
+                      onClick={() => setClaimModalOpen(false)}
+                      className="flex-1 text-xs py-2"
+                    >
+                      {t("Cancel")}
+                    </SecondaryButton>
+                    <PrimaryButton
+                      type="submit"
+                      disabled={claimLoading || !inviteCode.trim()}
+                      className="flex-1 text-xs py-2 font-bold bg-success hover:bg-success/90"
+                    >
+                      {claimLoading ? t("Delivering Tokens…") : t("⚡ Claim Free Tokens")}
+                    </PrimaryButton>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

@@ -130,6 +130,12 @@ export default async function handler(req, res) {
         }
       }
     }
+    // Ensure all locked gifts are immediately available (0s delay)
+    await supabaseAdmin
+      .from("referral_gifts")
+      .update({ status: "available" })
+      .eq("owner_user_id", userId)
+      .eq("status", "locked");
   } catch (reconcileErr) {
     console.warn("[referrals/me] gift reconciliation note:", reconcileErr?.message);
   }
@@ -203,18 +209,15 @@ export default async function handler(req, res) {
   // 5. System settings
   const settings = await getReferralSettings();
 
-  // 6. Reliable live calculation of stats
+  // 6. Reliable live calculation of stats (Instant rewards, 0s lock delay)
   const now = new Date();
-  const giftList = gifts || [];
+  const giftList = (gifts || []).map((g) => ({
+    ...g,
+    status: g.status === "locked" ? "available" : g.status,
+  }));
   const totalEarned = giftList.filter((g) => g.status !== "revoked").length;
-  const availableCount = giftList.filter((g) => {
-    if (g.status === "available") return true;
-    if (g.status === "locked" && g.available_at && new Date(g.available_at) <= now) return true;
-    return false;
-  }).length;
-  const lockedCount = giftList.filter((g) => {
-    return g.status === "locked" && g.available_at && new Date(g.available_at) > now;
-  }).length;
+  const availableCount = giftList.filter((g) => g.status === "available").length;
+  const lockedCount = 0;
   const redeemedCount = giftList.filter((g) => g.status === "redeemed").length;
 
   const todayStart = new Date();
@@ -233,14 +236,7 @@ export default async function handler(req, res) {
   const dailyLimit = Number(settings?.daily_redemption_limit) || 3;
   const maxLifetime = Number(settings?.max_lifetime_gifts) || 15;
   const remainingToday = Math.max(0, dailyLimit - todayRedeemedCount);
-
-  // Closest locked countdown in seconds
-  let nextUnlockSec = 0;
-  const lockedGifts = giftList.filter((g) => g.status === "locked" && g.available_at && new Date(g.available_at) > now);
-  if (lockedGifts.length > 0) {
-    const earliest = Math.min(...lockedGifts.map((g) => new Date(g.available_at).getTime()));
-    nextUnlockSec = Math.max(0, Math.ceil((earliest - now.getTime()) / 1000));
-  }
+  const nextUnlockSec = 0;
 
   const computedStats = {
     total_earned: totalEarned,
@@ -256,6 +252,8 @@ export default async function handler(req, res) {
   const finalStats = {
     ...computedStats,
     ...(rpcStats || {}),
+    locked_count: 0,
+    next_unlock_seconds: 0,
     // Ensure accurate counts from live gift rows if RPC returned 0 but gifts exist
     ...(totalEarned > 0 ? {
       total_earned: Math.max(totalEarned, Number(rpcStats?.total_earned || 0)),

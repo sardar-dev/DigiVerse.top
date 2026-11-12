@@ -147,7 +147,7 @@ export default function ReferralCostTab() {
         <div className="rounded-2xl border border-brand/30 bg-brand-soft/30 p-4 shadow-card">
           <span className="text-xs font-semibold text-brand">4. Gifts Locked</span>
           <div className="mt-2 text-2xl font-extrabold text-brand">{an.total_gifts_locked ?? 0}</div>
-          <span className="text-[11px] text-muted">In 30s unlock delay</span>
+          <span className="text-[11px] text-muted">Pending unlock</span>
         </div>
 
         <div className="rounded-2xl border border-success/30 bg-success-soft/30 p-4 shadow-card">
