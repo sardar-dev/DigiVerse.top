@@ -115,7 +115,7 @@ export default function SiteHeader({
           <span className="text-base sm:text-lg font-semibold tracking-tight text-ink truncate">{brandName}</span>
         </Link>
 
-        <nav className="hidden items-center gap-1 text-sm md:flex">
+        <nav className="hidden items-center gap-1 text-sm lg:flex">
           {links.map((l) => (
             <Link
               key={l.href}
@@ -132,7 +132,7 @@ export default function SiteHeader({
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitcher />
           {session ? (
             <>
@@ -206,7 +206,7 @@ export default function SiteHeader({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 md:hidden flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden flex-shrink-0">
           <LanguageSwitcher />
           {session && hasBalance && (
             <Link
@@ -235,7 +235,7 @@ export default function SiteHeader({
       </div>
 
       {open && (
-        <nav className="border-t border-border bg-surface px-4 py-3 md:hidden">
+        <nav className="border-t border-border bg-surface px-4 py-3 lg:hidden">
           {session && (
             <div className="mb-2 flex items-center gap-3 rounded-xl bg-brand-soft px-3 py-3">
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
