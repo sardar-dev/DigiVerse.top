@@ -1100,7 +1100,7 @@ export default function ReferralsTab() {
                   onChange={(e) => setWhitelistDevices(e.target.value)}
                 />
                 <p className="mt-1 text-[11px] text-muted">
-                  In devices se aane wale signups par multiple account block nahi hoga.
+                  Signups originating from whitelisted devices bypass the multi-account restriction.
                 </p>
               </div>
             </div>

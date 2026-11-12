@@ -126,7 +126,7 @@ export default function SettingsTab({
           </span>
         </div>
         <p className="text-xs text-muted leading-relaxed">
-          Jab yeh <strong>DISABLED</strong> hoga to login aur signup pages par Continue with Google ka button chhupa rahega. Google Cloud Console credentials set karne ke baad aap ise yahan se <strong>ENABLED</strong> kar sakte hain.
+          When set to <strong>DISABLED</strong>, the Continue with Google button remains hidden on login and signup pages. Once your Google Cloud Console credentials are configured, you can enable it here.
         </p>
       </div>
 
@@ -164,7 +164,7 @@ export default function SettingsTab({
           </span>
         </div>
         <p className="text-xs text-muted leading-relaxed">
-          Har naye <strong>Order</strong> aur naye <strong>User Signup</strong> par aapke private Telegram bot se aapko foran instant alert aayega.
+          Receive real-time instant alerts on your private Telegram bot for every <strong>Paid Order</strong> and new <strong>User Registration</strong>.
         </p>
         <FormInput
           label="Bot Token"

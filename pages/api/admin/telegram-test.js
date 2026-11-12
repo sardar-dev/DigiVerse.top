@@ -40,8 +40,8 @@ export default async function handler(req, res) {
   if (!result.success) {
     let err = result.error || "failed_to_send";
     if (/chat not found/i.test(err)) {
-      const link = botUsername ? `https://t.me/${botUsername}` : "apne naye bot";
-      err = `Pehle Telegram par apne bot ko open karke START dabayein: ${link}`;
+      const link = botUsername ? `https://t.me/${botUsername}` : "your bot";
+      err = `Please open your Telegram bot and click START first: ${link}`;
     }
     return res.status(400).json({ success: false, error: err, bot_username: botUsername });
   }
