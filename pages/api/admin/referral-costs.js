@@ -27,8 +27,78 @@ export default async function handler(req, res) {
   const settings = await getReferralSettings();
   const currentSupplierCost = Number(settings?.supplier_cost_per_gift || 0.06);
 
-  // 3. Overall referral counts
+  // 2.5 Auto-reconciliation of gift orders & redemptions
   const nowIso = new Date().toISOString();
+  let totalRedeemedFromOrders = 0;
+  const userIdsWithRedeemedOrders = new Set();
+
+  try {
+    const { data: giftOrders } = await supabaseAdmin
+      .from("orders")
+      .select("id, status, total, gifts_redeemed, user_id, product_id, created_at, products(cost_price)")
+      .gt("gifts_redeemed", 0)
+      .neq("status", "cancelled");
+
+    for (const ord of giftOrders || []) {
+      const gCount = Number(ord.gifts_redeemed || 1);
+      totalRedeemedFromOrders += gCount;
+      if (ord.user_id) userIdsWithRedeemedOrders.add(ord.user_id);
+
+      // If free order was stuck in pending_payment, advance it to paid
+      if (ord.status === "pending_payment" && Number(ord.total || 0) <= 0) {
+        await supabaseAdmin
+          .from("orders")
+          .update({ status: "paid", paid_with: "gift_box", updated_at: nowIso })
+          .eq("id", ord.id);
+        ord.status = "paid";
+      }
+
+      // Mark gifts for this order as redeemed
+      await supabaseAdmin
+        .from("referral_gifts")
+        .update({ status: "redeemed", redeemed_at: nowIso, order_id: ord.id })
+        .or(`order_id.eq.${ord.id},and(owner_user_id.eq.${ord.user_id},status.eq.reserved)`);
+
+      // Mark redemptions as fulfilled
+      await supabaseAdmin
+        .from("referral_gift_redemptions")
+        .update({ status: "fulfilled", fulfilled_at: nowIso, order_id: ord.id })
+        .or(`order_id.eq.${ord.id},and(user_id.eq.${ord.user_id},status.eq.reserved)`);
+
+      // Try invoking database RPC
+      try {
+        await supabaseAdmin.rpc("finalize_gift_redemption", {
+          p_order_id: ord.id,
+          p_actual_cost: ord.products?.cost_price ? Number(ord.products.cost_price) : null,
+        });
+      } catch {}
+
+      // Ensure cost ledger entry exists
+      const { data: existingLedger } = await supabaseAdmin
+        .from("referral_cost_ledger")
+        .select("id")
+        .eq("order_id", ord.id)
+        .maybeSingle();
+
+      if (!existingLedger && ord.user_id) {
+        const costPerGift = currentSupplierCost;
+        await supabaseAdmin.from("referral_cost_ledger").insert({
+          order_id: ord.id,
+          user_id: ord.user_id,
+          gifts_count: gCount,
+          tokens_fulfilled: gCount * 1000000000,
+          supplier_cost_per_gift: costPerGift,
+          total_supplier_cost: Number((gCount * costPerGift).toFixed(2)),
+          is_estimated: false,
+          created_at: ord.created_at || nowIso,
+        });
+      }
+    }
+  } catch (syncErr) {
+    console.warn("[referral-costs] auto-reconcile note:", syncErr?.message);
+  }
+
+  // 3. Overall referral counts
 
   const [
     { count: totalReferred },
@@ -69,8 +139,8 @@ export default async function handler(req, res) {
     }
   });
 
-  // Outstanding gift liability = (locked + available gifts) * currentSupplierCost
-  const outstandingGiftsCount = (totalGiftsLocked || 0) + (totalGiftsAvailable || 0);
+  const effectiveGiftsRedeemed = Math.max(totalGiftsRedeemed || 0, totalRedeemedFromOrders);
+  const outstandingGiftsCount = Math.max(0, (totalGiftsLocked || 0) + (totalGiftsAvailable || 0) - (effectiveGiftsRedeemed - (totalGiftsRedeemed || 0)));
   const totalOutstandingLiability = Number((outstandingGiftsCount * currentSupplierCost).toFixed(2));
 
   // 5. Per-User Cost & Referral Report
@@ -105,13 +175,20 @@ export default async function handler(req, res) {
     if (!g.owner_user_id) return;
     if (!userStatsMap[g.owner_user_id]) userStatsMap[g.owner_user_id] = { referrals: 0, qualified: 0, earned: 0, redeemed: 0 };
     if (g.status !== "revoked") userStatsMap[g.owner_user_id].earned += 1;
-    if (g.status === "redeemed") userStatsMap[g.owner_user_id].redeemed += 1;
+    if (g.status === "redeemed" || g.status === "reserved") userStatsMap[g.owner_user_id].redeemed += 1;
+  });
+
+  // Ensure any user who redeemed via order has their redeemed count updated in userStatsMap
+  userIdsWithRedeemedOrders.forEach((uid) => {
+    if (!userStatsMap[uid]) userStatsMap[uid] = { referrals: 0, qualified: 0, earned: 0, redeemed: 0 };
+    if (userStatsMap[uid].redeemed === 0) userStatsMap[uid].redeemed = 1;
+    if (userStatsMap[uid].earned < userStatsMap[uid].redeemed) userStatsMap[uid].earned = userStatsMap[uid].redeemed;
   });
 
   const userReports = (activeProfiles || [])
     .map((p) => {
       const s = userStatsMap[p.id] || { referrals: 0, qualified: 0, earned: 0, redeemed: 0 };
-      const costSpent = perUserCost[p.id] || 0;
+      const costSpent = perUserCost[p.id] || (s.redeemed * currentSupplierCost);
       return {
         user_id: p.id,
         username: p.username || "—",
@@ -141,15 +218,15 @@ export default async function handler(req, res) {
     analytics: {
       total_referred_users: totalReferred || 0,
       total_qualified_referrals: totalQualified || 0,
-      total_gifts_awarded: totalGiftsAwarded || 0,
+      total_gifts_awarded: Math.max(totalGiftsAwarded || 0, effectiveGiftsRedeemed),
       total_gifts_locked: totalGiftsLocked || 0,
-      total_gifts_available: totalGiftsAvailable || 0,
-      total_gifts_redeemed: totalGiftsRedeemed || 0,
+      total_gifts_available: Math.max(0, (totalGiftsAvailable || 0) - (effectiveGiftsRedeemed - (totalGiftsRedeemed || 0))),
+      total_gifts_redeemed: effectiveGiftsRedeemed,
       total_gifts_revoked: totalGiftsRevoked || 0,
-      total_free_tokens_delivered: `${totalGiftsRedeemed || 0}B`,
+      total_free_tokens_delivered: `${Math.max(effectiveGiftsRedeemed, Math.round(totalFreeTokensFulfilled / 1000000000))}B`,
       total_outstanding_liability: totalOutstandingLiability,
-      total_actual_spent: Number(totalActualSpent.toFixed(2)),
-      total_users_redeemed: usersWhoRedeemed.size,
+      total_actual_spent: Number((Math.max(totalActualSpent, effectiveGiftsRedeemed * currentSupplierCost)).toFixed(2)),
+      total_users_redeemed: Math.max(usersWhoRedeemed.size, userIdsWithRedeemedOrders.size),
     },
     user_reports: userReports,
     cost_history: costHistory || [],

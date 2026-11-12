@@ -138,5 +138,28 @@ export default async function handler(req, res) {
   if (!result.success) {
     return res.status(502).json({ success: false, error: result.error });
   }
+  if (Number(claimedOrder.gifts_redeemed || 0) > 0) {
+    try {
+      await supabaseAdmin.rpc("finalize_gift_redemption", {
+        p_order_id: claimedOrder.id,
+        p_actual_cost: claimedOrder.unit_cost ? Number(claimedOrder.unit_cost) : null,
+      });
+    } catch (finErr) {
+      console.warn("[verify-payment] finalize_gift_redemption error:", finErr?.message);
+    }
+    try {
+      const nowIso = new Date().toISOString();
+      await supabaseAdmin
+        .from("referral_gifts")
+        .update({ status: "redeemed", redeemed_at: nowIso, order_id: claimedOrder.id })
+        .or(`order_id.eq.${claimedOrder.id},and(owner_user_id.eq.${claimedOrder.user_id},status.eq.reserved)`);
+
+      await supabaseAdmin
+        .from("referral_gift_redemptions")
+        .update({ status: "fulfilled", fulfilled_at: nowIso, order_id: claimedOrder.id })
+        .or(`order_id.eq.${claimedOrder.id},and(user_id.eq.${claimedOrder.user_id},status.eq.reserved)`);
+    } catch {}
+  }
+
   return res.status(200).json({ success: true, items: result.items, manual: result.manual || false });
 }

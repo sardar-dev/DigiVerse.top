@@ -4,6 +4,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getSupplier, resolveSource, applyBuffer } from "../../../lib/suppliers";
 import { refreshSourceFromLive } from "../../../lib/syncProducts";
 import { checkCoupon, orderFitsCouponLimits } from "../../../lib/coupons";
+import { fulfillOrder } from "../../../lib/fulfillOrder";
 import * as tunvn from "../../../lib/suppliers/tunvn";
 import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 
@@ -330,6 +331,79 @@ export default async function handler(req, res) {
       .update({ status: "cancelled", updated_at: new Date().toISOString() })
       .eq("id", order.id);
     return res.status(409).json({ success: false, error: "coupon_used_up" });
+  }
+
+  // 3. If order is 100% covered by referral gift(s), auto-finalize payment & fulfill immediately
+  if (total <= 0 && giftsCount > 0) {
+    const paidIso = new Date().toISOString();
+    await supabaseAdmin
+      .from("orders")
+      .update({ status: "paid", paid_with: "gift_box", updated_at: paidIso })
+      .eq("id", order.id);
+
+    try {
+      await supabaseAdmin.rpc("finalize_gift_redemption", {
+        p_order_id: order.id,
+        p_actual_cost: unitCost,
+      });
+    } catch (finErr) {
+      console.warn("[orders/create] finalize_gift_redemption RPC error:", finErr?.message);
+    }
+
+    // Direct fallback to ensure ledger and gifts are updated immediately
+    try {
+      await supabaseAdmin
+        .from("referral_gifts")
+        .update({ status: "redeemed", redeemed_at: paidIso, order_id: order.id })
+        .or(`order_id.eq.${order.id},and(owner_user_id.eq.${userId},status.eq.reserved)`);
+
+      await supabaseAdmin
+        .from("referral_gift_redemptions")
+        .update({ status: "fulfilled", fulfilled_at: paidIso, order_id: order.id })
+        .or(`order_id.eq.${order.id},and(user_id.eq.${userId},status.eq.reserved)`);
+
+      const { data: existingLedger } = await supabaseAdmin
+        .from("referral_cost_ledger")
+        .select("id")
+        .eq("order_id", order.id)
+        .maybeSingle();
+
+      if (!existingLedger) {
+        const costPerGift = Number(unitCost) > 0 ? Number(unitCost) : 0.06;
+        await supabaseAdmin.from("referral_cost_ledger").insert({
+          order_id: order.id,
+          user_id: userId,
+          gifts_count: giftsCount,
+          tokens_fulfilled: giftsCount * 1000000000,
+          supplier_cost_per_gift: costPerGift,
+          total_supplier_cost: Number((giftsCount * costPerGift).toFixed(2)),
+          is_estimated: false,
+          created_at: paidIso,
+        });
+      }
+    } catch (fallbackErr) {
+      console.warn("[orders/create] gift finalize fallback note:", fallbackErr?.message);
+    }
+
+    let fulfillRes = null;
+    try {
+      fulfillRes = await fulfillOrder({ ...order, status: "paid", paid_with: "gift_box" });
+    } catch (fErr) {
+      console.error("[orders/create] fulfillOrder for free gift failed:", fErr?.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      order: {
+        ...order,
+        status: fulfillRes?.success ? "completed" : "paid",
+        paid_with: "gift_box",
+        items: fulfillRes?.items || [],
+        manual: fulfillRes?.manual || false,
+      },
+      items: fulfillRes?.items || [],
+      manual: fulfillRes?.manual || false,
+    });
   }
 
   return res.status(200).json({ success: true, order });

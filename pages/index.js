@@ -594,6 +594,20 @@ function BuyModal({ product, onClose, ticker, session }) {
       return;
     }
     setOrder(data.order);
+    if (data.order?.status && data.order.status !== "pending_payment") {
+      fpixel.event("Purchase", {
+        content_name: product.title,
+        content_ids: [String(product.id)],
+        content_type: "product",
+        value: Number(data.order?.total) || 0,
+        currency: "USD",
+        num_items: parseInt(quantity, 10) || 1,
+      });
+      setItems(data.items || data.order.items || []);
+      setManual(data.manual !== undefined ? data.manual : (data.order.manual || false));
+      setStep("done");
+      return;
+    }
     fpixel.event("InitiateCheckout", {
       content_name: product.title,
       content_ids: [String(product.id)],
