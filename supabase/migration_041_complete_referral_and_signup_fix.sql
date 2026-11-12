@@ -101,6 +101,22 @@ insert into public.referral_settings (id)
 values (1)
 on conflict (id) do nothing;
 
+-- Ensure all columns exist on referral_settings even if table was created previously
+alter table public.referral_settings
+  add column if not exists referral_enabled boolean not null default true,
+  add column if not exists redemption_enabled boolean not null default true,
+  add column if not exists require_email_verification boolean not null default false,
+  add column if not exists max_lifetime_gifts int not null default 15,
+  add column if not exists daily_redemption_limit int not null default 3,
+  add column if not exists lock_delay_seconds int not null default 30,
+  add column if not exists tokens_per_gift bigint not null default 1000000000,
+  add column if not exists supplier_cost_per_gift numeric not null default 0.06,
+  add column if not exists currency text not null default 'USD',
+  add column if not exists fraud_max_accounts_per_ip int not null default 2,
+  add column if not exists fraud_max_accounts_per_device int not null default 1,
+  add column if not exists whitelisted_ips text default '',
+  add column if not exists whitelisted_device_ids text default '';
+
 alter table public.referral_settings enable row level security;
 drop policy if exists "referral_settings: public read" on public.referral_settings;
 create policy "referral_settings: public read" on public.referral_settings for select using (true);
@@ -138,6 +154,19 @@ create table if not exists public.referrals (
 );
 
 alter table public.referrals enable row level security;
+
+-- Ensure all columns exist on referrals even if table was created previously
+alter table public.referrals
+  add column if not exists referrer_username text,
+  add column if not exists status text not null default 'pending_verification',
+  add column if not exists device_id text,
+  add column if not exists registration_ip text,
+  add column if not exists suspicious_reason text,
+  add column if not exists reward_issued boolean not null default false,
+  add column if not exists verified_at timestamptz,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
 drop policy if exists "referrals: user can read own referrals" on public.referrals;
 create policy "referrals: user can read own referrals" on public.referrals for select
   using (auth.uid() = referrer_id or auth.uid() = referred_id);
@@ -163,6 +192,19 @@ create table if not exists public.referral_gifts (
   revoked_by uuid references auth.users(id),
   revoked_reason text
 );
+
+-- Ensure all columns exist on referral_gifts even if table was created previously
+alter table public.referral_gifts
+  add column if not exists reward_type text not null default 'muse_ai_tokens',
+  add column if not exists reward_quantity bigint not null default 1000000000,
+  add column if not exists status text not null default 'locked',
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists available_at timestamptz not null default now(),
+  add column if not exists redeemed_at timestamptz,
+  add column if not exists order_id uuid,
+  add column if not exists revoked_at timestamptz,
+  add column if not exists revoked_by uuid references auth.users(id),
+  add column if not exists revoked_reason text;
 
 -- Drop restrictive order_id foreign key if it already exists from earlier migrations
 alter table public.referral_gifts drop constraint if exists referral_gifts_order_id_fkey;
@@ -190,6 +232,15 @@ create table if not exists public.referral_gift_redemptions (
   fulfilled_at timestamptz
 );
 
+-- Ensure all columns exist on referral_gift_redemptions even if table was created previously
+alter table public.referral_gift_redemptions
+  add column if not exists tokens_redeemed bigint not null default 1000000000,
+  add column if not exists supplier_cost_snapshot numeric not null default 0.06,
+  add column if not exists currency text not null default 'USD',
+  add column if not exists status text not null default 'reserved',
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists fulfilled_at timestamptz;
+
 -- Drop restrictive order_id foreign key if it already exists
 alter table public.referral_gift_redemptions drop constraint if exists referral_gift_redemptions_order_id_fkey;
 
@@ -216,6 +267,20 @@ create table if not exists public.referral_cost_ledger (
   is_estimated boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+alter table public.referral_cost_ledger drop constraint if exists referral_cost_ledger_order_id_fkey;
+
+-- Ensure all columns exist on referral_cost_ledger even if table was created previously
+alter table public.referral_cost_ledger
+  add column if not exists gifts_count int not null default 1,
+  add column if not exists tokens_fulfilled bigint not null default 1000000000,
+  add column if not exists supplier_cost_per_gift numeric not null default 0.06,
+  add column if not exists total_supplier_cost numeric not null default 0.06,
+  add column if not exists supplier_wallet_before numeric,
+  add column if not exists supplier_wallet_after numeric,
+  add column if not exists actual_deducted numeric,
+  add column if not exists is_estimated boolean not null default false,
+  add column if not exists created_at timestamptz not null default now();
 
 alter table public.referral_cost_ledger enable row level security;
 drop policy if exists "referral_cost_ledger: admin read" on public.referral_cost_ledger;
