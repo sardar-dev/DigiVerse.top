@@ -47,29 +47,86 @@ export default async function handler(req, res) {
 
     const userMap = {};
     if (userIds.size > 0) {
+      const idArray = Array.from(userIds);
       const { data: profiles } = await supabaseAdmin
         .from("profiles")
         .select("id, username, email")
-        .in("id", Array.from(userIds));
+        .in("id", idArray);
 
       (profiles || []).forEach((p) => {
         userMap[p.id] = { username: p.username || "—", email: p.email || "—" };
       });
+
+      // For any user whose username or email is missing, lookup in auth.users and auto-heal profiles
+      const missingOrIncomplete = idArray.filter(
+        (id) => !userMap[id] || userMap[id].username === "—" || userMap[id].email === "—"
+      );
+
+      for (const mId of missingOrIncomplete) {
+        try {
+          const { data: authData } = await supabaseAdmin.auth.admin.getUserById(mId);
+          if (authData?.user) {
+            const resolvedUser =
+              authData.user.user_metadata?.username ||
+              (authData.user.email ? authData.user.email.split("@")[0] : `user_${mId.slice(0, 5)}`);
+            const resolvedEmail = authData.user.email || "";
+
+            userMap[mId] = {
+              username: resolvedUser,
+              email: resolvedEmail || "—",
+            };
+
+            // Backfill public.profiles so future queries are instant
+            await supabaseAdmin.from("profiles").upsert(
+              {
+                id: mId,
+                email: resolvedEmail || null,
+                username: resolvedUser,
+              },
+              { onConflict: "id" }
+            );
+          }
+        } catch {}
+      }
     }
 
-    const referrals = (referralsRaw || []).map((r) => ({
-      ...r,
-      referrer_name: userMap[r.referrer_id]?.username || r.referrer_username || "—",
-      referred_name: userMap[r.referred_id]?.username || "—",
-      referred_email: userMap[r.referred_id]?.email || "—",
-    }));
+    const referrals = (referralsRaw || []).map((r) => {
+      const refUser = userMap[r.referred_id];
+      const invUser = userMap[r.referrer_id];
+      const cleanRefName = refUser?.username && refUser.username !== "—"
+        ? refUser.username
+        : (refUser?.email && refUser.email !== "—" ? refUser.email.split("@")[0] : `user_${r.referred_id.slice(0, 6)}`);
 
-    const gifts = (giftsRaw || []).map((g) => ({
-      ...g,
-      owner_name: userMap[g.owner_user_id]?.username || "—",
-      owner_email: userMap[g.owner_user_id]?.email || "—",
-      referred_name: userMap[g.referred_user_id]?.username || "—",
-    }));
+      const cleanInvName = invUser?.username && invUser.username !== "—"
+        ? invUser.username
+        : (r.referrer_username || (invUser?.email && invUser.email !== "—" ? invUser.email.split("@")[0] : "inviter"));
+
+      return {
+        ...r,
+        referrer_name: cleanInvName,
+        referred_name: cleanRefName,
+        referred_email: refUser?.email && refUser.email !== "—" ? refUser.email : "",
+      };
+    });
+
+    const gifts = (giftsRaw || []).map((g) => {
+      const ownUser = userMap[g.owner_user_id];
+      const refUser = userMap[g.referred_user_id];
+      const cleanOwnerName = ownUser?.username && ownUser.username !== "—"
+        ? ownUser.username
+        : (ownUser?.email && ownUser.email !== "—" ? ownUser.email.split("@")[0] : `user_${g.owner_user_id.slice(0, 6)}`);
+
+      const cleanRefName = refUser?.username && refUser.username !== "—"
+        ? refUser.username
+        : (refUser?.email && refUser.email !== "—" ? refUser.email.split("@")[0] : "friend");
+
+      return {
+        ...g,
+        owner_name: cleanOwnerName,
+        owner_email: ownUser?.email && ownUser.email !== "—" ? ownUser.email : "",
+        referred_name: cleanRefName,
+      };
+    });
 
     // Calculate flagged referrals
     const flaggedList = referrals.filter((r) => r.status === "flagged_suspicious");

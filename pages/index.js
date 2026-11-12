@@ -558,7 +558,7 @@ function BuyModal({ product, onClose, ticker }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         product_id: product.id,
-        quantity: parseInt(quantity, 10) || 1,
+        quantity: Math.max(parseInt(quantity, 10) || 1, effectiveGifts),
         email,
         activation_info: activationInfo,
         coupon_code: coupon ? coupon.code : undefined,
@@ -593,10 +593,11 @@ function BuyModal({ product, onClose, ticker }) {
 
   const parsedQty = parseInt(quantity, 10) || 0;
   const unitPriceNum = Number(product.sell_price) || 0;
-  const maxRedeemableForQty = availableGiftsData?.max_redeemable ? Math.min(availableGiftsData.max_redeemable, parsedQty) : 0;
-  const effectiveGifts = Math.min(giftsToRedeem, maxRedeemableForQty);
+  const maxAvailableGifts = availableGiftsData?.max_redeemable || 0;
+  const effectiveGifts = Math.min(giftsToRedeem, maxAvailableGifts);
+  const currentTotalQty = Math.max(parsedQty, effectiveGifts);
   const giftDiscountAmount = effectiveGifts * unitPriceNum;
-  const paidQty = Math.max(0, parsedQty - effectiveGifts);
+  const paidQty = Math.max(0, currentTotalQty - effectiveGifts);
   const subtotal = Number((paidQty * unitPriceNum).toFixed(2));
   const total = (coupon ? coupon.final : subtotal).toFixed(2);
   const checkParts = t("Check {link} once it's ready. If you need support, just quote your order number above.").split("{link}");
@@ -726,7 +727,7 @@ function BuyModal({ product, onClose, ticker }) {
         <div className="space-y-4 text-sm">
           <div className="divide-y divide-border rounded-lg border border-border">
             <Row label={t("Product")} value={product.title} />
-            <Row label={t("Quantity")} value={quantity} mono />
+            <Row label={t("Quantity")} value={currentTotalQty} mono />
             <Row label={t("Unit price")} value={`$${Number(product.sell_price).toFixed(2)}`} mono />
             {product.requires_email && product.provider !== "manual" && <Row label={t("Delivery email")} value={email} />}
             {activationLabel && (
@@ -786,9 +787,17 @@ function BuyModal({ product, onClose, ticker }) {
                   </span>
                   <button
                     type="button"
-                    disabled={effectiveGifts >= maxRedeemableForQty}
-                    onClick={() => setGiftsToRedeem((g) => Math.min(maxRedeemableForQty, g + 1))}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-ink hover:bg-border/40 disabled:opacity-30"
+                    disabled={effectiveGifts >= maxAvailableGifts}
+                    onClick={() => {
+                      setGiftsToRedeem((g) => {
+                        const next = Math.min(maxAvailableGifts, g + 1);
+                        if (next > parsedQty) {
+                          setQuantity(String(next));
+                        }
+                        return next;
+                      });
+                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-ink hover:bg-border/40 disabled:opacity-30 cursor-pointer"
                   >
                     +
                   </button>

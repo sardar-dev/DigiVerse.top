@@ -201,28 +201,13 @@ export default async function handler(req, res) {
   const giftsCount = Math.floor(Number(gifts_to_redeem) || 0);
   const orderId = crypto.randomUUID();
 
-  // Validate and reserve referral gifts atomically
+  // Validate referral gift parameters early
   if (giftsCount > 0) {
     if (!localProduct.tunvn_buff) {
       return res.status(400).json({ success: false, error: "gifts_only_for_muse_ai" });
     }
     if (giftsCount > quantity) {
       return res.status(400).json({ success: false, error: "cannot_redeem_more_gifts_than_qty" });
-    }
-    const { error: reserveErr } = await supabaseAdmin.rpc("reserve_gifts_for_order", {
-      p_user_id: session.user.id,
-      p_order_id: orderId,
-      p_product_id: product_id,
-      p_gift_count: giftsCount,
-    });
-    if (reserveErr) {
-      if (/schema cache|function public\.reserve/i.test(reserveErr.message)) {
-        return res.status(400).json({
-          success: false,
-          error: "Gift redemption database function is updating. Please ensure migration 041 is executed in Supabase.",
-        });
-      }
-      return res.status(400).json({ success: false, error: reserveErr.message });
     }
   }
 
@@ -245,9 +230,6 @@ export default async function handler(req, res) {
       quantity: paidQty,
     });
     if (!result.ok) {
-      if (giftsCount > 0) {
-        await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: orderId });
-      }
       return res.status(400).json({ success: false, error: result.reason, min_order: result.min_order });
     }
     coupon = result.coupon;
@@ -290,6 +272,7 @@ export default async function handler(req, res) {
   const costField = Number.isFinite(unitCost) ? { unit_cost: unitCost } : {};
   let insertPayload = { ...orderRow, ...costField };
 
+  // 1. Insert order into public.orders FIRST so order row exists for foreign keys
   let { data: order, error: orderErr } = await supabaseAdmin
     .from("orders")
     .insert(insertPayload)
@@ -309,11 +292,24 @@ export default async function handler(req, res) {
   }
 
   if (orderErr) {
-    if (giftsCount > 0) {
-      await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: orderId });
-    }
     return res.status(500).json({ success: false, error: orderErr.message });
   }
+
+  // 2. Now atomically reserve referral gifts with valid order.id
+  if (giftsCount > 0) {
+    const { error: reserveErr } = await supabaseAdmin.rpc("reserve_gifts_for_order", {
+      p_user_id: session.user.id,
+      p_order_id: order.id,
+      p_product_id: product_id,
+      p_gift_count: giftsCount,
+    });
+    if (reserveErr) {
+      // Reservation failed — clean up the pending order row
+      await supabaseAdmin.from("orders").delete().eq("id", order.id);
+      return res.status(400).json({ success: false, error: reserveErr.message });
+    }
+  }
+
 
   // Two customers can race for the last use of a limited coupon; the
   // later order is rejected here (and cancelled so it holds no use).

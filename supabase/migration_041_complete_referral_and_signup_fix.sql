@@ -158,11 +158,14 @@ create table if not exists public.referral_gifts (
   created_at timestamptz not null default now(),
   available_at timestamptz not null,
   redeemed_at timestamptz,
-  order_id uuid references public.orders(id) on delete set null,
+  order_id uuid,
   revoked_at timestamptz,
   revoked_by uuid references auth.users(id),
   revoked_reason text
 );
+
+-- Drop restrictive order_id foreign key if it already exists from earlier migrations
+alter table public.referral_gifts drop constraint if exists referral_gifts_order_id_fkey;
 
 alter table public.referral_gifts enable row level security;
 drop policy if exists "referral_gifts: user can read own gifts" on public.referral_gifts;
@@ -178,7 +181,7 @@ create table if not exists public.referral_gift_redemptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   gift_id uuid not null references public.referral_gifts(id) on delete cascade,
-  order_id uuid not null references public.orders(id) on delete cascade,
+  order_id uuid not null,
   tokens_redeemed bigint not null default 1000000000,
   supplier_cost_snapshot numeric not null default 0.06,
   currency text not null default 'USD',
@@ -186,6 +189,9 @@ create table if not exists public.referral_gift_redemptions (
   created_at timestamptz not null default now(),
   fulfilled_at timestamptz
 );
+
+-- Drop restrictive order_id foreign key if it already exists
+alter table public.referral_gift_redemptions drop constraint if exists referral_gift_redemptions_order_id_fkey;
 
 alter table public.referral_gift_redemptions enable row level security;
 drop policy if exists "referral_gift_redemptions: user can read own" on public.referral_gift_redemptions;
@@ -661,6 +667,92 @@ end;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
+-- RPC: get_user_gift_wallet_stats(p_user_id uuid)
+-- Returns live, atomic counts for user gift wallet dashboard
+-- ─────────────────────────────────────────────────────────────
+create or replace function public.get_user_gift_wallet_stats(p_user_id uuid)
+returns jsonb
+language plpgsql
+security definer
+as $$
+declare
+  v_settings record;
+  v_total_earned int;
+  v_locked_count int;
+  v_available_count int;
+  v_redeemed_count int;
+  v_revoked_count int;
+  v_today_redeemed int;
+  v_next_unlock_sec int;
+  v_now timestamptz := now();
+  v_today_start timestamptz := date_trunc('day', v_now);
+begin
+  select * into v_settings from public.referral_settings where id = 1;
+
+  -- Total gifts earned (excluding revoked)
+  select count(*) into v_total_earned
+  from public.referral_gifts
+  where owner_user_id = p_user_id and status <> 'revoked';
+
+  -- Locked gifts (status = 'locked' AND available_at > now)
+  select count(*) into v_locked_count
+  from public.referral_gifts
+  where owner_user_id = p_user_id
+    and status = 'locked'
+    and available_at > v_now;
+
+  -- Available gifts (status = 'available' OR (status = 'locked' AND available_at <= now))
+  select count(*) into v_available_count
+  from public.referral_gifts
+  where owner_user_id = p_user_id
+    and (status = 'available' or (status = 'locked' and available_at <= v_now));
+
+  -- Redeemed gifts
+  select count(*) into v_redeemed_count
+  from public.referral_gifts
+  where owner_user_id = p_user_id and status = 'redeemed';
+
+  -- Revoked gifts
+  select count(*) into v_revoked_count
+  from public.referral_gifts
+  where owner_user_id = p_user_id and status = 'revoked';
+
+  -- Today's successful redemptions for daily limit
+  select count(*) into v_today_redeemed
+  from public.referral_gift_redemptions
+  where user_id = p_user_id
+    and status in ('fulfilled', 'reserved')
+    and created_at >= v_today_start;
+
+  -- Next unlock countdown in seconds (for closest locked gift)
+  select coalesce(extract(epoch from (min(available_at) - v_now))::int, 0) into v_next_unlock_sec
+  from public.referral_gifts
+  where owner_user_id = p_user_id
+    and status = 'locked'
+    and available_at > v_now;
+
+  if v_next_unlock_sec < 0 then
+    v_next_unlock_sec := 0;
+  end if;
+
+  return jsonb_build_object(
+    'total_earned', v_total_earned,
+    'locked_count', v_locked_count,
+    'available_count', v_available_count,
+    'redeemed_count', v_redeemed_count,
+    'revoked_count', v_revoked_count,
+    'max_lifetime_gifts', coalesce(v_settings.max_lifetime_gifts, 15),
+    'remaining_capacity', greatest(0, coalesce(v_settings.max_lifetime_gifts, 15) - v_total_earned),
+    'daily_limit', coalesce(v_settings.daily_redemption_limit, 3),
+    'today_redeemed', v_today_redeemed,
+    'remaining_today', greatest(0, coalesce(v_settings.daily_redemption_limit, 3) - v_today_redeemed),
+    'redemption_enabled', coalesce(v_settings.redemption_enabled, true),
+    'next_unlock_seconds', v_next_unlock_sec
+  );
+end;
+$$;
+
+-- ─────────────────────────────────────────────────────────────
 -- RPC: reserve_gifts_for_order(...)
 -- Atomically reserves available gift boxes for checkout.
 -- ─────────────────────────────────────────────────────────────
@@ -921,6 +1013,7 @@ $$;
 grant execute on function public.handle_new_user() to service_role, anon, authenticated;
 grant execute on function public.handle_user_email_verified() to service_role, anon, authenticated;
 grant execute on function public.qualify_referral(uuid) to service_role, authenticated, anon;
+grant execute on function public.get_user_gift_wallet_stats(uuid) to service_role, authenticated, anon;
 grant execute on function public.reserve_gifts_for_order(uuid, uuid, bigint, int) to service_role, authenticated;
 grant execute on function public.finalize_gift_redemption(uuid, numeric, numeric, numeric, boolean) to service_role;
 grant execute on function public.release_reserved_gifts(uuid) to service_role, authenticated;
@@ -928,3 +1021,4 @@ grant execute on function public.revoke_referral_gift(uuid, uuid, text) to servi
 
 -- Refresh PostgREST schema cache so all RPC functions are immediately discoverable
 notify pgrst, 'reload schema';
+

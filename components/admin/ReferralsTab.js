@@ -644,11 +644,17 @@ export default function ReferralsTab() {
                     .map((r) => (
                     <tr key={r.id} className="text-ink">
                       <td className="py-3">
-                        <div className="font-semibold">@{r.referred_name}</div>
-                        <div className="text-[11px] text-muted">{r.referred_email}</div>
+                        <div className="font-semibold">
+                          @{r.referred_name && r.referred_name !== "—" ? r.referred_name : (r.referred_email ? r.referred_email.split("@")[0] : "user")}
+                        </div>
+                        {r.referred_email && (
+                          <div className="text-[11px] text-muted">{r.referred_email}</div>
+                        )}
                       </td>
                       <td className="py-3">
-                        <span className="font-medium text-brand">@{r.referrer_name}</span>
+                        <span className="font-medium text-brand">
+                          @{r.referrer_name && r.referrer_name !== "—" ? r.referrer_name : "inviter"}
+                        </span>
                       </td>
                       <td className="py-3">
                         {r.status === "qualified" ? (
@@ -820,10 +826,16 @@ export default function ReferralsTab() {
                   {data.gifts.map((g) => (
                     <tr key={g.id} className="text-ink">
                       <td className="py-3">
-                        <div className="font-semibold">@{g.owner_name}</div>
-                        <div className="text-[11px] text-muted">{g.owner_email}</div>
+                        <div className="font-semibold">
+                          @{g.owner_name && g.owner_name !== "—" ? g.owner_name : (g.owner_email ? g.owner_email.split("@")[0] : "user")}
+                        </div>
+                        {g.owner_email && (
+                          <div className="text-[11px] text-muted">{g.owner_email}</div>
+                        )}
                       </td>
-                      <td className="py-3 font-medium">@{g.referred_name}</td>
+                      <td className="py-3 font-medium">
+                        @{g.referred_name && g.referred_name !== "—" ? g.referred_name : "user"}
+                      </td>
                       <td className="py-3 font-mono font-bold text-brand">1B Tokens</td>
                       <td className="py-3">
                         {g.status === "available" ? (
