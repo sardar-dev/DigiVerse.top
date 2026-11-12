@@ -114,7 +114,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     const match = products.find(
       (p) => String(p.id) === fromProductCode(rawParam) || String(p.id) === String(rawParam)
     );
-    if (match && match.available_stock <= 0) {
+    if (match && match.available_stock <= 0 && !match.tunvn_buff && String(match.id) !== "-12") {
       setSharedNotFound(true); // sold out: don't open a buy popup for it
     } else if (match) {
       setActive(match);
@@ -434,12 +434,13 @@ function BuyModal({ product, onClose, ticker, session }) {
   }, [step, product?.tunvn_buff, order?.id]);
 
   useEffect(() => {
-    if (product?.tunvn_buff && product?.id) {
+    if ((product?.tunvn_buff || String(product?.id) === "-12") && product?.id) {
       fetch(`/api/wallet/gifts/available?product_id=${product.id}`)
         .then((r) => r.json())
         .then((d) => {
           if (d.success && d.eligible && d.max_redeemable > 0) {
             setAvailableGiftsData(d);
+            setGiftsToRedeem(1);
           }
         })
         .catch(() => {});
@@ -691,6 +692,12 @@ function BuyModal({ product, onClose, ticker, session }) {
 
       {step === "form" && (
         <div className="space-y-4">
+          {(product.tunvn_buff || String(product.id) === "-12") && availableGiftsData?.max_redeemable > 0 && (
+            <div className="rounded-xl border border-success/40 bg-success-soft/30 px-3.5 py-2.5 text-xs text-success flex items-center justify-between font-medium">
+              <span>🎁 {t("1 Free Gift Box auto-applied ({n} available)", { n: availableGiftsData.max_redeemable })}</span>
+              <span className="font-bold font-mono">$0.00 Total</span>
+            </div>
+          )}
           {isManualDelivery && (
             <Alert variant="warning">
               {t("This product is delivered manually. Estimated delivery: {delivery}. You'll find it in My Orders once it's ready.", {
@@ -798,7 +805,7 @@ function BuyModal({ product, onClose, ticker, session }) {
           </div>
 
           {/* Referral Gift Box Redemption Selector for Muse AI */}
-          {product.tunvn_buff && availableGiftsData?.max_redeemable > 0 && (
+          {(product.tunvn_buff || String(product.id) === "-12") && availableGiftsData?.max_redeemable > 0 && (
             <div className="rounded-xl border border-brand/30 bg-gradient-to-br from-brand-soft/40 to-surface p-3.5 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

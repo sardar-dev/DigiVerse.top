@@ -7,7 +7,7 @@ import SiteFooter from "../../components/layout/SiteFooter";
 import PageContainer from "../../components/layout/PageContainer";
 import Alert from "../../components/ui/Alert";
 import { FormInput } from "../../components/ui/FormInput";
-import { PrimaryButton, SecondaryButton } from "../../components/ui/Button";
+import { PrimaryButton } from "../../components/ui/Button";
 import { useT } from "../../lib/i18n";
 
 export default function ReferralsPage() {
@@ -25,12 +25,7 @@ export default function ReferralsPage() {
   const [savingUsername, setSavingUsername] = useState(false);
   const [userError, setUserError] = useState("");
 
-  // Direct 1-Click Gift Claim Modal
-  const [claimModalOpen, setClaimModalOpen] = useState(false);
-  const [inviteCode, setInviteCode] = useState("");
-  const [claimLoading, setClaimLoading] = useState(false);
-  const [claimError, setClaimError] = useState("");
-  const [claimSuccess, setClaimSuccess] = useState(null);
+  const claimHref = locale === "en" ? "/?product=-12" : `/${locale}/?product=-12`;
 
   useEffect(() => {
     loadData();
@@ -102,32 +97,6 @@ export default function ReferralsPage() {
   );
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText}\n${referralLink}`)}`;
   const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
-
-  async function handleClaimGift(e) {
-    if (e) e.preventDefault();
-    setClaimError("");
-    setClaimLoading(true);
-
-    try {
-      const res = await fetch("/api/referrals/claim-gift", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invite_code: inviteCode }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setClaimError(data.message || data.error || "Failed to claim tokens.");
-      } else {
-        setClaimSuccess(data);
-        setInviteCode("");
-        await loadData();
-      }
-    } catch {
-      setClaimError("Network error. Please try again.");
-    } finally {
-      setClaimLoading(false);
-    }
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-bg text-ink">
@@ -288,17 +257,12 @@ export default function ReferralsPage() {
               </p>
             </div>
             {(stats?.available_count ?? 0) > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setClaimSuccess(null);
-                  setClaimError("");
-                  setClaimModalOpen(true);
-                }}
-                className="mt-4 w-full rounded-xl bg-success px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-success/90 active:scale-[0.99]"
+              <Link
+                href={claimHref}
+                className="mt-4 block w-full text-center rounded-xl bg-success px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-success/90 active:scale-[0.99]"
               >
                 ⚡ {t("Claim 1B Free Tokens Now")}
-              </button>
+              </Link>
             )}
           </div>
 
@@ -353,17 +317,12 @@ export default function ReferralsPage() {
               </p>
             </div>
             {(stats?.available_count ?? 0) > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setClaimSuccess(null);
-                  setClaimError("");
-                  setClaimModalOpen(true);
-                }}
+              <Link
+                href={claimHref}
                 className="text-xs font-bold text-brand hover:underline"
               >
                 ⚡ {t("Claim 1B Tokens →")}
-              </button>
+              </Link>
             )}
           </div>
 
@@ -439,17 +398,12 @@ export default function ReferralsPage() {
                       </span>
 
                       {isAvailable && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setClaimSuccess(null);
-                            setClaimError("");
-                            setClaimModalOpen(true);
-                          }}
+                        <Link
+                          href={claimHref}
                           className="font-bold text-brand hover:underline"
                         >
                           ⚡ {t("Claim Now →")}
-                        </button>
+                        </Link>
                       )}
                     </div>
                   </div>
@@ -523,100 +477,6 @@ export default function ReferralsPage() {
         </div>
       </PageContainer>
       <SiteFooter />
-
-      {/* Direct 1-Click Gift Claim Modal */}
-      {claimModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <button
-              type="button"
-              onClick={() => setClaimModalOpen(false)}
-              className="absolute end-4 top-4 text-muted hover:text-ink text-lg font-bold"
-            >
-              ✕
-            </button>
-
-            {claimSuccess ? (
-              <div className="text-center py-4">
-                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-success-soft text-3xl">
-                  ✨
-                </div>
-                <h3 className="text-lg font-extrabold text-ink">
-                  {t("Tokens Delivered Successfully!")}
-                </h3>
-                <p className="mt-2 text-xs text-muted leading-relaxed">
-                  {claimSuccess.message || t("1 Billion Muse AI tokens have been delivered to your account.")}
-                </p>
-                <div className="mt-4 rounded-xl border border-border bg-bg p-3 text-xs text-ink font-mono" dir="ltr">
-                  Order ID: #{claimSuccess.order_id?.slice(0, 8).toUpperCase()}
-                </div>
-                <PrimaryButton
-                  onClick={() => setClaimModalOpen(false)}
-                  className="mt-6 w-full text-xs font-semibold py-2.5"
-                >
-                  {t("Done")}
-                </PrimaryButton>
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">🎁</span>
-                  <div>
-                    <h3 className="text-base font-extrabold text-ink">
-                      {t("Claim 1 Billion Muse AI Tokens")}
-                    </h3>
-                    <p className="text-xs text-success font-semibold">
-                      {t("100% Free · 1 Gift Box will be used")}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-xs text-muted leading-relaxed mb-4">
-                  {t("Enter your Muse AI Invite Code or paste your full invite link. Your free tokens will be delivered automatically via TunVN!")}
-                </p>
-
-                {claimError && <div className="mb-3"><Alert variant="error">{claimError}</Alert></div>}
-
-                <form onSubmit={handleClaimGift} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-ink mb-1.5">
-                      {t("Your Muse AI Invite Code / Link")}
-                    </label>
-                    <FormInput
-                      placeholder="e.g. muse-code-1234 or https://museai.top/?invite=..."
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value)}
-                      required
-                      autoFocus
-                      className="text-xs font-mono"
-                    />
-                    <span className="mt-1 block text-[11px] text-muted">
-                      {t("Paste your Muse AI invite code or invitation link from your Muse AI app.")}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <SecondaryButton
-                      type="button"
-                      onClick={() => setClaimModalOpen(false)}
-                      className="flex-1 text-xs py-2"
-                    >
-                      {t("Cancel")}
-                    </SecondaryButton>
-                    <PrimaryButton
-                      type="submit"
-                      disabled={claimLoading || !inviteCode.trim()}
-                      className="flex-1 text-xs py-2 font-bold bg-success hover:bg-success/90"
-                    >
-                      {claimLoading ? t("Delivering Tokens…") : t("⚡ Claim Free Tokens")}
-                    </PrimaryButton>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
