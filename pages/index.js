@@ -966,6 +966,7 @@ function BuyModal({ product, onClose, ticker, session }) {
       {step === "order" && order && (
         <PaymentPanel
           order={order}
+          product={product}
           onBack={() => setStep("form")}
           onDone={(result) => {
             fpixel.event("Purchase", {

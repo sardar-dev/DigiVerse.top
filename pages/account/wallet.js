@@ -525,12 +525,17 @@ export default function Wallet() {
                       </div>
                     </div>
 
-                    <Alert variant="warning">
-                      {t("Send {token} on {network}. All options use your same payout address below.", {
-                        token: currentNet.token,
-                        network: currentNet.networkName,
-                      })}
-                    </Alert>
+                    <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/60 bg-amber-50/80 dark:border-amber-800/40 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200">
+                      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-white text-[11px]">
+                        !
+                      </span>
+                      <p className="leading-relaxed">
+                        {t("Send only {token} on {network}. Sending other coins may result in loss of funds.", {
+                          token: currentNet.token,
+                          network: currentNet.networkName,
+                        })}
+                      </p>
+                    </div>
 
                     {/* Step 1 */}
                     <div className="space-y-3">

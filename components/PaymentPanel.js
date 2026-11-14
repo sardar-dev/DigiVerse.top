@@ -14,7 +14,7 @@ import CryptoBadge from "./ui/CryptoBadge";
 // (resuming a payment after a closed tab / refresh / lost connection).
 // order needs: { id, total, payout_wallet }. Calls onDone(items) once
 // the order is fulfilled.
-export default function PaymentPanel({ order, onDone, onBack }) {
+export default function PaymentPanel({ order, product, onDone, onBack }) {
   const { t } = useT();
   const [method, setMethod] = useState(null); // 'wallet' | 'onchain' | null
   const [selectedNetwork, setSelectedNetwork] = useState(DEFAULT_NETWORK_ID);
@@ -385,9 +385,33 @@ export default function PaymentPanel({ order, onDone, onBack }) {
   const exactAmount = Number(order.total).toFixed(4);
   const currentNet = getNetworkConfig(selectedNetwork);
 
+  const activeProduct = product || order?.product || order?.products || null;
+  const productTitle = activeProduct?.title || order?.product_title || null;
+  const productSubtitle =
+    activeProduct?.short_description ||
+    activeProduct?.description?.slice(0, 60) ||
+    (order?.quantity ? t("{n} digital items ready for delivery", { n: order.quantity }) : null);
+  const productIcon =
+    activeProduct?.icon ||
+    (productTitle?.toLowerCase().includes("elevenlabs")
+      ? "🎙️"
+      : productTitle?.toLowerCase().includes("tokens")
+      ? "✨"
+      : "🔥");
+  const creditBadge =
+    productTitle?.match(/\d+[KMB]?\s*(Credit|Tokens?)/i)?.[0] ||
+    (order?.quantity > 1 ? `${order.quantity} ${t("Items")}` : null);
+
   return (
-    <div className="space-y-5 text-sm">
-      <LinkButton onClick={() => setMethod(null)}>{t("← Change payment method")}</LinkButton>
+    <div className="space-y-4 text-sm">
+      <div className="flex items-center justify-between">
+        <LinkButton onClick={() => setMethod(null)}>{t("← Change payment method")}</LinkButton>
+        {!timeExpired && (
+          <span className="text-xs font-mono text-muted">
+            ⏱️ {minutes}:{seconds.toString().padStart(2, "0")}
+          </span>
+        )}
+      </div>
 
       {buffCheck?.is_buff && !buffCheck.affordable && (
         <Alert variant="error">
@@ -397,146 +421,264 @@ export default function PaymentPanel({ order, onDone, onBack }) {
         </Alert>
       )}
 
-      {/* Network & Coin Selector */}
-      <div className="rounded-2xl border border-border bg-surface p-4 shadow-card space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-bold uppercase tracking-wider text-ink">
-            {t("Choose Coin & Network")}
-          </label>
-          <span className="text-[11px] text-muted font-medium bg-bg px-2.5 py-0.5 rounded-full border border-border">
-            {t("Same address on all chains")}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {Object.values(CRYPTO_NETWORKS).map((net) => {
-            const active = selectedNetwork === net.id;
-            return (
-              <button
-                key={net.id}
-                type="button"
-                onClick={() => {
-                  setSelectedNetwork(net.id);
-                  setError("");
-                }}
-                className={`group relative flex items-center gap-3 rounded-xl border p-2.5 text-left transition-all duration-150 ${
-                  active
-                    ? "border-brand bg-brand-soft/50 ring-2 ring-brand/20 shadow-sm"
-                    : "border-border bg-bg/50 hover:bg-surface hover:border-brand-light"
-                }`}
-              >
-                <CryptoBadge networkId={net.id} size="md" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-ink group-hover:text-brand transition-colors">
-                      {net.token}
-                    </span>
-                    {active && (
-                      <span className="h-2 w-2 rounded-full bg-brand ring-4 ring-brand/20" />
-                    )}
-                  </div>
-                  <span className="block text-[10px] font-medium text-muted truncate">
-                    {net.shortNetwork}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Step 1 — send */}
-      <section className="rounded-xl border border-border bg-surface shadow-card">
-        <header className="flex items-center gap-2.5 border-b border-border px-4 py-3">
-          <StepBadge n={1} />
-          <h3 className="font-semibold text-ink">{t("Send exactly this amount")}</h3>
-        </header>
-
-        <div className="space-y-4 p-4">
-          <div className="rounded-xl bg-brand-soft/60 border border-brand/20 p-4 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("Amount to send")}</p>
-            <div className="mt-1 flex items-center justify-center gap-2">
-              <CryptoBadge networkId={currentNet.id} size="sm" />
-              <p className="font-mono text-3xl font-bold text-ink" dir="ltr">
-                {exactAmount} <span className="text-base font-semibold text-muted">{currentNet.token}</span>
-              </p>
+      {/* Top Product Header Banner */}
+      {productTitle && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-3.5 sm:p-4 text-white shadow-md">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/10 text-xl shadow-xs">
+                {productIcon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate font-bold text-sm sm:text-base text-white">{productTitle}</h3>
+                {productSubtitle && (
+                  <p className="truncate text-xs text-white/70">{productSubtitle}</p>
+                )}
+              </div>
             </div>
-            <CopyButton value={exactAmount} label={t("Copy amount")} className="mt-3" />
-            <p className="mt-2 text-xs text-muted">
-              {t("Send this exact figure, including every decimal. It is how we match your payment.")}
-            </p>
+            {/* Equalizer Waveform Bars */}
+            <div className="flex items-center gap-1 text-brand-light flex-shrink-0" aria-hidden="true">
+              <span className="h-3 w-1 rounded-full bg-brand-light/80 animate-pulse" />
+              <span className="h-6 w-1 rounded-full bg-brand" />
+              <span className="h-4 w-1 rounded-full bg-brand-light" />
+              <span className="h-5 w-1 rounded-full bg-brand/90 animate-pulse" />
+              <span className="h-2 w-1 rounded-full bg-brand-light/70" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unified 4-Step Checkout Card */}
+      <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-card space-y-5">
+        {/* STEP 1: Choose Coin & Network */}
+        <div className="space-y-3">
+          <div className="flex items-start gap-2.5">
+            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white mt-0.5">
+              1
+            </span>
+            <div>
+              <h3 className="font-bold text-sm sm:text-base text-ink">{t("Choose Coin & Network")}</h3>
+              <p className="text-xs text-muted">{t("Select the blockchain network for payment")}</p>
+            </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {Object.values(CRYPTO_NETWORKS).map((net) => {
+              const active = selectedNetwork === net.id;
+              const isRecommended = net.id === "usdt_bep20";
+              return (
+                <button
+                  key={net.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedNetwork(net.id);
+                    setError("");
+                  }}
+                  className={`group relative flex flex-col items-start rounded-xl border p-2.5 sm:p-3 text-left transition-all duration-150 ${
+                    active
+                      ? "border-brand bg-brand-soft/30 ring-1 ring-brand shadow-xs"
+                      : "border-border bg-bg/50 hover:bg-surface hover:border-brand-light"
+                  }`}
+                >
+                  {/* Active Checkmark Pill on Top-Right Corner */}
+                  {active && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-white shadow-xs">
+                      <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </span>
+                  )}
+
+                  <div className="flex items-center gap-2.5 w-full">
+                    <CryptoBadge networkId={net.id} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <span className="block font-bold text-xs text-ink group-hover:text-brand transition-colors">
+                        {net.token}
+                      </span>
+                      <span className="block text-[10px] font-medium text-muted truncate">
+                        {net.shortNetwork}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Recommended Badge */}
+                  {isRecommended && (
+                    <span className="mt-2 inline-block rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold text-white leading-none">
+                      {t("Recommended")}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* STEP 2: Send exactly this amount */}
+        <div className="border-t border-border/60 pt-4 space-y-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+              2
+            </span>
+            <h3 className="font-bold text-sm sm:text-base text-ink">{t("Send exactly this amount")}</h3>
+          </div>
+
+          <div className="rounded-2xl border border-brand/20 bg-brand-soft/25 p-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+              <div className="flex items-center gap-3">
+                <img
+                  src={currentNet.coinIcon}
+                  alt={currentNet.token}
+                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-full shadow-xs flex-shrink-0"
+                />
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-2xl sm:text-3xl font-extrabold tracking-tight text-ink" dir="ltr">
+                    {exactAmount}
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold uppercase text-muted">
+                    {currentNet.token}
+                  </span>
+                </div>
+              </div>
+
+              {creditBadge && (
+                <>
+                  <div className="h-8 w-px bg-border/80 hidden sm:block" />
+                  <div className="flex items-center gap-1.5 rounded-full bg-surface/80 border border-border px-3 py-1 text-xs font-semibold text-ink">
+                    <span className="text-amber-500 text-sm">✦</span>
+                    <span>{creditBadge}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mt-3 flex justify-center">
+              <CopyButton value={exactAmount} label={t("Copy amount")} />
+            </div>
+
+            <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] text-muted text-center">
+              <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand text-white text-[9px] font-bold select-none">
+                i
+              </span>
+              <span>{t("Send this exact figure, including every decimal. It is how we match your payment.")}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* STEP 3: Scan QR Code or Send Payment */}
+        <div className="border-t border-border/60 pt-4 space-y-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+              3
+            </span>
+            <h3 className="font-bold text-sm sm:text-base text-ink">{t("Scan QR Code or Send Payment")}</h3>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
             {qrDataUrl && (
               <img
                 src={qrDataUrl}
                 alt={t("QR code for the payout wallet address")}
-                className="h-36 w-36 flex-shrink-0 rounded-lg border border-border bg-white p-1"
+                className="h-32 w-32 sm:h-36 sm:w-36 flex-shrink-0 rounded-2xl border border-border bg-white p-2 shadow-xs"
               />
             )}
             <div className="w-full flex-1 space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                {t("Wallet address (Same for all networks)")}
-              </p>
-              <p dir="ltr" className="break-all rounded-lg border border-border bg-bg p-3 font-mono text-xs text-ink">
+              <div className="text-xs font-semibold text-muted">
+                {t("Wallet Address (Same for all networks)")}
+              </div>
+              <p
+                dir="ltr"
+                className="break-all rounded-xl border border-border bg-bg/70 p-2.5 font-mono text-[11px] sm:text-xs text-ink leading-relaxed select-all"
+              >
                 {order.payout_wallet}
               </p>
               <CopyButton value={order.payout_wallet} label={t("Copy address")} />
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-border bg-bg/40 px-3.5 py-2.5">
-            <span className="text-muted text-xs font-medium">{t("Selected Network")}</span>
+          {/* Selected Network Pill */}
+          <div className="flex items-center justify-between rounded-xl border border-blue-200/60 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-950/20 px-3.5 py-2.5 text-xs">
+            <span className="text-muted font-medium">{t("Selected Network:")}</span>
             <div className="flex items-center gap-2">
               <img src={currentNet.netIcon} alt="" className="h-4 w-4 rounded-full" />
-              <span className="rounded-full bg-brand-soft border border-brand/30 px-2.5 py-1 text-xs font-bold text-brand">
-                {currentNet.networkName}
-              </span>
+              <span className="font-bold text-brand">{currentNet.networkName}</span>
             </div>
           </div>
 
-          <Alert variant="warning">
-            {t("Send only {token} on {network}. All options use your same payout address above.", {
-              token: currentNet.token,
-              network: currentNet.networkName,
-            })}
-          </Alert>
+          {/* Warning Banner: User-requested text replacement */}
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/60 bg-amber-50/80 dark:border-amber-800/40 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200">
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-white text-[11px]">
+              !
+            </span>
+            <p className="leading-relaxed">
+              {t("Send only {token} on {network}. Sending other coins may result in loss of funds.", {
+                token: currentNet.token,
+                network: currentNet.networkName,
+              })}
+            </p>
+          </div>
         </div>
-      </section>
 
-      {/* Step 2 — verify */}
-      <section className="rounded-xl border border-border bg-surface shadow-card">
-        <header className="flex items-center gap-2.5 border-b border-border px-4 py-3">
-          <StepBadge n={2} />
-          <h3 className="font-semibold text-ink">{t("Paste your transaction hash")}</h3>
-        </header>
-        <div className="space-y-3 p-4">
-          <FormInput
-            value={txHash}
-            onChange={(e) => {
-              setTxHash(e.target.value.trim());
-              setError("");
-            }}
-            placeholder="0x…"
-            label={t("Transaction hash ({network})", { network: currentNet.shortNetwork })}
-            hint={t("After sending, copy the transaction hash (TxID) from your wallet or exchange.")}
-            className="font-mono !text-xs"
-            dir="ltr"
-            aria-label={t("Transaction hash")}
-            autoComplete="off"
-            spellCheck={false}
-            disabled={busy || timeExpired}
-          />
-          <Alert variant="error">{error}</Alert>
-          <PrimaryButton onClick={submitPayment} disabled={!txHash || busy || timeExpired} className="w-full">
-            {busy ? t("Checking the blockchain…") : t("I've sent it — verify payment")}
-          </PrimaryButton>
-          <p className="text-center text-xs text-muted">
+        {/* STEP 4: Paste your transaction hash */}
+        <div className="border-t border-border/60 pt-4 space-y-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+              4
+            </span>
+            <div>
+              <h3 className="font-bold text-sm sm:text-base text-ink">{t("Paste your transaction hash")}</h3>
+              <p className="text-xs text-muted font-normal">
+                {t("Transaction hash ({network})", { network: currentNet.shortNetwork })}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center rounded-xl border border-border bg-bg px-3 py-2.5 transition-all focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
+              <svg className="h-4 w-4 text-muted pe-1.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <input
+                type="text"
+                value={txHash}
+                onChange={(e) => {
+                  setTxHash(e.target.value.trim());
+                  setError("");
+                }}
+                placeholder="0x…"
+                className="w-full bg-transparent font-mono text-xs font-medium text-ink outline-none placeholder:text-muted"
+                dir="ltr"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={busy || timeExpired}
+                aria-label={t("Transaction hash")}
+              />
+            </div>
+            <p className="text-[11px] text-muted">
+              {t("After sending, copy the transaction hash (TxID) from your wallet or exchange.")}
+            </p>
+          </div>
+
+          {error && <Alert variant="error">{error}</Alert>}
+
+          <button
+            type="button"
+            onClick={submitPayment}
+            disabled={!txHash || busy || timeExpired}
+            className="w-full rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold py-3.5 px-4 shadow-md shadow-brand/25 flex items-center justify-center gap-2 text-sm sm:text-base transition-all disabled:opacity-50 active:scale-[0.99]"
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white flex-shrink-0">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            <span>{busy ? t("Checking the blockchain…") : t("Confirm Payment")}</span>
+          </button>
+
+          <p className="text-center text-[11px] text-muted">
             {t("Confirmation usually takes under a minute. If it says \"not visible yet\", wait a moment and try again — your payment is safe.")}
           </p>
         </div>
-      </section>
+      </div>
     </div>
   );
 }
