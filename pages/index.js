@@ -284,31 +284,129 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         />
 
         {/* How it works */}
-        <section id="how-it-works" className="border-b border-border bg-surface">
-          <PageContainer className="py-10">
-            <h2 className="text-center text-xl font-semibold text-ink sm:text-2xl">
-              {t("How it works")}
-            </h2>
-            <p className="mx-auto mt-1 max-w-md text-center text-sm text-muted">
-              {t("From choosing a product to receiving it, in three simple steps.")}
-            </p>
-            <ol className="mt-8 grid w-full min-w-0 max-w-full gap-4 sm:grid-cols-3">
-              {[
-                { n: 1, title: t("Choose a product"), text: t("Browse the catalog and pick what you need. Prices are shown upfront.") },
-                { n: 2, title: t("Pay with USDT or wallet"), text: t("Send the exact USDT (BEP20) amount, or pay instantly from your wallet balance.") },
-                { n: 3, title: t("Receive instantly"), text: t("Your order details appear right away and stay saved under My Orders.") },
-              ].map((step) => (
-                <li
-                  key={step.n}
-                  className="rounded-xl border border-border bg-bg p-5 text-center shadow-card transition-shadow hover:shadow-[0_18px_36px_-18px_rgba(49,105,245,0.45)]"
-                >
-                  <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-light to-brand-dark text-sm font-semibold text-white shadow-[0_0_22px_rgba(49,105,245,0.55)]">
-                    {step.n}
+        <section id="how-it-works" className="relative border-b border-border bg-gradient-to-b from-surface via-bg/40 to-surface py-12 sm:py-16">
+          <PageContainer>
+            {/* Section Header */}
+            <div className="text-center space-y-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+                {t("Simple 3-Step Process")}
+              </span>
+              <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+                {t("How it works")}
+              </h2>
+              <p className="mx-auto max-w-lg text-xs sm:text-sm text-muted leading-relaxed">
+                {t("From choosing your digital product to instant delivery in under 60 seconds.")}
+              </p>
+            </div>
+
+            {/* 3 Step Cards Grid */}
+            <ol className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+              {/* Step 1 */}
+              <li className="group relative flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:border-brand-light hover:shadow-card-hover">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/10 to-indigo-500/20 text-brand ring-1 ring-brand/10 transition-transform duration-200 group-hover:scale-110">
+                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="9" cy="21" r="1" />
+                        <circle cx="20" cy="21" r="1" />
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                      </svg>
+                    </div>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-bg font-mono text-xs font-bold text-muted ring-1 ring-border">
+                      01
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                      {t("Choose a product")}
+                    </h3>
+                    <p className="mt-1.5 text-xs sm:text-sm text-muted leading-relaxed">
+                      {t("Browse our catalog of verified AI tokens, accounts, and software licenses. Prices and stock are shown upfront.")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-4 text-[11px] font-medium text-muted">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
+                    ⚡ {t("Instant Stock")}
                   </span>
-                  <h3 className="mt-3 text-base font-semibold text-ink">{step.title}</h3>
-                  <p className="mt-1 text-sm text-muted">{step.text}</p>
-                </li>
-              ))}
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
+                    🛡️ {t("Warranty")}
+                  </span>
+                </div>
+              </li>
+
+              {/* Step 2 */}
+              <li className="group relative flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:border-brand-light hover:shadow-card-hover">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/20 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500/10 transition-transform duration-200 group-hover:scale-110">
+                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="2" y="5" width="20" height="14" rx="3" />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                        <circle cx="17" cy="14" r="1.5" fill="currentColor" />
+                      </svg>
+                    </div>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-bg font-mono text-xs font-bold text-muted ring-1 ring-border">
+                      02
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                      {t("Pay with Crypto or Wallet")}
+                    </h3>
+                    <p className="mt-1.5 text-xs sm:text-sm text-muted leading-relaxed">
+                      {t("Pay securely with USDT or USDC across Polygon, Base, and BSC, or checkout in 1-click using your wallet balance.")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-4 text-[11px] font-medium text-muted">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
+                    💎 {t("Polygon · Base · BSC")}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
+                    👛 {t("Balance")}
+                  </span>
+                </div>
+              </li>
+
+              {/* Step 3 */}
+              <li className="group relative flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:border-brand-light hover:shadow-card-hover">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/10 transition-transform duration-200 group-hover:scale-110">
+                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                      </svg>
+                    </div>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-bg font-mono text-xs font-bold text-muted ring-1 ring-border">
+                      03
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                      {t("Receive instantly")}
+                    </h3>
+                    <p className="mt-1.5 text-xs sm:text-sm text-muted leading-relaxed">
+                      {t("License keys and AI token buffs deliver automatically upon blockchain confirmation, saved permanently in My Orders.")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-4 text-[11px] font-medium text-muted">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
+                    ⚡ {t("0-Second Dispatch")}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
+                    📦 {t("Saved in Account")}
+                  </span>
+                </div>
+              </li>
             </ol>
           </PageContainer>
         </section>
