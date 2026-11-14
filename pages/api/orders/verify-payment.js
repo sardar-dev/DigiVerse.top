@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     session = sessionRes.data?.session || null;
   } catch {}
 
-  const { order_id, tx_hash: rawTxHash } = req.body || {};
+  const { order_id, tx_hash: rawTxHash, network: rawNetwork } = req.body || {};
   if (!order_id || !rawTxHash) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
@@ -102,6 +102,7 @@ export default async function handler(req, res) {
   const verdict = await verifyUsdtPayment({
     txHash: tx_hash,
     expectedAmount: claimedOrder.expected_amount,
+    networkKey: rawNetwork,
   });
 
   if (!verdict.ok) {

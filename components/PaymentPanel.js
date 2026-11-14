@@ -7,6 +7,7 @@ import { PrimaryButton, SecondaryButton, LinkButton } from "./ui/Button";
 import { FormInput } from "./ui/FormInput";
 import CopyButton, { StepBadge } from "./ui/CopyButton";
 import { useT } from "../lib/i18n";
+import { CRYPTO_NETWORKS, DEFAULT_NETWORK_ID, getNetworkConfig } from "../lib/cryptoNetworks";
 
 // Used both in the checkout modal (fresh order) and on /account/orders
 // (resuming a payment after a closed tab / refresh / lost connection).
@@ -15,6 +16,7 @@ import { useT } from "../lib/i18n";
 export default function PaymentPanel({ order, onDone, onBack }) {
   const { t } = useT();
   const [method, setMethod] = useState(null); // 'wallet' | 'onchain' | null
+  const [selectedNetwork, setSelectedNetwork] = useState(DEFAULT_NETWORK_ID);
   const [balance, setBalance] = useState(null);
   const [sessionUser, setSessionUser] = useState(null);
   const [walletLoginPrompt, setWalletLoginPrompt] = useState(false);
@@ -142,7 +144,7 @@ export default function PaymentPanel({ order, onDone, onBack }) {
       const res = await fetch("/api/orders/verify-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id: order.id, tx_hash: txHash }),
+        body: JSON.stringify({ order_id: order.id, tx_hash: txHash, network: selectedNetwork }),
       });
       const data = await res.json().catch(() => ({}));
       if (data.success) {
@@ -311,16 +313,16 @@ export default function PaymentPanel({ order, onDone, onBack }) {
           <button
             type="button"
             onClick={() => setMethod("onchain")}
-            className="flex w-full items-center justify-between rounded-lg border border-brand/40 bg-brand-soft/20 px-4 py-3 text-left text-sm hover:border-brand hover:bg-brand-soft/40 transition-all"
+            className="flex w-full items-center justify-between rounded-xl border border-brand/40 bg-brand-soft/20 px-4 py-3.5 text-left text-sm hover:border-brand hover:bg-brand-soft/40 transition-all"
             disabled={isChecking || isPaymentBlocked}
           >
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-ink">{t("USDT (BEP20) deposit")}</span>
-              <span className="rounded-md bg-success-soft border border-success/30 px-2 py-0.5 text-[10px] font-bold text-success">
-                {sessionUser ? t("Instant Verification") : t("Guest checkout · No login needed")}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <span className="font-semibold text-ink">{t("Crypto Pay (USDT & USDC)")}</span>
+              <span className="rounded-md bg-success-soft border border-success/30 px-2 py-0.5 text-[10px] font-bold text-success w-fit">
+                {t("Polygon · Base · BSC")}
               </span>
             </div>
-            <span className="text-brand font-medium">{t("Pay on-chain")}</span>
+            <span className="text-brand font-medium">{t("Pay on-chain →")}</span>
           </button>
         </div>
 
@@ -376,6 +378,7 @@ export default function PaymentPanel({ order, onDone, onBack }) {
   }
 
   const exactAmount = Number(order.total).toFixed(4);
+  const currentNet = getNetworkConfig(selectedNetwork);
 
   return (
     <div className="space-y-5 text-sm">
@@ -389,6 +392,49 @@ export default function PaymentPanel({ order, onDone, onBack }) {
         </Alert>
       )}
 
+      {/* Network & Coin Selector */}
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-card space-y-2.5">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold uppercase tracking-wider text-muted">
+            {t("Choose Network & Coin")}
+          </label>
+          <span className="text-[11px] text-muted font-medium">
+            {t("Same address on all chains")}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {Object.values(CRYPTO_NETWORKS).map((net) => {
+            const active = selectedNetwork === net.id;
+            return (
+              <button
+                key={net.id}
+                type="button"
+                onClick={() => {
+                  setSelectedNetwork(net.id);
+                  setError("");
+                }}
+                className={`flex flex-col items-start rounded-xl border p-2.5 text-left transition-all ${
+                  active
+                    ? "border-brand bg-brand-soft/40 ring-1 ring-brand shadow-sm"
+                    : "border-border bg-bg hover:border-brand-light hover:bg-surface"
+                }`}
+              >
+                <div className="flex w-full items-center justify-between">
+                  <span className="font-bold text-xs text-ink">{net.label}</span>
+                  {active && <span className="h-2 w-2 rounded-full bg-brand" />}
+                </div>
+                <span className="mt-0.5 text-[11px] text-muted">{net.shortNetwork}</span>
+                {net.badge && (
+                  <span className="mt-1.5 inline-block rounded bg-surface border border-border px-1.5 py-0.5 text-[9px] font-semibold text-brand">
+                    {net.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Step 1 — send */}
       <section className="rounded-xl border border-border bg-surface shadow-card">
         <header className="flex items-center gap-2.5 border-b border-border px-4 py-3">
@@ -399,8 +445,8 @@ export default function PaymentPanel({ order, onDone, onBack }) {
         <div className="space-y-4 p-4">
           <div className="rounded-lg bg-brand-soft p-4 text-center">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">{t("Amount to send")}</p>
-            <p className="mt-1 font-mono text-3xl font-semibold text-ink">
-              {exactAmount} <span className="text-base font-medium text-muted">USDT</span>
+            <p className="mt-1 font-mono text-3xl font-semibold text-ink" dir="ltr">
+              {exactAmount} <span className="text-base font-medium text-muted">{currentNet.token}</span>
             </p>
             <CopyButton value={exactAmount} label={t("Copy amount")} className="mt-3" />
             <p className="mt-2 text-xs text-muted">
@@ -418,7 +464,7 @@ export default function PaymentPanel({ order, onDone, onBack }) {
             )}
             <div className="w-full flex-1 space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                {t("Wallet address")}
+                {t("Wallet address (Same for all networks)")}
               </p>
               <p dir="ltr" className="break-all rounded-lg border border-border bg-bg p-3 font-mono text-xs text-ink">
                 {order.payout_wallet}
@@ -428,14 +474,17 @@ export default function PaymentPanel({ order, onDone, onBack }) {
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border px-3.5 py-2.5">
-            <span className="text-muted">{t("Network")}</span>
-            <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand">
-              BEP20 (BNB Smart Chain)
+            <span className="text-muted">{t("Selected Network")}</span>
+            <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">
+              {currentNet.networkName}
             </span>
           </div>
 
           <Alert variant="warning">
-            {t("Send only USDT on BEP20. Other tokens or networks will be lost, and an amount that differs from the one above can't be matched to your order.")}
+            {t("Send only {token} on {network}. All options use your same payout address above.", {
+              token: currentNet.token,
+              network: currentNet.networkName,
+            })}
           </Alert>
         </div>
       </section>
@@ -449,13 +498,19 @@ export default function PaymentPanel({ order, onDone, onBack }) {
         <div className="space-y-3 p-4">
           <FormInput
             value={txHash}
-            onChange={(e) => setTxHash(e.target.value.trim())}
+            onChange={(e) => {
+              setTxHash(e.target.value.trim());
+              setError("");
+            }}
             placeholder="0x…"
-            className="font-mono !text-xs" dir="ltr"
+            label={t("Transaction hash ({network})", { network: currentNet.shortNetwork })}
             hint={t("After sending, copy the transaction hash (TxID) from your wallet or exchange.")}
+            className="font-mono !text-xs"
+            dir="ltr"
             aria-label={t("Transaction hash")}
             autoComplete="off"
             spellCheck={false}
+            disabled={busy || timeExpired}
           />
           <Alert variant="error">{error}</Alert>
           <PrimaryButton onClick={submitPayment} disabled={!txHash || busy || timeExpired} className="w-full">
@@ -483,7 +538,7 @@ function describeError(t, code, data) {
     case "tx_failed":
       return t("That transaction failed on-chain — it never went through.");
     case "wrong_recipient":
-      return t("That transaction wasn't a USDT (BEP20) transfer to our wallet.");
+      return t("That transaction wasn't a valid transfer to our wallet in the expected token or network.");
     case "amount_too_low":
       return t("The amount received doesn't match the order total.");
     case "awaiting_confirmations":

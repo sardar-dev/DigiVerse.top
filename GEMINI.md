@@ -47,6 +47,8 @@ DigiVerse.top/
 ├── lib/
 │   ├── supabaseAdmin.js          # Service-role database client (server only)
 │   ├── supabaseClient.js         # Client-safe Supabase instance
+│   ├── cryptoNetworks.js         # Multi-chain network definitions (BSC, Polygon, Base)
+│   ├── cryptoVerifier.js         # Universal EVM on-chain transaction verifier
 │   ├── telegram.js               # Real-time Telegram alert dispatcher
 │   ├── fulfillOrder.js           # Order fulfillment pipeline (stock, TunVN, manual)
 │   ├── tunvnBuff.js              # Muse AI Buff token delivery via TunVN API
@@ -58,6 +60,10 @@ DigiVerse.top/
 ---
 
 ## 4. Fulfillment & Business Logic
+- **Multi-Chain Crypto Payments (Same 0x Payout Address)**:
+  - Accepts USDT & USDC across BNB Smart Chain (BEP20), Polygon PoS, and Base (Coinbase L2).
+  - Verified on-chain via public JSON-RPC nodes with zero fees or third-party dependencies (`lib/cryptoVerifier.js`).
+  - Supports automatic network fallback if a customer chooses one network but sends on another.
 - **Stock Serials (`provider = 'digitrust' | 'internal'`)**:
   - Automatically claims available license keys from `stock_items` and marks order completed.
 - **TunVN Buff AI Tokens (`tunvn_buff = true`, e.g. Product `-12`)**:

@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: "login_required" });
   }
 
-  const { tx_hash: rawTxHash, invoice_id } = req.body || {};
+  const { tx_hash: rawTxHash, invoice_id, network: rawNetwork } = req.body || {};
   if (!rawTxHash) {
     return res.status(400).json({ success: false, error: "tx_hash_required" });
   }
@@ -86,7 +86,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const verdict = await verifyUsdtTopup({ txHash: tx_hash });
+  const verdict = await verifyUsdtTopup({ txHash: tx_hash, networkKey: rawNetwork });
   if (!verdict.ok) {
     await releaseTxHash(tx_hash);
     const lock = isWrongHash(verdict.reason) ? await recordWrongHash(session.user.id) : 0;

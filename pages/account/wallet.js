@@ -12,9 +12,12 @@ import { EmptyState } from "../../components/ui/States";
 import CopyButton, { StepBadge } from "../../components/ui/CopyButton";
 import Link from "next/link";
 import { useT, intlLocale } from "../../lib/i18n";
+import { CRYPTO_NETWORKS, DEFAULT_NETWORK_ID, getNetworkConfig } from "../../lib/cryptoNetworks";
 
 export default function Wallet() {
   const { t, locale } = useT();
+  const [selectedNetwork, setSelectedNetwork] = useState(DEFAULT_NETWORK_ID);
+  const currentNet = getNetworkConfig(selectedNetwork);
   const [session, setSession] = useState(null);
   const [balance, setBalance] = useState(null);
   const [ledger, setLedger] = useState([]);
@@ -141,7 +144,7 @@ export default function Wallet() {
     const res = await fetch("/api/wallet/topup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tx_hash: txHash, invoice_id: invoice.id }),
+      body: JSON.stringify({ tx_hash: txHash, invoice_id: invoice.id, network: selectedNetwork }),
     });
     const data = await res.json();
     if (data.success) {
@@ -284,8 +287,51 @@ export default function Wallet() {
 
             {invoice && (
               <div className="mt-4 space-y-5">
+                {/* Network & Coin Selector */}
+                <div className="rounded-xl border border-border bg-surface p-3.5 shadow-card space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                      {t("Choose Network & Coin")}
+                    </span>
+                    <span className="text-[11px] text-muted font-medium">
+                      {t("Same address on all chains")}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {Object.values(CRYPTO_NETWORKS).map((net) => {
+                      const active = selectedNetwork === net.id;
+                      return (
+                        <button
+                          key={net.id}
+                          type="button"
+                          onClick={() => setSelectedNetwork(net.id)}
+                          className={`flex flex-col items-start rounded-xl border p-2 text-left transition-all ${
+                            active
+                              ? "border-brand bg-brand-soft/50 ring-1 ring-brand shadow-sm"
+                              : "border-border bg-bg hover:border-brand-light"
+                          }`}
+                        >
+                          <div className="flex w-full items-center justify-between">
+                            <span className="font-bold text-xs text-ink">{net.label}</span>
+                            {active && <span className="h-1.5 w-1.5 rounded-full bg-brand" />}
+                          </div>
+                          <span className="text-[10px] text-muted">{net.shortNetwork}</span>
+                          {net.badge && (
+                            <span className="mt-1 inline-block rounded bg-surface border border-border px-1 py-0.2 text-[8px] font-semibold text-brand">
+                              {net.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <Alert variant="warning">
-                  {t("Send only USDT on")} <strong>BEP20 (BNB Smart Chain)</strong>{t(". Other tokens or networks will be lost.")}
+                  {t("Send {token} on {network}. All options use your same payout address below.", {
+                    token: currentNet.token,
+                    network: currentNet.networkName,
+                  })}
                 </Alert>
 
                 {/* Step 1 */}
@@ -297,7 +343,7 @@ export default function Wallet() {
                     <div className="text-xs text-muted">{t("Send exactly")}</div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
                       <span className="font-mono text-3xl font-semibold text-ink" dir="ltr">
-                        ${invoice.amount.toFixed(4)}
+                        ${invoice.amount.toFixed(4)} <span className="text-sm font-medium text-muted">{currentNet.token}</span>
                       </span>
                       <CopyButton value={String(invoice.amount)} label={t("Copy amount")} />
                     </div>
@@ -315,7 +361,7 @@ export default function Wallet() {
                       />
                     )}
                     <div className="w-full flex-1 space-y-2">
-                      <div className="text-xs text-muted">{t("To this address (BEP20)")}</div>
+                      <div className="text-xs text-muted">{t("To this address (Same for all networks)")}</div>
                       <p dir="ltr" className="break-all rounded-lg bg-bg p-3 font-mono text-xs text-ink">
                         {invoice.payout_wallet}
                       </p>
@@ -462,7 +508,7 @@ function describeError(code, data, t) {
     case "tx_failed":
       return t("That transaction failed on-chain — it never went through.");
     case "wrong_recipient":
-      return t("That transaction wasn't a USDT (BEP20) transfer to our wallet.");
+      return t("That transaction wasn't a valid transfer to our wallet in the expected token or network.");
     case "awaiting_confirmations":
       return t("Payment seen, waiting for more confirmations — try again shortly.");
     case "tx_already_used":
