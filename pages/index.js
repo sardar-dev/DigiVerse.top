@@ -467,12 +467,6 @@ function BuyModal({ product, onClose, ticker, session }) {
   const [buffState, setBuffState] = useState(null);
 
   useEffect(() => {
-    if (session?.user?.email && !email) {
-      setEmail(session.user.email);
-    }
-  }, [session?.user?.email]);
-
-  useEffect(() => {
     if (step !== "done" || !product?.tunvn_buff || !order?.id) return;
     let stop = false;
     async function check() {
@@ -809,6 +803,13 @@ function BuyModal({ product, onClose, ticker, session }) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              data-lpignore="true"
+              data-form-type="other"
             />
           )}
           {!session && !(product.requires_email && product.provider !== "manual") && (
@@ -817,7 +818,13 @@ function BuyModal({ product, onClose, ticker, session }) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@gmail.com"
+              placeholder="you@example.com"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              data-lpignore="true"
+              data-form-type="other"
             />
           )}
           {activationLabel && (

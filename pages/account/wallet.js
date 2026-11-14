@@ -525,11 +525,11 @@ export default function Wallet() {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/60 bg-amber-50/80 dark:border-amber-800/40 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200">
-                      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-white text-[11px]">
+                    <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/70 bg-amber-500/10 p-3 text-xs text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
+                      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-400 font-bold text-white text-[11px] shadow-xs">
                         !
                       </span>
-                      <p className="leading-relaxed">
+                      <p className="leading-relaxed font-medium">
                         {t("Send only {token} on {network}. Sending other coins may result in loss of funds.", {
                           token: currentNet.token,
                           network: currentNet.networkName,

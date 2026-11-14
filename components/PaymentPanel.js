@@ -25,6 +25,7 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [telegramLink, setTelegramLink] = useState("https://t.me/digiverse_top");
   const [timeLeft, setTimeLeft] = useState(() => {
     if (!order?.created_at) return 30 * 60;
     const elapsed = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 1000);
@@ -82,6 +83,17 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
     })();
     QRCode.toDataURL(order.payout_wallet, { margin: 1, width: 180 })
       .then(setQrDataUrl)
+      .catch(() => {});
+
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.channel_type === "telegram" && d?.whatsapp_link) {
+          setTelegramLink(d.whatsapp_link);
+        } else if (d?.telegram_channel_link) {
+          setTelegramLink(d.telegram_channel_link);
+        }
+      })
       .catch(() => {});
   }, [order.payout_wallet]);
 
@@ -582,12 +594,9 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
               />
             )}
             <div className="w-full flex-1 space-y-2">
-              <div className="text-xs font-semibold text-muted">
-                {t("Wallet Address (Same for all networks)")}
-              </div>
               <p
                 dir="ltr"
-                className="break-all rounded-xl border border-border bg-bg/70 p-2.5 font-mono text-[11px] sm:text-xs text-ink leading-relaxed select-all"
+                className="break-all rounded-xl border border-border bg-bg/70 p-3 font-mono text-[11px] sm:text-xs text-ink leading-relaxed select-all"
               >
                 {order.payout_wallet}
               </p>
@@ -604,12 +613,12 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
             </div>
           </div>
 
-          {/* Warning Banner: User-requested text replacement */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/60 bg-amber-50/80 dark:border-amber-800/40 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200">
-            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-white text-[11px]">
+          {/* Warning Banner: User-requested text replacement & harmonious color matching */}
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/70 bg-amber-500/10 p-3 text-xs text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-400 font-bold text-white text-[11px] shadow-xs">
               !
             </span>
-            <p className="leading-relaxed">
+            <p className="leading-relaxed font-medium">
               {t("Send only {token} on {network}. Sending other coins may result in loss of funds.", {
                 token: currentNet.token,
                 network: currentNet.networkName,
@@ -674,9 +683,33 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
             <span>{busy ? t("Checking the blockchain…") : t("Confirm Payment")}</span>
           </button>
 
-          <p className="text-center text-[11px] text-muted">
-            {t("Confirmation usually takes under a minute. If it says \"not visible yet\", wait a moment and try again — your payment is safe.")}
-          </p>
+          {/* Need help? Contact us on Telegram */}
+          <div className="flex items-center justify-center gap-1.5 text-xs text-muted pt-1">
+            <svg
+              className="h-3.5 w-3.5 text-muted shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+            </svg>
+            <span>{t("Need help?")}</span>
+            <a
+              href={telegramLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-semibold text-brand hover:underline"
+            >
+              <span>{t("Contact us on Telegram")}</span>
+              <svg className="h-3.5 w-3.5 text-[#229ED9] shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M21.9 4.6 18.7 19.7c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.4-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.6 13.5 1.9 12c-1-.3-1-1 .2-1.5L20.4 3.4c.9-.3 1.6.2 1.5 1.2z" />
+              </svg>
+            </a>
+          </div>
         </div>
       </div>
     </div>
