@@ -8,6 +8,7 @@ import { FormInput } from "./ui/FormInput";
 import CopyButton, { StepBadge } from "./ui/CopyButton";
 import { useT } from "../lib/i18n";
 import { CRYPTO_NETWORKS, DEFAULT_NETWORK_ID, getNetworkConfig } from "../lib/cryptoNetworks";
+import CryptoBadge from "./ui/CryptoBadge";
 
 // Used both in the checkout modal (fresh order) and on /account/orders
 // (resuming a payment after a closed tab / refresh / lost connection).
@@ -313,16 +314,20 @@ export default function PaymentPanel({ order, onDone, onBack }) {
           <button
             type="button"
             onClick={() => setMethod("onchain")}
-            className="flex w-full items-center justify-between rounded-xl border border-brand/40 bg-brand-soft/20 px-4 py-3.5 text-left text-sm hover:border-brand hover:bg-brand-soft/40 transition-all"
+            className="flex w-full items-center justify-between rounded-xl border border-brand/40 bg-brand-soft/20 px-4 py-3.5 text-left text-sm hover:border-brand hover:bg-brand-soft/40 transition-all shadow-xs"
             disabled={isChecking || isPaymentBlocked}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <span className="font-semibold text-ink">{t("Crypto Pay (USDT & USDC)")}</span>
-              <span className="rounded-md bg-success-soft border border-success/30 px-2 py-0.5 text-[10px] font-bold text-success w-fit">
-                {t("Polygon · Base · BSC")}
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-1.5 overflow-hidden">
+                <img src="/crypto/usdt.svg" alt="USDT" className="inline-block h-6 w-6 rounded-full ring-2 ring-surface" />
+                <img src="/crypto/usdc.svg" alt="USDC" className="inline-block h-6 w-6 rounded-full ring-2 ring-surface" />
+              </div>
+              <div>
+                <span className="font-bold text-ink block">{t("Crypto Pay (USDT & USDC)")}</span>
+                <span className="text-xs text-muted">{t("Polygon · Base · BNB Chain")}</span>
+              </div>
             </div>
-            <span className="text-brand font-medium">{t("Pay on-chain →")}</span>
+            <span className="text-brand font-semibold text-xs">{t("Pay on-chain →")}</span>
           </button>
         </div>
 
@@ -393,15 +398,16 @@ export default function PaymentPanel({ order, onDone, onBack }) {
       )}
 
       {/* Network & Coin Selector */}
-      <div className="rounded-xl border border-border bg-surface p-4 shadow-card space-y-2.5">
+      <div className="rounded-2xl border border-border bg-surface p-4 shadow-card space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-            {t("Choose Network & Coin")}
+          <label className="text-xs font-bold uppercase tracking-wider text-ink">
+            {t("Choose Coin & Network")}
           </label>
-          <span className="text-[11px] text-muted font-medium">
+          <span className="text-[11px] text-muted font-medium bg-bg px-2.5 py-0.5 rounded-full border border-border">
             {t("Same address on all chains")}
           </span>
         </div>
+
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {Object.values(CRYPTO_NETWORKS).map((net) => {
             const active = selectedNetwork === net.id;
@@ -413,22 +419,26 @@ export default function PaymentPanel({ order, onDone, onBack }) {
                   setSelectedNetwork(net.id);
                   setError("");
                 }}
-                className={`flex flex-col items-start rounded-xl border p-2.5 text-left transition-all ${
+                className={`group relative flex items-center gap-3 rounded-xl border p-2.5 text-left transition-all duration-150 ${
                   active
-                    ? "border-brand bg-brand-soft/40 ring-1 ring-brand shadow-sm"
-                    : "border-border bg-bg hover:border-brand-light hover:bg-surface"
+                    ? "border-brand bg-brand-soft/50 ring-2 ring-brand/20 shadow-sm"
+                    : "border-border bg-bg/50 hover:bg-surface hover:border-brand-light"
                 }`}
               >
-                <div className="flex w-full items-center justify-between">
-                  <span className="font-bold text-xs text-ink">{net.label}</span>
-                  {active && <span className="h-2 w-2 rounded-full bg-brand" />}
-                </div>
-                <span className="mt-0.5 text-[11px] text-muted">{net.shortNetwork}</span>
-                {net.badge && (
-                  <span className="mt-1.5 inline-block rounded bg-surface border border-border px-1.5 py-0.5 text-[9px] font-semibold text-brand">
-                    {net.badge}
+                <CryptoBadge networkId={net.id} size="md" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-ink group-hover:text-brand transition-colors">
+                      {net.token}
+                    </span>
+                    {active && (
+                      <span className="h-2 w-2 rounded-full bg-brand ring-4 ring-brand/20" />
+                    )}
+                  </div>
+                  <span className="block text-[10px] font-medium text-muted truncate">
+                    {net.shortNetwork}
                   </span>
-                )}
+                </div>
               </button>
             );
           })}
@@ -443,11 +453,14 @@ export default function PaymentPanel({ order, onDone, onBack }) {
         </header>
 
         <div className="space-y-4 p-4">
-          <div className="rounded-lg bg-brand-soft p-4 text-center">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">{t("Amount to send")}</p>
-            <p className="mt-1 font-mono text-3xl font-semibold text-ink" dir="ltr">
-              {exactAmount} <span className="text-base font-medium text-muted">{currentNet.token}</span>
-            </p>
+          <div className="rounded-xl bg-brand-soft/60 border border-brand/20 p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("Amount to send")}</p>
+            <div className="mt-1 flex items-center justify-center gap-2">
+              <CryptoBadge networkId={currentNet.id} size="sm" />
+              <p className="font-mono text-3xl font-bold text-ink" dir="ltr">
+                {exactAmount} <span className="text-base font-semibold text-muted">{currentNet.token}</span>
+              </p>
+            </div>
             <CopyButton value={exactAmount} label={t("Copy amount")} className="mt-3" />
             <p className="mt-2 text-xs text-muted">
               {t("Send this exact figure, including every decimal. It is how we match your payment.")}
@@ -473,11 +486,14 @@ export default function PaymentPanel({ order, onDone, onBack }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-border px-3.5 py-2.5">
-            <span className="text-muted">{t("Selected Network")}</span>
-            <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">
-              {currentNet.networkName}
-            </span>
+          <div className="flex items-center justify-between rounded-xl border border-border bg-bg/40 px-3.5 py-2.5">
+            <span className="text-muted text-xs font-medium">{t("Selected Network")}</span>
+            <div className="flex items-center gap-2">
+              <img src={currentNet.netIcon} alt="" className="h-4 w-4 rounded-full" />
+              <span className="rounded-full bg-brand-soft border border-brand/30 px-2.5 py-1 text-xs font-bold text-brand">
+                {currentNet.networkName}
+              </span>
+            </div>
           </div>
 
           <Alert variant="warning">

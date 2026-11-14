@@ -13,6 +13,7 @@ import CopyButton, { StepBadge } from "../../components/ui/CopyButton";
 import Link from "next/link";
 import { useT, intlLocale } from "../../lib/i18n";
 import { CRYPTO_NETWORKS, DEFAULT_NETWORK_ID, getNetworkConfig } from "../../lib/cryptoNetworks";
+import CryptoBadge from "../../components/ui/CryptoBadge";
 
 export default function Wallet() {
   const { t, locale } = useT();
@@ -288,15 +289,16 @@ export default function Wallet() {
             {invoice && (
               <div className="mt-4 space-y-5">
                 {/* Network & Coin Selector */}
-                <div className="rounded-xl border border-border bg-surface p-3.5 shadow-card space-y-2">
+                <div className="rounded-2xl border border-border bg-surface p-4 shadow-card space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                      {t("Choose Network & Coin")}
-                    </span>
-                    <span className="text-[11px] text-muted font-medium">
+                    <label className="text-xs font-bold uppercase tracking-wider text-ink">
+                      {t("Choose Coin & Network")}
+                    </label>
+                    <span className="text-[11px] text-muted font-medium bg-bg px-2.5 py-0.5 rounded-full border border-border">
                       {t("Same address on all chains")}
                     </span>
                   </div>
+
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {Object.values(CRYPTO_NETWORKS).map((net) => {
                       const active = selectedNetwork === net.id;
@@ -304,23 +306,30 @@ export default function Wallet() {
                         <button
                           key={net.id}
                           type="button"
-                          onClick={() => setSelectedNetwork(net.id)}
-                          className={`flex flex-col items-start rounded-xl border p-2 text-left transition-all ${
+                          onClick={() => {
+                            setSelectedNetwork(net.id);
+                            setMessage("");
+                          }}
+                          className={`group relative flex items-center gap-3 rounded-xl border p-2.5 text-left transition-all duration-150 ${
                             active
-                              ? "border-brand bg-brand-soft/50 ring-1 ring-brand shadow-sm"
-                              : "border-border bg-bg hover:border-brand-light"
+                              ? "border-brand bg-brand-soft/50 ring-2 ring-brand/20 shadow-sm"
+                              : "border-border bg-bg/50 hover:bg-surface hover:border-brand-light"
                           }`}
                         >
-                          <div className="flex w-full items-center justify-between">
-                            <span className="font-bold text-xs text-ink">{net.label}</span>
-                            {active && <span className="h-1.5 w-1.5 rounded-full bg-brand" />}
-                          </div>
-                          <span className="text-[10px] text-muted">{net.shortNetwork}</span>
-                          {net.badge && (
-                            <span className="mt-1 inline-block rounded bg-surface border border-border px-1 py-0.2 text-[8px] font-semibold text-brand">
-                              {net.badge}
+                          <CryptoBadge networkId={net.id} size="md" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-ink group-hover:text-brand transition-colors">
+                                {net.token}
+                              </span>
+                              {active && (
+                                <span className="h-2 w-2 rounded-full bg-brand ring-4 ring-brand/20" />
+                              )}
+                            </div>
+                            <span className="block text-[10px] font-medium text-muted truncate">
+                              {net.shortNetwork}
                             </span>
-                          )}
+                          </div>
                         </button>
                       );
                     })}
@@ -342,9 +351,12 @@ export default function Wallet() {
                   <div className="rounded-xl border border-border bg-brand-soft p-4">
                     <div className="text-xs text-muted">{t("Send exactly")}</div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-mono text-3xl font-semibold text-ink" dir="ltr">
-                        ${invoice.amount.toFixed(4)} <span className="text-sm font-medium text-muted">{currentNet.token}</span>
-                      </span>
+                      <div className="flex items-center gap-2.5">
+                        <CryptoBadge networkId={currentNet.id} size="sm" />
+                        <span className="font-mono text-3xl font-semibold text-ink" dir="ltr">
+                          ${invoice.amount.toFixed(4)} <span className="text-sm font-medium text-muted">{currentNet.token}</span>
+                        </span>
+                      </div>
                       <CopyButton value={String(invoice.amount)} label={t("Copy amount")} />
                     </div>
                     <p className="mt-2 text-xs text-muted">
@@ -357,7 +369,7 @@ export default function Wallet() {
                       <img
                         src={qrDataUrl}
                         alt={t("QR code for the payout wallet address")}
-                        className="h-32 w-32 flex-shrink-0 rounded-lg border border-border"
+                        className="h-32 w-32 flex-shrink-0 rounded-lg border border-border bg-white p-1"
                       />
                     )}
                     <div className="w-full flex-1 space-y-2">
