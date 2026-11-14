@@ -17,6 +17,7 @@ import Modal from "../components/ui/Modal";
 import Alert from "../components/ui/Alert";
 import { FormInput } from "../components/ui/FormInput";
 import { PrimaryButton, SecondaryButton } from "../components/ui/Button";
+import DeliveredItems from "../components/ui/DeliveredItems";
 import { EmptyState, ErrorState, LoadingState } from "../components/ui/States";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
@@ -1132,15 +1133,52 @@ function BuyModal({ product, onClose, ticker, session }) {
       )}
 
       {step === "done" && !manual && (
-        <div className="space-y-3 text-sm">
-          <p className="font-mono text-xs text-muted" dir="ltr">{t("Order #{n}", { n: order?.order_number })}</p>
-          <p className="text-ink">{t("Delivered. Save these now:")}</p>
-          <pre dir="ltr" className="whitespace-pre-wrap break-all rounded-lg border border-border bg-brand-soft p-3 font-mono text-xs text-ink">
-            {(items || []).join("\n\n")}
-          </pre>
-          <PrimaryButton onClick={onClose} className="w-full">
-            {t("Done")}
-          </PrimaryButton>
+        <div className="space-y-4 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs text-muted" dir="ltr">
+              {t("Order #{n}", { n: order?.order_number })}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {t("Delivered")}
+            </span>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 space-y-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold shadow-xs flex-shrink-0">
+                ✓
+              </span>
+              <div>
+                <h4 className="font-bold text-ink text-sm sm:text-base">
+                  {t("Your order is delivered!")}
+                </h4>
+                <p className="text-xs text-muted">
+                  {t("Copy your digital items below. They are also saved permanently under My Orders.")}
+                </p>
+              </div>
+            </div>
+
+            <DeliveredItems items={items} />
+          </div>
+
+          <div className="flex gap-2.5 pt-1">
+            <Link
+              href="/account/orders"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-border bg-surface hover:bg-bg py-2.5 px-3 text-center text-xs sm:text-sm font-semibold text-ink shadow-xs transition-all flex items-center justify-center gap-1.5"
+            >
+              <svg className="h-4 w-4 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              <span>{t("View in My Orders")}</span>
+            </Link>
+            <PrimaryButton onClick={onClose} className="flex-1 py-2.5 text-xs sm:text-sm">
+              {t("Done")}
+            </PrimaryButton>
+          </div>
         </div>
       )}
     </Modal>

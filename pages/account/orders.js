@@ -8,6 +8,7 @@ import PageContainer from "../../components/layout/PageContainer";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { EmptyState, LoadingState } from "../../components/ui/States";
 import { PrimaryButton, SecondaryButton, LinkButton } from "../../components/ui/Button";
+import DeliveredItems from "../../components/ui/DeliveredItems";
 import { useT, intlLocale } from "../../lib/i18n";
 
 export default function Orders() {
@@ -206,10 +207,10 @@ export default function Orders() {
                   </div>
                 )}
 
-                {o.status === "delivered" && o.items?.length > 0 && (
-                  <pre dir="ltr" className="mt-3 whitespace-pre-wrap break-all rounded-lg border border-success/20 bg-success-soft p-3 font-mono text-xs text-ink">
-                    {o.items.join("\n\n")}
-                  </pre>
+                {o.status === "delivered" && (Array.isArray(o.items) ? o.items.length > 0 : !!o.items) && (
+                  <div className="mt-4 pt-3.5 border-t border-border/70">
+                    <DeliveredItems items={o.items} />
+                  </div>
                 )}
               </li>
             ))}
