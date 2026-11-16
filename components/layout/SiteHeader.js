@@ -149,7 +149,19 @@ export default function SiteHeader({
       window.location.href = locale === "en" ? "/" : `/${locale}`;
     });
 
-  const links = session
+  const navLinks = session
+    ? [
+        { href: "/", label: t("Store"), icon: <StoreIcon /> },
+        { href: "/account/wallet", label: t("Wallet"), icon: <WalletIcon /> },
+        { href: "/account/orders", label: t("My Orders"), icon: <OrdersIcon /> },
+        { href: "/account/support", label: t("Support"), icon: <SupportIcon />, live: true },
+      ]
+    : [
+        { href: "/", label: t("Store"), icon: <StoreIcon /> },
+        { href: "/account/support", label: t("Support"), icon: <SupportIcon />, live: true },
+      ];
+
+  const mobileLinks = session
     ? [
         { href: "/", label: t("Store"), icon: <StoreIcon /> },
         { href: "/account/referrals", label: t("Referrals 🎁"), icon: <GiftIcon />, badge: "Free" },
@@ -246,7 +258,7 @@ export default function SiteHeader({
           className="hidden items-center gap-1 rounded-2xl border border-border/70 bg-surface/60 p-1 shadow-[inset_0_1px_2px_rgba(23,33,58,0.03)] backdrop-blur-sm lg:flex"
           aria-label="Main Navigation"
         >
-          {links.map((l) => {
+          {navLinks.map((l) => {
             const active = isActive(l.href);
             return (
               <Link
@@ -598,7 +610,7 @@ export default function SiteHeader({
 
           {/* Navigation Links */}
           <ul className="space-y-1">
-            {links.map((l) => {
+            {mobileLinks.map((l) => {
               const active = isActive(l.href);
               return (
                 <li key={l.href}>
