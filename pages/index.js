@@ -1310,81 +1310,144 @@ function HeroSection({ inStock, search, setSearch }) {
       <div className="dv-orb pointer-events-none absolute -left-16 top-32 h-56 w-56 rounded-full bg-violet-400/15 blur-3xl [animation-delay:2s] sm:-left-28 sm:top-40 sm:h-72 sm:w-72" aria-hidden="true" />
       <div className="dv-orb pointer-events-none absolute bottom-0 right-1/3 h-40 w-40 rounded-full bg-cyan-300/15 blur-3xl [animation-delay:4s] sm:-bottom-16 sm:h-56 sm:w-56" aria-hidden="true" />
 
-      <PageContainer className="relative py-10 sm:py-14 md:py-18">
+      <PageContainer className="relative py-12 sm:py-16 md:py-20 lg:py-24">
         {/* ── Single centered column on mobile, two-col on desktop ── */}
-        <div className="grid w-full min-w-0 max-w-full gap-8 md:grid-cols-[1.15fr_0.85fr] md:items-center md:gap-12">
+        <div className="grid w-full min-w-0 max-w-full gap-8 md:grid-cols-[1.12fr_0.88fr] lg:grid-cols-[1.15fr_0.85fr] md:items-center lg:gap-14 xl:gap-16">
 
-          {/* Left / main content — centered on mobile */}
+          {/* Left / main content — centered on mobile, left-aligned on md+ */}
           <div className="mx-auto flex w-full min-w-0 max-w-full sm:max-w-lg flex-col items-center text-center md:mx-0 md:max-w-none md:items-start md:text-start">
 
             {/* Live badge */}
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-surface/90 px-3 py-1.5 text-xs font-medium text-brand shadow-[0_0_22px_-4px_rgba(49,105,245,0.45)] backdrop-blur">
-              <span className="dv-live-dot h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-              {inStock.length > 0
-                ? inStock.length === 1
-                  ? t("1 product in stock")
-                  : locale === "ru" && inStock.length % 10 >= 2 && inStock.length % 10 <= 4 && (inStock.length % 100 < 12 || inStock.length % 100 > 14)
-                  ? t("{n} products in stock (few)", { n: inStock.length })
-                  : t("{n} products in stock", { n: inStock.length })
-                : t("Digital products store")}
-            </span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface/90 px-3.5 py-1.5 text-xs font-medium text-ink shadow-2xs backdrop-blur-md transition-all hover:border-brand/40">
+              <span className="relative flex h-2 w-2 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              <span className="font-semibold text-ink">
+                {inStock.length > 0
+                  ? inStock.length === 1
+                    ? t("1 product in stock")
+                    : locale === "ru" && inStock.length % 10 >= 2 && inStock.length % 10 <= 4 && (inStock.length % 100 < 12 || inStock.length % 100 > 14)
+                    ? t("{n} products in stock (few)", { n: inStock.length })
+                    : t("{n} products in stock", { n: inStock.length })
+                  : t("Digital products store")}
+              </span>
+              <span className="text-border" aria-hidden="true">•</span>
+              <span className="inline-flex items-center gap-1 font-semibold text-brand">
+                <svg className="h-3 w-3 text-brand" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                </svg>
+                {t("Instant Delivery")}
+              </span>
+            </div>
 
             {/* Headline */}
-            <h1 className="mt-4 text-[2rem] font-bold leading-tight tracking-tight text-ink sm:text-4xl lg:text-5xl">
+            <h1 className="mt-4 text-[2.15rem] font-extrabold leading-[1.12] tracking-tight text-ink sm:text-5xl lg:text-[3.25rem] xl:text-[3.5rem] sm:leading-[1.1]">
               {t("Digital subscriptions,")}{" "}
-              <span className="dv-gradient-text">{t("delivered instantly.")}</span>
+              <span className="dv-gradient-text block sm:inline">{t("delivered instantly.")}</span>
             </h1>
 
             {/* Sub-copy */}
-            <p className="mt-3 text-sm text-muted sm:text-base">
+            <p className="mt-3.5 max-w-xl text-sm text-muted sm:text-base lg:text-lg leading-relaxed">
               {t("Fair prices, instant delivery, real support.")}{" "}
-              <span className="sm:whitespace-nowrap">{t("Pay with USDT or wallet balance.")}</span>
+              <span className="font-medium text-ink/85 sm:whitespace-nowrap">{t("Pay with USDT or wallet balance.")}</span>
             </p>
 
             {/* Search bar */}
             <form
-              className="dv-search mt-5 flex w-full max-w-full min-w-0 gap-2 rounded-2xl border border-border bg-surface/90 p-1.5 shadow-card backdrop-blur transition-shadow"
+              className="dv-search group mt-6 flex w-full max-w-full min-w-0 items-center gap-2 rounded-2xl border border-border/90 bg-surface/95 p-1.5 shadow-card backdrop-blur-md transition-all duration-200 focus-within:border-brand focus-within:shadow-[0_0_0_3px_rgba(49,105,245,0.15),0_12px_28px_-8px_rgba(49,105,245,0.25)] sm:max-w-xl"
               role="search"
               onSubmit={(e) => {
                 e.preventDefault();
                 document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              <span className="flex items-center ps-3 text-muted" aria-hidden="true">🔍</span>
+              <div className="flex items-center ps-3.5 text-muted transition-colors group-focus-within:text-brand" aria-hidden="true">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                </svg>
+              </div>
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t("Search, e.g. Gemini, Muse AI…")}
                 aria-label={t("Search products")}
-                className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm text-ink placeholder:text-muted focus:outline-none"
+                className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-sm font-medium text-ink placeholder:text-muted/70 focus:outline-none"
               />
-              <PrimaryButton type="submit" className="flex-shrink-0 px-3 sm:px-4 text-xs sm:text-sm">{t("Search")}</PrimaryButton>
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="p-1.5 text-muted hover:text-ink transition-colors rounded-lg"
+                  aria-label={t("Clear search")}
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              <PrimaryButton type="submit" className="flex-shrink-0 px-4 sm:px-5 text-xs sm:text-sm font-semibold min-h-11">
+                {t("Search")}
+              </PrimaryButton>
             </form>
 
             {/* CTA buttons — stacked on mobile, row on sm+ */}
-            <div className="mt-4 grid w-full max-w-full min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 md:flex md:w-auto">
-              <a href="#catalog" className="w-full block">
-                <PrimaryButton className="w-full px-7 py-2.5">{t("Browse products")}</PrimaryButton>
+            <div className="mt-5 grid w-full max-w-full min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 md:flex md:w-auto">
+              <a href="#catalog" className="w-full sm:w-auto block">
+                <PrimaryButton className="w-full sm:w-auto px-7 py-2.5 text-sm font-semibold flex items-center justify-center gap-2">
+                  <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  <span>{t("Browse products")}</span>
+                </PrimaryButton>
               </a>
-              <a href="#how-it-works" className="w-full block">
-                <SecondaryButton className="w-full px-7 py-2.5">{t("How it works")}</SecondaryButton>
+              <a href="#how-it-works" className="w-full sm:w-auto block">
+                <SecondaryButton className="w-full sm:w-auto px-7 py-2.5 text-sm font-semibold flex items-center justify-center gap-2">
+                  <svg className="h-4 w-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{t("How it works")}</span>
+                </SecondaryButton>
               </a>
             </div>
 
-            {/* Feature pills */}
-            <ul className="mt-5 flex flex-wrap justify-center gap-2 md:justify-start">
+            {/* Feature trust pills */}
+            <ul className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 md:justify-start">
               {[
-                { icon: "⚡", label: t("Instant delivery") },
-                { icon: "🔒", label: t("Secure USDT") },
-                { icon: "💬", label: t("Real support") },
+                {
+                  icon: (
+                    <svg className="h-3.5 w-3.5 text-brand" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                    </svg>
+                  ),
+                  label: t("Instant delivery"),
+                },
+                {
+                  icon: (
+                    <svg className="h-3.5 w-3.5 text-brand" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 012-2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                  ),
+                  label: t("Secure USDT"),
+                },
+                {
+                  icon: (
+                    <svg className="h-3.5 w-3.5 text-brand" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zm-4 0h-2v2h2V9z" clipRule="evenodd" />
+                    </svg>
+                  ),
+                  label: t("Real support"),
+                },
               ].map((f) => (
                 <li
                   key={f.label}
-                  className="flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-ink shadow-sm backdrop-blur"
+                  className="flex items-center gap-1.5 rounded-full border border-border/80 bg-surface/90 px-3 py-1.5 text-xs font-semibold text-ink shadow-2xs backdrop-blur-sm transition-all hover:border-brand-light/60 hover:bg-surface"
                 >
-                  <span aria-hidden="true">{f.icon}</span>
-                  {f.label}
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-soft" aria-hidden="true">
+                    {f.icon}
+                  </span>
+                  <span>{f.label}</span>
                 </li>
               ))}
             </ul>
@@ -1392,36 +1455,72 @@ function HeroSection({ inStock, search, setSearch }) {
 
           {/* Right — desktop float cards */}
           <div className="hidden md:block">
-            <div className="mx-auto max-w-xs space-y-3 lg:max-w-sm">
+            <div className="mx-auto max-w-sm space-y-3.5">
+              {/* Micro header label */}
+              <div className="flex items-center justify-between px-1 text-xs font-semibold text-muted">
+                <span className="inline-flex items-center gap-1.5 text-ink">
+                  <span className="h-2 w-2 rounded-full bg-success" />
+                  {t("Live in-stock highlights")}
+                </span>
+                <span className="text-[11px] font-mono text-muted">{inStock.length} {t("available")}</span>
+              </div>
+
               {inStock.slice(0, 3).map((p, i) => (
                 <a
                   key={p.id}
                   href="#catalog"
-                  className="dv-float flex items-center gap-3 rounded-xl border border-brand/15 bg-surface/95 p-3.5 shadow-[0_0_0_1px_rgba(49,105,245,0.05),0_18px_36px_-14px_rgba(49,105,245,0.45)] backdrop-blur transition-shadow hover:shadow-[0_0_0_1px_rgba(49,105,245,0.35),0_22px_44px_-12px_rgba(49,105,245,0.6)]"
+                  className="dv-float group flex items-center gap-3.5 rounded-2xl border border-border/80 bg-surface/95 p-3.5 shadow-[0_4px_20px_-4px_rgba(23,33,58,0.06),0_0_0_1px_rgba(49,105,245,0.03)] backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_12px_28px_-6px_rgba(49,105,245,0.18)]"
                   style={{ marginInlineStart: `${i * 14}px`, animationDelay: `${i * 0.9}s` }}
                 >
                   {p.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img loading="lazy" decoding="async" src={p.image_url} alt=""
-                      className="h-11 w-11 flex-shrink-0 rounded-lg border border-border object-cover"
+                    <img
+                      loading="lazy"
+                      decoding="async"
+                      src={p.image_url}
+                      alt=""
+                      className="h-12 w-12 flex-shrink-0 rounded-xl border border-border/80 bg-bg p-0.5 object-cover shadow-2xs transition-transform duration-200 group-hover:scale-105"
                     />
                   ) : (
-                    <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-lg font-bold text-brand">
+                    <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-brand-soft text-lg font-bold text-brand shadow-2xs">
                       {(p.title || "?").trim().charAt(0).toUpperCase()}
                     </span>
                   )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-ink">{p.title}</span>
-                    <span className="block text-xs text-success">
-                      {p.provider === "manual" && !p.auto_delivery ? t("Manual delivery") : t("Instant delivery")}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <span className="block truncate text-sm font-bold text-ink transition-colors group-hover:text-brand">
+                      {p.title}
                     </span>
-                  </span>
-                  <span className="text-sm font-bold text-ink" dir="ltr">${Number(p.sell_price).toFixed(2)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success">
+                        <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                        {p.provider === "manual" && !p.auto_delivery ? t("Manual delivery") : t("Instant delivery")}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end flex-shrink-0" dir="ltr">
+                    <span className="font-mono text-sm font-extrabold text-ink group-hover:text-brand transition-colors">
+                      ${Number(p.sell_price).toFixed(2)}
+                    </span>
+                    <span className="text-[10px] text-muted font-medium uppercase">USDT</span>
+                  </div>
                 </a>
               ))}
+
               {inStock.length === 0 && (
-                <div className="rounded-xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-muted">
+                <div className="rounded-2xl border border-dashed border-border bg-surface/70 p-6 text-center text-sm text-muted">
                   {t("New stock added regularly — check back soon.")}
+                </div>
+              )}
+
+              {inStock.length > 3 && (
+                <div className="pt-1 text-center">
+                  <a
+                    href="#catalog"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-dark transition-colors"
+                  >
+                    <span>{t("Browse all {n} products", { n: inStock.length })}</span>
+                    <span aria-hidden="true">→</span>
+                  </a>
                 </div>
               )}
             </div>
@@ -1430,26 +1529,43 @@ function HeroSection({ inStock, search, setSearch }) {
           {/* Mobile product strip — below text, hidden on desktop */}
           {inStock.length > 0 && (
             <div className="w-full max-w-full min-w-0 overflow-hidden md:hidden">
-              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted">{t("In stock now")}</p>
-              <div className="flex w-full max-w-full min-w-0 gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="mb-2.5 flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                  <span>{t("In stock now")}</span>
+                </div>
+                <span className="text-[11px] text-muted font-medium">{t("Swipe")} →</span>
+              </div>
+              <div className="flex w-full max-w-full min-w-0 gap-3 overflow-x-auto pb-3 pt-1 px-0.5 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {inStock.slice(0, 6).map((p) => (
                   <a
                     key={p.id}
                     href="#catalog"
-                    className="flex w-28 flex-shrink-0 flex-col items-center gap-2 rounded-xl border border-brand/15 bg-surface/95 p-3 text-center shadow-card backdrop-blur"
+                    className="flex w-36 flex-shrink-0 flex-col justify-between rounded-2xl border border-border/80 bg-surface/95 p-3 shadow-card backdrop-blur-md transition-all active:scale-[0.98] snap-start hover:border-brand-light"
                   >
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img loading="lazy" decoding="async" src={p.image_url} alt=""
-                        className="h-10 w-10 rounded-lg border border-border object-cover"
+                      <img
+                        loading="lazy"
+                        decoding="async"
+                        src={p.image_url}
+                        alt=""
+                        className="h-11 w-11 rounded-xl border border-border/80 bg-bg p-0.5 object-cover shadow-2xs mx-auto"
                       />
                     ) : (
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-lg font-bold text-brand">
+                      <span className="flex h-11 w-11 mx-auto items-center justify-center rounded-xl bg-brand-soft text-lg font-bold text-brand">
                         {(p.title || "?").trim().charAt(0).toUpperCase()}
                       </span>
                     )}
-                    <span className="line-clamp-2 text-xs font-semibold leading-tight text-ink">{p.title}</span>
-                    <span className="text-xs font-bold text-brand" dir="ltr">${Number(p.sell_price).toFixed(2)}</span>
+                    <span className="mt-2 line-clamp-2 text-center text-xs font-bold leading-tight text-ink min-h-[2rem]">
+                      {p.title}
+                    </span>
+                    <div className="mt-2.5 flex items-center justify-between border-t border-border/60 pt-2">
+                      <span className="font-mono text-xs font-extrabold text-brand" dir="ltr">
+                        ${Number(p.sell_price).toFixed(2)}
+                      </span>
+                      <span className="text-[10px] font-semibold text-success">⚡ {t("Instant")}</span>
+                    </div>
                   </a>
                 ))}
               </div>
