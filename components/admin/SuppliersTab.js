@@ -591,7 +591,6 @@ function ProductSources({ entry, act, labelMap = LABEL, unlinked = [] }) {
   );
 }
 
-
 // One supplier column — shows its own unlinked products, highlights matches.
 // globalQ: shared search from the global bar above all columns
 function SupplierColumn({ supplierId, unlinked, dSel, targets, onSelect, selId, lbl, globalQ }) {
