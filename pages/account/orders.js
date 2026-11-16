@@ -561,13 +561,10 @@ export default function Orders() {
                   {/* ── Delivered Content Area ── */}
                   {isDelivered && (Array.isArray(o.items) ? o.items.length > 0 : !!o.items) && (
                     <div className="mt-4 pt-4 border-t border-border/80">
-                      <div className="mb-2 flex items-center justify-between">
+                      <div className="mb-2 flex items-center">
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-success">
                           <span>✓</span>
                           <span>{t("Verified Delivery")}</span>
-                        </span>
-                        <span className="text-[11px] text-muted">
-                          🛡️ {t("Replacement Warranty Active")}
                         </span>
                       </div>
                       <DeliveredItems items={o.items} />
