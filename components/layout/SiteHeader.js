@@ -365,7 +365,7 @@ export default function SiteHeader({
                 {menu && (
                   <div
                     role="menu"
-                    className="absolute end-0 mt-2.5 w-72 origin-top-right overflow-hidden rounded-2xl border border-border/90 bg-surface/98 p-2 shadow-[0_20px_50px_-10px_rgba(23,33,58,0.22),0_10px_20px_-5px_rgba(23,33,58,0.1)] backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50"
+                    className="absolute end-0 mt-2.5 w-72 origin-top-right overflow-hidden rounded-2xl border border-border bg-surface p-2 shadow-[0_20px_50px_-10px_rgba(23,33,58,0.25),0_10px_20px_-5px_rgba(23,33,58,0.12)] animate-in fade-in zoom-in-95 duration-150 z-50"
                   >
                     {/* User Identity Header Card */}
                     <div className="mb-1.5 rounded-xl border border-brand/15 bg-gradient-to-br from-brand-soft/80 via-surface to-brand-soft/40 p-3 shadow-sm">
@@ -623,7 +623,7 @@ export default function SiteHeader({
       {open && (
         <div
           ref={mobileRef}
-          className="border-t border-border/80 bg-surface/98 backdrop-blur-xl px-4 py-4 shadow-2xl md:hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          className="border-t border-border bg-surface px-4 py-4 shadow-2xl md:hidden animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {session ? (
             <div className="mb-3 rounded-2xl border border-border/90 bg-gradient-to-br from-brand-soft/70 via-surface to-surface p-3.5 shadow-sm">

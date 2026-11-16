@@ -61,7 +61,7 @@ export default function LanguageSwitcher({ className = "" }) {
       {open && (
         <ul
           role="listbox"
-          className="absolute end-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-border/90 bg-surface/95 p-1.5 text-xs sm:text-sm shadow-[0_12px_32px_-6px_rgba(23,33,58,0.18)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className="absolute end-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-border bg-surface p-1.5 text-xs sm:text-sm shadow-[0_12px_32px_-6px_rgba(23,33,58,0.22)] animate-in fade-in zoom-in-95 duration-150"
         >
           {LOCALES.map((l) => (
             <li key={l.code}>
