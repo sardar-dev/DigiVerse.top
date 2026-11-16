@@ -365,54 +365,77 @@ export default function SiteHeader({
                 {menu && (
                   <div
                     role="menu"
-                    className="absolute end-0 mt-2.5 w-64 origin-top-right overflow-hidden rounded-2xl border border-border/90 bg-surface/98 p-1.5 shadow-[0_16px_40px_-6px_rgba(23,33,58,0.18)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 z-50"
+                    className="absolute end-0 mt-2.5 w-72 origin-top-right overflow-hidden rounded-2xl border border-border/90 bg-surface/98 p-2 shadow-[0_20px_50px_-10px_rgba(23,33,58,0.22),0_10px_20px_-5px_rgba(23,33,58,0.1)] backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50"
                   >
-                    {/* User Info Header */}
-                    <div className="mb-1 rounded-xl border border-brand/10 bg-gradient-to-br from-brand-soft/70 via-surface to-surface p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-semibold text-muted shadow-sm">
-                          {"👤 " + t("Customer")}
-                        </span>
-                        <span className="flex items-center gap-1 text-[10px] font-medium text-muted">
-                          <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                          Online
-                        </span>
-                      </div>
-                      <div className="mt-1.5 truncate text-xs font-semibold text-ink" title={email}>
-                        {email}
-                      </div>
-                      {hasBalance && (
-                        <div className="mt-2 flex items-center justify-between rounded-lg border border-border/80 bg-surface/90 px-2.5 py-1.5">
-                          <div className="text-xs text-muted">
-                            {t("Balance")}:{" "}
-                            <span className="font-mono font-bold text-ink" dir="ltr">
-                              ${balance.toFixed(2)}
+                    {/* User Identity Header Card */}
+                    <div className="mb-1.5 rounded-xl border border-brand/15 bg-gradient-to-br from-brand-soft/80 via-surface to-brand-soft/40 p-3 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-shrink-0">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-brand to-indigo-600 text-sm font-bold text-white shadow-sm ring-2 ring-white/80">
+                            {initial}
+                          </span>
+                          <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                            <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-surface bg-success" />
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-surface/90 px-2 py-0.5 text-[10px] font-semibold text-muted shadow-sm">
+                              {"👤 " + t("Customer")}
                             </span>
+                            <span className="flex items-center gap-1 text-[10px] font-semibold text-success">
+                              ✓ Verified
+                            </span>
+                          </div>
+                          <div className="mt-1 truncate text-xs font-bold text-ink" title={email}>
+                            {email}
+                          </div>
+                        </div>
+                      </div>
+
+                      {hasBalance && (
+                        <div className="mt-2.5 flex items-center justify-between rounded-xl border border-border/80 bg-surface/95 px-3 py-2 shadow-sm">
+                          <div>
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                              {t("Balance")}
+                            </div>
+                            <div className="font-mono text-sm font-extrabold text-ink" dir="ltr">
+                              ${balance.toFixed(2)}
+                            </div>
                           </div>
                           <Link
                             href="/account/wallet"
                             onClick={() => setMenu(false)}
-                            className="rounded-md bg-brand px-2 py-0.5 text-[11px] font-semibold text-white transition-colors hover:bg-brand-dark"
+                            className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1 text-xs font-semibold text-white shadow-[0_2px_8px_-2px_rgba(49,105,245,0.5)] transition-all hover:bg-brand-dark active:scale-95"
                           >
-                            {t("Top up")}
+                            <span>+</span>
+                            <span>{t("Top up")}</span>
                           </Link>
                         </div>
                       )}
                     </div>
 
-                    {/* Navigation Items */}
-                    <div className="space-y-0.5 text-xs sm:text-sm">
+                    {/* Navigation Items with Icon Badges and Microcopy */}
+                    <div className="space-y-0.5">
                       <Link
                         role="menuitem"
                         href="/account/referrals"
                         onClick={() => setMenu(false)}
-                        className="flex items-center justify-between rounded-xl px-3 py-2 text-ink transition-colors hover:bg-brand-soft"
+                        className="group flex items-center justify-between rounded-xl px-2.5 py-2 text-ink transition-all hover:bg-brand-soft/70 active:scale-[0.99]"
                       >
-                        <span className="flex items-center gap-2">
-                          <GiftIcon className="h-4 w-4 text-brand" />
-                          <span>{t("Referrals & Gift Wallet 🎁")}</span>
-                        </span>
-                        <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand ring-1 ring-brand/20">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand transition-colors group-hover:bg-brand group-hover:text-white shadow-sm">
+                            <GiftIcon className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-ink group-hover:text-brand transition-colors truncate">
+                              {t("Referrals & Gift Wallet 🎁")}
+                            </div>
+                            <div className="text-[10px] text-muted">Claim free gift boxes</div>
+                          </div>
+                        </div>
+                        <span className="flex-shrink-0 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand ring-1 ring-brand/20 group-hover:bg-brand group-hover:text-white transition-colors">
                           Free
                         </span>
                       </Link>
@@ -421,45 +444,104 @@ export default function SiteHeader({
                         role="menuitem"
                         href="/account/wallet"
                         onClick={() => setMenu(false)}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-ink transition-colors hover:bg-brand-soft"
+                        className="group flex items-center justify-between rounded-xl px-2.5 py-2 text-ink transition-all hover:bg-brand-soft/70 active:scale-[0.99]"
                       >
-                        <WalletIcon className="h-4 w-4 text-muted" />
-                        <span>{t("Wallet & top-up")}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-muted transition-colors group-hover:bg-brand group-hover:text-white shadow-sm">
+                            <WalletIcon className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-ink group-hover:text-brand transition-colors truncate">
+                              {t("Wallet & top-up")}
+                            </div>
+                            <div className="text-[10px] text-muted">Top up & EVM crypto pay</div>
+                          </div>
+                        </div>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="text-muted/40 transition-transform group-hover:translate-x-0.5 group-hover:text-brand shrink-0"
+                        >
+                          <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </Link>
 
                       <Link
                         role="menuitem"
                         href="/account/orders"
                         onClick={() => setMenu(false)}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-ink transition-colors hover:bg-brand-soft"
+                        className="group flex items-center justify-between rounded-xl px-2.5 py-2 text-ink transition-all hover:bg-brand-soft/70 active:scale-[0.99]"
                       >
-                        <OrdersIcon className="h-4 w-4 text-muted" />
-                        <span>{t("My orders")}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-muted transition-colors group-hover:bg-brand group-hover:text-white shadow-sm">
+                            <OrdersIcon className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-ink group-hover:text-brand transition-colors truncate">
+                              {t("My orders")}
+                            </div>
+                            <div className="text-[10px] text-muted">Claimed keys & active tokens</div>
+                          </div>
+                        </div>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="text-muted/40 transition-transform group-hover:translate-x-0.5 group-hover:text-brand shrink-0"
+                        >
+                          <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </Link>
 
                       <Link
                         role="menuitem"
                         href="/account/support"
                         onClick={() => setMenu(false)}
-                        className="flex items-center justify-between rounded-xl px-3 py-2 text-ink transition-colors hover:bg-brand-soft"
+                        className="group flex items-center justify-between rounded-xl px-2.5 py-2 text-ink transition-all hover:bg-brand-soft/70 active:scale-[0.99]"
                       >
-                        <span className="flex items-center gap-2">
-                          <SupportIcon className="h-4 w-4 text-muted" />
-                          <span>{t("Support")}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-muted transition-colors group-hover:bg-brand group-hover:text-white shadow-sm">
+                            <SupportIcon className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-ink group-hover:text-brand transition-colors truncate">
+                              {t("Support")}
+                            </div>
+                            <div className="text-[10px] text-muted">24/7 VIP concierge assistance</div>
+                          </div>
+                        </div>
+                        <span className="flex h-2 w-2 items-center justify-center shrink-0">
+                          <span className="h-1.5 w-1.5 rounded-full bg-success" />
                         </span>
-                        <span className="h-1.5 w-1.5 rounded-full bg-success" />
                       </Link>
                     </div>
 
-                    <div className="my-1 border-t border-border" />
+                    {/* Divider & Sign Out */}
+                    <div className="my-1.5 border-t border-border/70" />
 
                     <button
                       role="menuitem"
                       onClick={onSignOut}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-start text-xs sm:text-sm font-medium text-danger transition-colors hover:bg-danger-soft"
+                      className="group flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-start text-xs font-semibold text-danger transition-colors hover:bg-danger-soft active:scale-[0.99]"
                     >
-                      <SignOutIcon className="h-4 w-4" />
-                      <span>{t("Sign out")}</span>
+                      <span className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-danger-soft text-danger transition-colors group-hover:bg-danger group-hover:text-white shadow-sm shrink-0">
+                          <SignOutIcon className="h-4 w-4" />
+                        </span>
+                        <span>{t("Sign out")}</span>
+                      </span>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="text-danger/40 transition-transform group-hover:translate-x-0.5 group-hover:text-danger shrink-0"
+                      >
+                        <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </button>
                   </div>
                 )}
