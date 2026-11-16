@@ -220,11 +220,11 @@ export default function SiteHeader({
       {/* Top subtle ambient highlight */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/35 to-transparent" />
 
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 sm:py-3">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-6 sm:py-2.5 lg:py-3">
         {/* Brand Lockup */}
         <Link
           href="/"
-          className="group flex items-center gap-2.5 min-w-0 transition-transform active:scale-[0.98]"
+          className="group flex items-center gap-2 sm:gap-2.5 min-w-0 shrink-0 transition-transform active:scale-[0.98]"
           aria-label={`${brandName} home`}
         >
           <div className="relative flex-shrink-0 overflow-hidden rounded-xl ring-1 ring-border/80 shadow-card transition-all duration-300 group-hover:ring-brand/40 group-hover:shadow-[0_0_18px_rgba(49,105,245,0.22)]">
@@ -240,11 +240,11 @@ export default function SiteHeader({
             />
           </div>
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-base sm:text-lg font-bold tracking-tight text-ink transition-colors duration-200 group-hover:text-brand truncate">
+            <span className="text-base sm:text-lg font-bold tracking-tight text-ink transition-colors duration-200 group-hover:text-brand truncate max-w-[120px] sm:max-w-none">
               {brandName}
             </span>
             <span
-              className="hidden sm:inline-flex items-center gap-1 rounded-full bg-success-soft px-1.5 py-0.5 text-[10px] font-semibold text-success ring-1 ring-success/20"
+              className="hidden sm:inline-flex items-center gap-1 rounded-full bg-success-soft px-1.5 py-0.5 text-[10px] font-semibold text-success ring-1 ring-success/20 shrink-0"
               title="Cloud Network Online"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
@@ -253,9 +253,9 @@ export default function SiteHeader({
           </div>
         </Link>
 
-        {/* Center Navigation Island (Desktop) */}
+        {/* Center Navigation Island (Desktop & Tablet) */}
         <nav
-          className="hidden items-center gap-1 rounded-2xl border border-border/70 bg-surface/60 p-1 shadow-[inset_0_1px_2px_rgba(23,33,58,0.03)] backdrop-blur-sm lg:flex"
+          className="hidden items-center gap-0.5 md:flex lg:gap-1 rounded-2xl border border-border/70 bg-surface/60 p-1 shadow-[inset_0_1px_2px_rgba(23,33,58,0.03)] backdrop-blur-sm shrink-0"
           aria-label="Main Navigation"
         >
           {navLinks.map((l) => {
@@ -265,19 +265,19 @@ export default function SiteHeader({
                 key={l.href}
                 href={l.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium transition-all duration-150 active:scale-95 ${
+                className={`relative inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-all duration-150 active:scale-95 lg:px-3 lg:text-sm ${
                   active
                     ? "bg-brand-soft text-brand font-semibold shadow-[inset_0_0_0_1px_rgba(49,105,245,0.22)]"
                     : "text-muted hover:bg-brand-soft/70 hover:text-ink"
                 }`}
               >
-                <span className={active ? "text-brand" : "text-muted transition-colors"}>
+                <span className={`shrink-0 ${active ? "text-brand" : "text-muted transition-colors"}`}>
                   {l.icon}
                 </span>
                 <span>{l.label}</span>
                 {l.badge && (
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shrink-0 ${
                       active
                         ? "bg-brand text-white"
                         : "bg-brand-soft text-brand ring-1 ring-brand/20"
@@ -287,15 +287,15 @@ export default function SiteHeader({
                   </span>
                 )}
                 {l.live && !active && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-success" title="24/7 Live" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-success shrink-0" title="24/7 Live" />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Right Desktop Action Area */}
-        <div className="hidden items-center gap-2.5 lg:flex">
+        {/* Right Desktop/Tablet Action Area */}
+        <div className="hidden items-center gap-1.5 md:flex lg:gap-2.5 shrink-0">
           <LanguageSwitcher />
 
           {session ? (
@@ -303,10 +303,10 @@ export default function SiteHeader({
               {hasBalance && (
                 <Link
                   href="/account/wallet"
-                  className="group relative flex items-center gap-2 rounded-xl border border-border/80 bg-surface/90 px-3 py-1.5 shadow-sm transition-all duration-200 hover:border-brand/40 hover:bg-brand-soft/50 hover:shadow-card active:scale-[0.98]"
+                  className="group relative flex items-center gap-1.5 lg:gap-2 rounded-xl border border-border/80 bg-surface/90 px-2.5 lg:px-3 py-1.5 shadow-sm transition-all duration-200 hover:border-brand/40 hover:bg-brand-soft/50 hover:shadow-card active:scale-[0.98] shrink-0"
                   title={t("Wallet balance")}
                 >
-                  <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75"></span>
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
                   </span>
@@ -322,7 +322,7 @@ export default function SiteHeader({
                     </span>
                   </div>
                   <span
-                    className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-soft text-[10px] font-bold text-brand transition-colors group-hover:bg-brand group-hover:text-white"
+                    className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-soft text-[10px] font-bold text-brand transition-colors group-hover:bg-brand group-hover:text-white shrink-0"
                     title={t("Top up")}
                   >
                     +
@@ -492,18 +492,18 @@ export default function SiteHeader({
           )}
         </div>
 
-        {/* Mobile Action Cluster (< lg) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden flex-shrink-0">
+        {/* Mobile Action Cluster (< md) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 md:hidden flex-shrink-0">
           <LanguageSwitcher />
 
           {session && hasBalance && (
             <Link
               href="/account/wallet"
-              className="flex items-center gap-1.5 rounded-xl border border-border/80 bg-surface/90 px-2.5 py-1.5 shadow-sm transition-all hover:border-brand/40 active:scale-95"
+              className="flex items-center gap-1.5 rounded-xl border border-border/80 bg-surface/90 px-2 py-1 sm:px-2.5 sm:py-1.5 shadow-sm transition-all hover:border-brand/40 active:scale-95 shrink-0"
               dir="ltr"
               title={t("Wallet balance")}
             >
-              <span className="relative flex h-1.5 w-1.5">
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75"></span>
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success"></span>
               </span>
@@ -514,7 +514,7 @@ export default function SiteHeader({
           )}
 
           <button
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-surface/90 text-ink shadow-sm transition-all hover:border-brand/40 hover:bg-brand-soft active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-surface/90 text-ink shadow-sm transition-all hover:border-brand/40 hover:bg-brand-soft active:scale-95 shrink-0"
             aria-label={t("Toggle menu")}
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
@@ -541,7 +541,7 @@ export default function SiteHeader({
       {open && (
         <div
           ref={mobileRef}
-          className="border-t border-border/80 bg-surface/98 backdrop-blur-xl px-4 py-4 shadow-2xl lg:hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          className="border-t border-border/80 bg-surface/98 backdrop-blur-xl px-4 py-4 shadow-2xl md:hidden animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {session ? (
             <div className="mb-3 rounded-2xl border border-border/90 bg-gradient-to-br from-brand-soft/70 via-surface to-surface p-3.5 shadow-sm">
