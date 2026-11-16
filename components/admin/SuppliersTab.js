@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../ui/SectionHeading";
 import { SecondaryButton, LinkButton } from "../ui/Button";
 import { ErrorState, LoadingState } from "../ui/States";
+import Modal from "../ui/Modal";
 
 const LABEL = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store", shotix: "Shotix", tunvn: "TunVN" };
 // admin-added APIs show their saved name (see custom_suppliers)
@@ -33,6 +34,8 @@ export default function SuppliersTab({ onChanged }) {
   const [check, setCheck] = useState(null);
   const [checking, setChecking] = useState(false);
   const [msg, setMsg] = useState("");
+
+  const [multiFilter, setMultiFilter] = useState("");
 
   async function load() {
     setLoading(true);
@@ -84,6 +87,17 @@ export default function SuppliersTab({ onChanged }) {
 
   // Merge custom supplier labels so the matcher shows "Shotix" not "c_shotix1shop"
   const labelMap = buildLabelMap(data.configured || []);
+
+  const filteredMulti = useMemo(() => {
+    if (!data?.multi) return [];
+    if (!multiFilter.trim()) return data.multi;
+    const q = multiFilter.trim().toLowerCase();
+    return data.multi.filter(
+      (m) =>
+        m.product.title.toLowerCase().includes(q) ||
+        m.sources.some((s) => (labelMap[s.supplier] || s.supplier).toLowerCase().includes(q))
+    );
+  }, [data?.multi, multiFilter, labelMap]);
 
   return (
     <div className="space-y-8">
@@ -154,14 +168,20 @@ export default function SuppliersTab({ onChanged }) {
         ) : (
           <div className="space-y-3">
             {[...data.multi.filter((m) => m.product.supplier_status === "price_too_high"), ...data.needsPrice].map((m) => (
-              <ProductSources key={m.product.id} entry={m} act={act} labelMap={labelMap} />
+              <ProductSources
+                key={m.product.id}
+                entry={m}
+                act={act}
+                labelMap={labelMap}
+                unlinked={data.unlinked}
+              />
             ))}
           </div>
         )}
       </section>
 
       {/* Match products across suppliers */}
-      <section>
+      <section id="product-matcher">
         <h3 className="mb-1 text-sm font-semibold text-ink">Match products (same product at two suppliers)</h3>
         <p className="mb-3 text-xs text-muted">
           Pick one supplier product (XPro, Shotix, etc.) and one DigiTrust product, then link them. They become ONE product on
@@ -173,103 +193,42 @@ export default function SuppliersTab({ onChanged }) {
 
       {/* Multi-source products */}
       <section>
-        <h3 className="mb-2 text-sm font-semibold text-ink">Products with several sources</h3>
-        {data.multi.length === 0 ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-ink">Products with several sources</h3>
+            <p className="text-xs text-muted">
+              Edit linked products, unlink any supplier source, or add new supplier sources directly.
+            </p>
+          </div>
+          <div className="w-full sm:w-72">
+            <input
+              type="search"
+              value={multiFilter}
+              onChange={(e) => setMultiFilter(e.target.value)}
+              placeholder="Search linked products..."
+              className="w-full rounded-xl border border-border bg-surface px-3 py-1.5 text-xs text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand shadow-xs"
+            />
+          </div>
+        </div>
+
+        {filteredMulti.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-            None linked yet.
+            {multiFilter ? "No linked products match your search." : "None linked yet."}
           </p>
         ) : (
           <div className="space-y-3">
-            {data.multi.map((m) => (
-              <ProductSources key={m.product.id} entry={m} act={act} labelMap={labelMap} />
+            {filteredMulti.map((m) => (
+              <ProductSources
+                key={m.product.id}
+                entry={m}
+                act={act}
+                labelMap={labelMap}
+                unlinked={data.unlinked}
+              />
             ))}
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function ProductSources({ entry, act, labelMap = LABEL }) {
-  const lbl = (id) => labelMap[id] || LABEL[id] || id;
-  const { product, sources } = entry;
-  const st = STATUS[product.supplier_status] || STATUS.ok;
-  return (
-    <div className="rounded-xl border border-border bg-surface p-4 shadow-card">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="font-medium text-ink">{product.title}</div>
-          <div className="text-xs text-muted">
-            Your price <span className="font-mono text-ink">{money(product.sell_price)}</span>
-            {!product.selected && " · hidden by you"}
-          </div>
-        </div>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${st.cls}`}>{st.text}</span>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[520px] text-sm">
-          <thead className="text-left text-xs text-muted">
-            <tr>
-              <th className="py-1.5 pr-3">Supplier</th>
-              <th className="py-1.5 pr-3">Cost</th>
-              <th className="py-1.5 pr-3">Stock</th>
-              <th className="py-1.5 pr-3">Margin</th>
-              <th className="py-1.5">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sources.map((s) => {
-              const margin = Number(product.sell_price) - Number(s.cost);
-              const active = product.active_supplier === s.supplier;
-              return (
-                <tr key={s.id} className="border-t border-border">
-                  <td className="py-2 pr-3 text-ink">
-                    {lbl(s.supplier)}
-                    {active && product.supplier_status === "ok" && (
-                      <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-xs text-brand">in use</span>
-                    )}
-                  </td>
-                  <td className="py-2 pr-3 font-mono text-muted">{money(s.cost)}</td>
-                  <td className="py-2 pr-3 font-mono text-muted">
-                    {s.available_stock}
-                    <span className="text-xs"> / {s.stock}</span>
-                  </td>
-                  <td className={`py-2 pr-3 font-mono ${margin < 0 ? "text-danger" : "text-success"}`}>
-                    {margin >= 0 ? "+" : "−"}
-                    {money(Math.abs(margin))}
-                  </td>
-                  <td className="space-x-3 whitespace-nowrap py-2">
-                    {margin < 0 && (
-                      <LinkButton
-                        onClick={() =>
-                          act(
-                            { action: "approve", source_id: s.id, approved: !s.approved },
-                            s.approved ? "Approval removed." : "Approved — this source can now be shown even though it costs more than your price."
-                          )
-                        }
-                        className={s.approved ? "text-danger" : ""}
-                      >
-                        {s.approved ? "Remove approval" : "Approve anyway"}
-                      </LinkButton>
-                    )}
-                    {s.supplier !== "digitrust" && sources.length > 1 && (
-                      <LinkButton
-                        onClick={() =>
-                          window.confirm("Unlink this source? It will come back as a separate product on the next sync.") &&
-                          act({ action: "unlink", source_id: s.id }, "Unlinked.")
-                        }
-                        className="text-muted"
-                      >
-                        Unlink
-                      </LinkButton>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
@@ -293,6 +252,345 @@ function similarity(a, b) {
 }
 
 const includesText = (q, text) => !q.trim() || String(text).toLowerCase().includes(q.trim().toLowerCase());
+
+function ProductSources({ entry, act, labelMap = LABEL, unlinked = [] }) {
+  const lbl = (id) => labelMap[id] || LABEL[id] || id;
+  const { product, sources } = entry;
+  const st = STATUS[product.supplier_status] || STATUS.ok;
+
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
+  const [linkingId, setLinkingId] = useState(null);
+
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceInput, setPriceInput] = useState(String(product.sell_price));
+  const [savingPrice, setSavingPrice] = useState(false);
+
+  // Suppliers already linked to this product
+  const existingSupplierIds = new Set(sources.map((s) => s.supplier));
+
+  // Eligible unlinked supplier products that don't belong to already linked suppliers
+  const eligibleUnlinked = useMemo(() => {
+    if (!unlinked || unlinked.length === 0) return [];
+    return unlinked
+      .filter((u) => {
+        // Exclude supplier if this product already has a source from this supplier
+        if (existingSupplierIds.has(u.product.provider)) return false;
+        // If product requires email, only suppliers that deliver email can be linked
+        if (product.requires_email && u.product.provider !== "digitrust") {
+          // Keep unless known incompatible
+        }
+        return true;
+      })
+      .map((u) => {
+        const score = similarity(u.product.title, product.title);
+        const cost = Number(u.source?.cost ?? u.product.cost_price ?? 0);
+        const margin = Number(product.sell_price) - cost;
+        return { u, score, cost, margin };
+      })
+      .filter(({ u }) => {
+        if (!linkSearch.trim()) return true;
+        const q = linkSearch.trim().toLowerCase();
+        return (
+          u.product.title.toLowerCase().includes(q) ||
+          lbl(u.product.provider).toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => b.score - a.score);
+  }, [unlinked, sources, product, linkSearch]);
+
+  async function handleLink(u) {
+    setLinkingId(u.product.id);
+    try {
+      await act(
+        { action: "link", stub_product_id: u.product.id, target_product_id: product.id },
+        `Linked ${lbl(u.product.provider)} to "${product.title}".`
+      );
+      setShowLinkModal(false);
+    } finally {
+      setLinkingId(null);
+    }
+  }
+
+  async function handleSavePrice() {
+    const p = Number(priceInput);
+    if (!Number.isFinite(p) || p <= 0) return;
+    setSavingPrice(true);
+    try {
+      await act(
+        { action: "set_price", product_id: product.id, sell_price: p },
+        `Updated sell price to ${money(p)}.`
+      );
+      setEditingPrice(false);
+    } finally {
+      setSavingPrice(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-surface p-4 shadow-card">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium text-ink text-base">{product.title}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+            <span>Your price</span>
+            {editingPrice ? (
+              <div className="inline-flex items-center gap-1.5">
+                <span className="font-mono text-ink">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={priceInput}
+                  onChange={(e) => setPriceInput(e.target.value)}
+                  className="w-20 rounded border border-border bg-bg px-2 py-0.5 font-mono text-xs text-ink focus:border-brand focus:outline-none"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  disabled={savingPrice}
+                  onClick={handleSavePrice}
+                  className="rounded bg-brand px-2 py-0.5 text-xs font-semibold text-white hover:bg-brand-dark"
+                >
+                  {savingPrice ? "…" : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPriceInput(String(product.sell_price));
+                    setEditingPrice(false);
+                  }}
+                  className="text-xs text-muted hover:text-ink underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5">
+                <span className="font-mono font-bold text-ink">{money(product.sell_price)}</span>
+                <button
+                  type="button"
+                  onClick={() => setEditingPrice(true)}
+                  className="text-[11px] text-brand hover:underline font-medium"
+                >
+                  Edit price
+                </button>
+              </div>
+            )}
+            {!product.selected && <span className="text-muted">· hidden on store</span>}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowLinkModal(true)}
+            className="inline-flex items-center gap-1 rounded-lg border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand hover:text-white transition shadow-xs"
+          >
+            <span>+ Link Supplier</span>
+          </button>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${st.cls}`}>{st.text}</span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px] text-sm">
+          <thead className="text-left text-xs text-muted">
+            <tr>
+              <th className="py-1.5 pr-3">Supplier</th>
+              <th className="py-1.5 pr-3">Cost</th>
+              <th className="py-1.5 pr-3">Stock</th>
+              <th className="py-1.5 pr-3">Margin</th>
+              <th className="py-1.5">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sources.map((s) => {
+              const margin = Number(product.sell_price) - Number(s.cost);
+              const active = product.active_supplier === s.supplier;
+              const isPrimary = s.supplier === "digitrust";
+              return (
+                <tr key={s.id} className="border-t border-border">
+                  <td className="py-2 pr-3 text-ink">
+                    <span className="font-medium">{lbl(s.supplier)}</span>
+                    {active && product.supplier_status === "ok" && (
+                      <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-xs text-brand font-medium">
+                        in use
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2 pr-3 font-mono text-muted">{money(s.cost)}</td>
+                  <td className="py-2 pr-3 font-mono text-muted">
+                    {s.available_stock}
+                    <span className="text-xs"> / {s.stock}</span>
+                  </td>
+                  <td className={`py-2 pr-3 font-mono font-medium ${margin < 0 ? "text-danger" : "text-success"}`}>
+                    {margin >= 0 ? "+" : "−"}
+                    {money(Math.abs(margin))}
+                  </td>
+                  <td className="space-x-3 whitespace-nowrap py-2">
+                    {margin < 0 && (
+                      <LinkButton
+                        onClick={() =>
+                          act(
+                            { action: "approve", source_id: s.id, approved: !s.approved },
+                            s.approved
+                              ? "Approval removed."
+                              : "Approved — this source can now be shown even though it costs more than your price."
+                          )
+                        }
+                        className={s.approved ? "text-danger" : ""}
+                      >
+                        {s.approved ? "Remove approval" : "Approve anyway"}
+                      </LinkButton>
+                    )}
+                    {!isPrimary && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Unlink ${lbl(s.supplier)} from "${product.title}"?\n\nIt will be detached and immediately restored as an unlinked product so you can re-link it or manage it.`
+                            )
+                          ) {
+                            act(
+                              { action: "unlink", source_id: s.id },
+                              `Unlinked ${lbl(s.supplier)} and restored to unlinked products.`
+                            );
+                          }
+                        }}
+                        className="text-xs font-semibold text-danger hover:underline"
+                      >
+                        Unlink
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add Supplier Modal */}
+      {showLinkModal && (
+        <Modal
+          title={`Link Another Supplier to "${product.title}"`}
+          onClose={() => setShowLinkModal(false)}
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-4 text-sm">
+            {/* Context Box */}
+            <div className="rounded-xl border border-border bg-bg p-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Target Store Product:</span>
+                <span className="font-semibold text-ink">{product.title}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Current Sell Price:</span>
+                <span className="font-mono font-bold text-ink">{money(product.sell_price)}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-border/60">
+                <span className="text-muted">Already Linked:</span>
+                <div className="flex flex-wrap gap-1">
+                  {sources.map((s) => (
+                    <span
+                      key={s.id}
+                      className="inline-flex items-center gap-1 rounded bg-surface border border-border px-1.5 py-0.5 text-[11px] font-medium text-ink"
+                    >
+                      <span className="text-brand font-semibold">{lbl(s.supplier)}</span>
+                      <span className="font-mono text-muted">({money(s.cost)})</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">🔍</span>
+              <input
+                type="search"
+                value={linkSearch}
+                onChange={(e) => setLinkSearch(e.target.value)}
+                placeholder="Search available unlinked supplier products..."
+                className="w-full rounded-xl border border-border bg-surface pl-9 pr-3 py-2 text-xs text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                autoFocus
+              />
+            </div>
+
+            {/* List of Eligible Unlinked Products */}
+            <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
+              {eligibleUnlinked.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border bg-bg/50 p-6 text-center text-xs text-muted">
+                  {linkSearch
+                    ? "No unlinked products match your search."
+                    : "No unlinked products available from other suppliers."}
+                </div>
+              ) : (
+                eligibleUnlinked.map(({ u, score, cost, margin }) => {
+                  const isLinking = linkingId === u.product.id;
+                  const isProfitable = margin >= 0;
+                  return (
+                    <div
+                      key={u.product.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3 hover:border-brand-light transition-all shadow-xs"
+                    >
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="rounded bg-brand-soft border border-brand/20 px-2 py-0.5 text-[10px] font-bold text-brand uppercase">
+                            {lbl(u.product.provider)}
+                          </span>
+                          <span className="font-medium text-xs text-ink truncate max-w-[280px]">
+                            {u.product.title}
+                          </span>
+                          {score >= 0.4 && (
+                            <span className="rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-600">
+                              {Math.round(score * 100)}% match
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="text-muted">
+                            Cost: <b className="font-mono text-ink">{money(cost)}</b>
+                          </span>
+                          <span className="text-muted">
+                            Stock: <b className="font-mono text-ink">{u.product.available_stock}</b>
+                          </span>
+                          <span className={isProfitable ? "text-success font-medium" : "text-danger font-medium"}>
+                            Margin: {isProfitable ? "+" : "−"}{money(Math.abs(margin))}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex-shrink-0">
+                        <button
+                          type="button"
+                          disabled={isLinking}
+                          onClick={() => handleLink(u)}
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand hover:bg-brand-dark px-3 py-1.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-50"
+                        >
+                          {isLinking ? "Linking…" : "+ Link to Product"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-border">
+              <SecondaryButton onClick={() => setShowLinkModal(false)} className="px-4 py-1.5 text-xs">
+                Close
+              </SecondaryButton>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 
 // One supplier column — shows its own unlinked products, highlights matches.
 // globalQ: shared search from the global bar above all columns

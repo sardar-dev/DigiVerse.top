@@ -2,7 +2,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { recomputeProduct } from "../../../lib/syncProducts";
 import { retrySupplierOrder } from "../../../lib/fulfillOrder";
-import { allSuppliers, enabledSuppliers, getSupplier } from "../../../lib/suppliers";
+import { allSuppliers, enabledSuppliers, getSupplier, stubIdFor } from "../../../lib/suppliers";
 
 // Everything the admin "Suppliers" tab needs. Read on demand only (when
 // the tab opens / Refresh is pressed) — never polled.
@@ -232,12 +232,12 @@ export default async function handler(req, res) {
     }
 
     if (action === "unlink") {
-      // Drops a secondary source; the next sync recreates it as a fresh
-      // unlinked product so nothing is lost.
+      // Detaches a secondary source from this product and restores it as an
+      // unlinked stub product immediately so it can be re-linked right away.
       const { source_id } = req.body;
       const { data: src } = await supabaseAdmin
         .from("product_sources")
-        .select("id, product_id, supplier")
+        .select("id, product_id, supplier, supplier_product_id, supplier_title, cost, stock, available_stock")
         .eq("id", source_id)
         .maybeSingle();
       if (!src) return res.status(404).json({ success: false, error: "not_found" });
@@ -249,8 +249,56 @@ export default async function handler(req, res) {
       if (prod?.provider === src.supplier) {
         return res.status(400).json({ success: false, error: "cant_unlink_primary_source" });
       }
-      await supabaseAdmin.from("product_sources").delete().eq("id", src.id);
-      await recomputeProduct(src.product_id);
+
+      const targetProductId = src.product_id;
+
+      // Compute deterministic stub ID for this supplier product
+      const newStubId =
+        src.supplier === "digitrust"
+          ? Number(src.supplier_product_id)
+          : src.supplier === "xpro"
+          ? stubIdFor(src.supplier_product_id)
+          : stubIdFor(`${src.supplier}:${src.supplier_product_id}`);
+
+      // Re-create the unlinked stub product in `products` so it appears immediately in the unlinked list
+      await supabaseAdmin.from("products").upsert({
+        id: newStubId,
+        title: src.supplier_title || `Product from ${src.supplier}`,
+        sell_price: src.cost || 0,
+        cost_price: src.cost || 0,
+        selected: false,
+        real_stock: src.stock || 0,
+        available_stock: src.available_stock || 0,
+        provider: src.supplier.startsWith("c_") ? "custom" : src.supplier,
+        active_supplier: src.supplier,
+        supplier_status: "ok",
+        updated_at: new Date().toISOString(),
+      });
+
+      // Point this source back to its newly restored stub product
+      await supabaseAdmin
+        .from("product_sources")
+        .update({ product_id: newStubId })
+        .eq("id", src.id);
+
+      // Recompute the original target product now that this source is detached
+      await recomputeProduct(targetProductId);
+
+      return res.status(200).json({ success: true });
+    }
+
+    if (action === "set_price") {
+      const { product_id, sell_price } = req.body;
+      const p = Number(sell_price);
+      if (!product_id || !Number.isFinite(p) || p <= 0) {
+        return res.status(400).json({ success: false, error: "invalid_price" });
+      }
+      const { error } = await supabaseAdmin
+        .from("products")
+        .update({ sell_price: p, auto_price: false, updated_at: new Date().toISOString() })
+        .eq("id", product_id);
+      if (error) return res.status(500).json({ success: false, error: error.message });
+      await recomputeProduct(product_id);
       return res.status(200).json({ success: true });
     }
 
