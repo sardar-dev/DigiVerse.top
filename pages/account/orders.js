@@ -412,7 +412,7 @@ export default function Orders() {
                   key={o.id}
                   className={`group rounded-2xl border bg-surface p-5 sm:p-6 shadow-card transition-all duration-200 ${
                     isPending
-                      ? "border-amber-300/80 bg-amber-50/20"
+                      ? "border-warning/30 hover:border-warning/50"
                       : isDelivered
                       ? "border-border/80 hover:border-brand-light"
                       : "border-border/80"
@@ -499,23 +499,30 @@ export default function Orders() {
 
                   {/* ── Pending Payment Callout & Actions ── */}
                   {isPending && !isResumingThis && (
-                    <div className="mt-4 rounded-xl border border-amber-300/70 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="text-xs text-amber-900 dark:text-amber-200">
-                        <span className="font-semibold">⚠️ {t("Awaiting payment:")}</span>{" "}
-                        {t("Send the exact deposit amount before this order expires.")}
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-warning/25 bg-warning-soft p-3.5 shadow-xs">
+                      <div className="flex items-center gap-2 text-xs text-warning">
+                        <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-warning/15 font-bold text-warning text-xs" aria-hidden="true">
+                          ⚠️
+                        </span>
+                        <div className="leading-relaxed">
+                          <span className="font-bold">{t("Awaiting payment:")}</span>{" "}
+                          <span>{t("Send the exact deposit amount before this order expires.")}</span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-2.5 flex-shrink-0">
-                        <PrimaryButton
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          type="button"
                           onClick={() => setResuming(o.id)}
-                          className="px-4 py-1.5 text-xs font-semibold shadow-xs"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-dark active:scale-95"
                         >
-                          {t("Continue payment →")}
-                        </PrimaryButton>
+                          <span>{t("Continue payment")}</span>
+                          <span>→</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => cancelOrder(o.id)}
-                          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger-soft hover:border-danger/30 transition"
+                          className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-danger shadow-xs transition hover:bg-danger-soft hover:border-danger/30 active:scale-95"
                         >
                           {t("Cancel order")}
                         </button>

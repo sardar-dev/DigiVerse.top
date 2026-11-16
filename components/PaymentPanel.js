@@ -613,9 +613,9 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
             </div>
           </div>
 
-          {/* Warning Banner: User-requested text replacement & harmonious color matching */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/70 bg-amber-500/10 p-3 text-xs text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
-            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-400 font-bold text-white text-[11px] shadow-xs">
+          {/* Warning Banner */}
+          <div className="flex items-start gap-2.5 rounded-xl border border-warning/25 bg-warning-soft p-3 text-xs text-warning shadow-xs">
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-warning/15 font-bold text-warning text-[11px]" aria-hidden="true">
               !
             </span>
             <p className="leading-relaxed font-medium">
