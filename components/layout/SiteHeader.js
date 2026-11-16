@@ -78,20 +78,6 @@ function SupportIcon({ className = "h-4 w-4" }) {
   );
 }
 
-function AdminIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
-      <path
-        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function SignOutIcon({ className = "h-4 w-4" }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
@@ -123,7 +109,6 @@ export default function SiteHeader({
 
   const [ownSession, setOwnSession] = useState(undefined);
   const [ownBalance, setOwnBalance] = useState(undefined);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const needSession = sessionProp === undefined;
   const needBalance = balanceProp === undefined;
@@ -138,15 +123,14 @@ export default function SiteHeader({
         sess = data.session;
         if (!cancelled) setOwnSession(sess);
       }
-      if (sess?.user?.id) {
+      if (sess?.user?.id && needBalance) {
         const { data } = await supabase
           .from("profiles")
-          .select("balance, is_admin")
+          .select("balance")
           .eq("id", sess.user.id)
           .single();
         if (!cancelled && data) {
-          if (needBalance) setOwnBalance(Number(data.balance || 0));
-          setIsAdmin(Boolean(data.is_admin));
+          setOwnBalance(Number(data.balance || 0));
         }
       }
     })();
@@ -375,7 +359,7 @@ export default function SiteHeader({
                     <div className="mb-1 rounded-xl border border-brand/10 bg-gradient-to-br from-brand-soft/70 via-surface to-surface p-3">
                       <div className="flex items-center justify-between gap-2">
                         <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-semibold text-muted shadow-sm">
-                          {isAdmin ? "⚡ " + t("Administrator") : "👤 " + t("Customer")}
+                          {"👤 " + t("Customer")}
                         </span>
                         <span className="flex items-center gap-1 text-[10px] font-medium text-muted">
                           <span className="h-1.5 w-1.5 rounded-full bg-success" />
@@ -453,23 +437,6 @@ export default function SiteHeader({
                         </span>
                         <span className="h-1.5 w-1.5 rounded-full bg-success" />
                       </Link>
-
-                      {isAdmin && (
-                        <Link
-                          role="menuitem"
-                          href="/admin"
-                          onClick={() => setMenu(false)}
-                          className="flex items-center justify-between rounded-xl px-3 py-2 font-medium text-brand transition-colors hover:bg-brand-soft"
-                        >
-                          <span className="flex items-center gap-2">
-                            <AdminIcon className="h-4 w-4 text-brand" />
-                            <span>{t("Admin Console")}</span>
-                          </span>
-                          <span className="rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white uppercase">
-                            Admin
-                          </span>
-                        </Link>
-                      )}
                     </div>
 
                     <div className="my-1 border-t border-border" />
@@ -573,7 +540,7 @@ export default function SiteHeader({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-semibold text-muted shadow-sm">
-                      {isAdmin ? "⚡ " + t("Administrator") : "👤 " + t("Customer")}
+                      {"👤 " + t("Customer")}
                     </span>
                     <span className="flex items-center gap-1 text-[10px] font-medium text-success">
                       <span className="h-1.5 w-1.5 rounded-full bg-success" /> Online
@@ -667,24 +634,6 @@ export default function SiteHeader({
                 </li>
               );
             })}
-
-            {isAdmin && (
-              <li>
-                <Link
-                  href="/admin"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium text-brand hover:bg-brand-soft/60"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <AdminIcon className="h-4 w-4 text-brand" />
-                    <span>{t("Admin Console")}</span>
-                  </span>
-                  <span className="rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white uppercase">
-                    Admin
-                  </span>
-                </Link>
-              </li>
-            )}
 
             {session && (
               <li className="pt-2 border-t border-border/80">
