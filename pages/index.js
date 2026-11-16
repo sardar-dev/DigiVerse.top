@@ -162,6 +162,16 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     return Array.from(set).sort();
   }, [products]);
 
+  const categoryCounts = useMemo(() => {
+    const counts = { "": products.length };
+    for (const p of products) {
+      if (p.category) {
+        counts[p.category] = (counts[p.category] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [products]);
+
   // Filtering happens entirely in the browser — no extra requests to
   // our server per keystroke, since we already have the full list.
   const inStock = useMemo(() => products.filter((p) => p.available_stock > 0), [products]);
@@ -414,49 +424,108 @@ export default function Storefront({ initialProducts, sharedMeta }) {
 
         {/* Catalog */}
         <section id="catalog">
-          <PageContainer className="py-10">
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <PageContainer className="py-10 sm:py-14">
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-ink sm:text-2xl">{t("Products")}</h2>
-                <p className="text-sm text-muted">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+                    {t("Products")}
+                  </h2>
+                  {products.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-surface px-2.5 py-0.5 text-xs font-semibold text-ink shadow-2xs">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                      </span>
+                      <span className="font-mono">{inStock.length}</span>
+                      <span className="text-muted font-normal">{t("in stock")}</span>
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs sm:text-sm text-muted">
                   {products.length > 0
-                    ? t("{shown} of {total} shown · {stock} in stock", { shown: visible.length, total: products.length, stock: inStock.length })
+                    ? t("{shown} of {total} shown", { shown: visible.length, total: products.length })
                     : t("Browse what's available")}
                 </p>
               </div>
-              <div className="dv-search flex w-full max-w-full items-center gap-2 rounded-xl border border-border bg-surface px-3 shadow-card transition-shadow sm:w-auto sm:max-w-sm sm:min-w-[280px]">
-                <span className="text-muted" aria-hidden="true">🔍</span>
+
+              {/* Search input with modern styling and SVG icons */}
+              <div className="relative flex w-full items-center sm:w-72 md:w-80">
+                <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-muted" aria-hidden="true">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                  </svg>
+                </div>
                 <input
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t("Search products…")}
                   aria-label={t("Search products")}
-                  className="min-h-11 min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none"
+                  className="w-full rounded-xl border border-border/90 bg-surface py-2.5 pe-8 ps-9 text-xs sm:text-sm text-ink placeholder:text-muted/70 shadow-2xs transition-all duration-200 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                 />
                 {search && (
-                  <button type="button" onClick={() => setSearch("")} aria-label={t("Clear search")} className="text-muted hover:text-ink">
-                    ✕
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    aria-label={t("Clear search")}
+                    className="absolute inset-y-0 end-0 flex items-center pe-2.5 text-muted hover:text-ink transition-colors"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 )}
               </div>
             </div>
 
+            {/* Category Filter Bar: Horizontal scroll on mobile, wrap on sm+ */}
             {categories.length > 1 && (
-              <div className="mb-6 flex w-full max-w-full min-w-0 flex-wrap gap-2" role="group" aria-label={t("Filter by category")}>
-                {["", ...categories].map((c) => (
+              <div
+                className="mb-6 flex w-full max-w-full min-w-0 items-center gap-2 overflow-x-auto pb-2 pt-0.5 sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                role="group"
+                aria-label={t("Filter by category")}
+              >
+                {["", ...categories].map((c) => {
+                  const isSelected = category === c;
+                  const count = categoryCounts[c] ?? 0;
+                  return (
+                    <button
+                      key={c || "all"}
+                      onClick={() => setCategory(c)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition-all duration-150 active:scale-95 flex-shrink-0 ${
+                        isSelected
+                          ? "bg-brand text-white shadow-xs"
+                          : "border border-border/80 bg-surface text-muted hover:border-brand-light/70 hover:text-ink hover:bg-brand-soft/40"
+                      }`}
+                    >
+                      <span>{c || t("All")}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                          isSelected
+                            ? "bg-white/25 text-white"
+                            : "bg-bg border border-border/60 text-muted"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {(category || search) && (
                   <button
-                    key={c || "all"}
-                    onClick={() => setCategory(c)}
-                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-                      category === c
-                        ? "bg-brand text-white shadow-[0_8px_20px_-6px_rgba(49,105,245,0.75)]"
-                        : "bg-brand-soft text-brand hover:bg-brand/10 hover:shadow-[0_0_16px_-4px_rgba(49,105,245,0.4)]"
-                    }`}
+                    type="button"
+                    onClick={() => {
+                      setCategory("");
+                      setSearch("");
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-xs font-semibold text-muted hover:text-brand hover:border-brand transition-all flex-shrink-0 active:scale-95"
                   >
-                    {c || t("All")}
+                    <span>✕</span>
+                    <span>{t("Reset")}</span>
                   </button>
-                ))}
+                )}
               </div>
             )}
 
