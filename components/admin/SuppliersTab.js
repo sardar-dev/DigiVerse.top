@@ -81,12 +81,8 @@ export default function SuppliersTab({ onChanged }) {
     setChecking(false);
   }
 
-  if (loading && !data) return <LoadingState label="Loading suppliers…" />;
-  if (error && !data) return <ErrorState title="Couldn't load suppliers" message={error} onRetry={load} />;
-  if (!data) return null;
-
   // Merge custom supplier labels so the matcher shows "Shotix" not "c_shotix1shop"
-  const labelMap = buildLabelMap(data.configured || []);
+  const labelMap = useMemo(() => buildLabelMap(data?.configured || []), [data?.configured]);
 
   const filteredMulti = useMemo(() => {
     if (!data?.multi) return [];
@@ -98,6 +94,10 @@ export default function SuppliersTab({ onChanged }) {
         m.sources.some((s) => (labelMap[s.supplier] || s.supplier).toLowerCase().includes(q))
     );
   }, [data?.multi, multiFilter, labelMap]);
+
+  if (loading && !data) return <LoadingState label="Loading suppliers…" />;
+  if (error && !data) return <ErrorState title="Couldn't load suppliers" message={error} onRetry={load} />;
+  if (!data) return null;
 
   return (
     <div className="space-y-8">
