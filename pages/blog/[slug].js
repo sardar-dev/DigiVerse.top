@@ -25,6 +25,24 @@ export async function getStaticProps({ params }) {
 const fmt = (d, locale) =>
   d ? new Date(d).toLocaleDateString(intlLocale(locale), { year: "numeric", month: "long", day: "numeric" }) : "";
 
+// Posts that end with "## Frequently asked questions" + "### question"
+// headings get FAQPage structured data (eligible for Google rich results).
+// Answers are the plain text under each question; markdown is stripped.
+function faqFromBody(body) {
+  const sec = body.match(/^##\s+Frequently asked questions\s*\n([\s\S]*?)(?=^##\s|(?![\s\S]))/im);
+  if (!sec) return [];
+  const strip = (s) =>
+    s.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\s+/g, " ").trim();
+  return sec[1]
+    .split(/^###\s+/m)
+    .slice(1)
+    .map((chunk) => {
+      const [q, ...rest] = chunk.split("\n");
+      return { q: strip(q), a: strip(rest.join(" ")) };
+    })
+    .filter((x) => x.q && x.a);
+}
+
 export default function Post({ post }) {
   const { t, locale } = useT();
   const url = `${SITE_URL}${locale === "en" ? "" : `/${locale}`}/blog/${post.slug}`;
@@ -54,6 +72,18 @@ export default function Post({ post }) {
       },
     ],
   };
+
+  const faq = faqFromBody(post.body);
+  if (faq.length) {
+    ld["@graph"].push({
+      "@type": "FAQPage",
+      mainEntity: faq.map(({ q, a }) => ({
+        "@type": "Question",
+        name: q,
+        acceptedAnswer: { "@type": "Answer", text: a },
+      })),
+    });
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-bg font-body text-ink">
