@@ -225,6 +225,9 @@ const part = {
     "What are Muse AI Tokens and how does delivery work?": "ما هي رموز Muse AI وكيف يتم تسليمها؟",
     "What is DigiVerse's replacement warranty and refund guarantee?": "ما هو ضمان الاستبدال والاسترداد في DigiVerse؟",
     "How does the free Referral Reward Box program work?": "كيف يعمل برنامج صناديق مكافآت الإحالة المجانية؟",
+    "Choose Payment Option": "اختر طريقة الدفع",
+    "Select your preferred cryptocurrency and network": "اختر العملة الرقمية والشبكة المفضلة لديك",
+    "Selected Method:": "الطريقة المحددة:",
   },
   ru: {
     "{price} on DigiVerse. Instant delivery and secure checkout.": "{price} в DigiVerse. Мгновенная доставка и безопасная оплата.",
@@ -450,6 +453,9 @@ const part = {
     "What are Muse AI Tokens and how does delivery work?": "Что такое токены Muse AI и как происходит их доставка?",
     "What is DigiVerse's replacement warranty and refund guarantee?": "Какова гарантия замены и возврата средств в DigiVerse?",
     "How does the free Referral Reward Box program work?": "Как работает программа бесплатных подарочных боксов за рефералов?",
+    "Choose Payment Option": "Выберите способ оплаты",
+    "Select your preferred cryptocurrency and network": "Выберите криптовалюту и сеть для оплаты",
+    "Selected Method:": "Выбранный способ:",
   },
 };
 export default part;

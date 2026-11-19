@@ -462,22 +462,22 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
 
       {/* Unified 4-Step Checkout Card */}
       <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-card space-y-5">
-        {/* STEP 1: Choose Coin & Network */}
+        {/* STEP 1: Choose Payment Method */}
         <div className="space-y-3">
           <div className="flex items-start gap-2.5">
             <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white mt-0.5">
               1
             </span>
             <div>
-              <h3 className="font-bold text-sm sm:text-base text-ink">{t("Choose Coin & Network")}</h3>
-              <p className="text-xs text-muted">{t("Select the blockchain network for payment")}</p>
+              <h3 className="font-bold text-sm sm:text-base text-ink">{t("Choose Payment Option")}</h3>
+              <p className="text-xs text-muted">{t("Select your preferred cryptocurrency and network")}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             {Object.values(CRYPTO_NETWORKS).map((net) => {
               const active = selectedNetwork === net.id;
-              const isRecommended = net.id === "usdt_bep20";
+              const isRecommended = Boolean(net.isRecommended);
               return (
                 <button
                   key={net.id}
@@ -486,39 +486,50 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
                     setSelectedNetwork(net.id);
                     setError("");
                   }}
-                  className={`group relative flex flex-col items-start rounded-xl border p-2.5 sm:p-3 text-left transition-all duration-150 ${
+                  className={`group relative flex items-center justify-between rounded-xl border p-3 text-left transition-all duration-150 ${
                     active
-                      ? "border-brand bg-brand-soft/30 ring-1 ring-brand shadow-xs"
-                      : "border-border bg-bg/50 hover:bg-surface hover:border-brand-light"
+                      ? "border-brand bg-brand-soft/50 ring-2 ring-brand/30 shadow-xs"
+                      : "border-border bg-surface hover:border-brand-light hover:bg-brand-soft/10"
                   }`}
                 >
-                  {/* Active Checkmark Pill on Top-Right Corner */}
-                  {active && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-white shadow-xs">
-                      <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </span>
-                  )}
-
-                  <div className="flex items-center gap-2.5 w-full">
+                  <div className="flex items-center gap-3 min-w-0">
                     <CryptoBadge networkId={net.id} size="md" />
-                    <div className="min-w-0 flex-1">
-                      <span className="block font-bold text-xs text-ink group-hover:text-brand transition-colors">
-                        {net.token}
-                      </span>
-                      <span className="block text-[10px] font-medium text-muted truncate">
-                        {net.shortNetwork}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-xs sm:text-sm text-ink group-hover:text-brand transition-colors">
+                          {net.coinTitle}
+                        </span>
+                        <span className="text-muted/40 text-xs">|</span>
+                        <span className="text-[11px] font-extrabold text-brand tracking-wide">
+                          {net.chainTitle}
+                        </span>
+                      </div>
+                      <span className="block text-[10px] text-muted truncate mt-0.5">
+                        {net.subtitle || net.networkName}
                       </span>
                     </div>
                   </div>
 
-                  {/* Recommended Badge */}
-                  {isRecommended && (
-                    <span className="mt-2 inline-block rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold text-white leading-none">
-                      {t("Recommended")}
+                  <div className="flex items-center gap-1.5 flex-shrink-0 ms-2">
+                    {isRecommended && (
+                      <span className="rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold text-white shadow-xs">
+                        {t("Recommended")}
+                      </span>
+                    )}
+                    <span
+                      className={`flex h-4 w-4 items-center justify-center rounded-full border transition-all ${
+                        active
+                          ? "border-brand bg-brand text-white"
+                          : "border-border bg-bg group-hover:border-brand/50"
+                      }`}
+                    >
+                      {active && (
+                        <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
                     </span>
-                  )}
+                  </div>
                 </button>
               );
             })}
@@ -604,12 +615,12 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
             </div>
           </div>
 
-          {/* Selected Network Pill */}
+          {/* Selected Payment Option Pill */}
           <div className="flex items-center justify-between rounded-xl border border-blue-200/60 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-950/20 px-3.5 py-2.5 text-xs">
-            <span className="text-muted font-medium">{t("Selected Network:")}</span>
+            <span className="text-muted font-medium">{t("Selected Method:")}</span>
             <div className="flex items-center gap-2">
-              <img src={currentNet.netIcon} alt="" className="h-4 w-4 rounded-full" />
-              <span className="font-bold text-brand">{currentNet.networkName}</span>
+              <CryptoBadge networkId={currentNet.id} size="sm" />
+              <span className="font-bold text-brand">{currentNet.fullPair || `${currentNet.token} | ${currentNet.shortNetwork}`}</span>
             </div>
           </div>
 

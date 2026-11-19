@@ -477,20 +477,21 @@ export default function Wallet() {
                 {/* Active Invoice Flow (Network Selector + Steps 1 & 2) */}
                 {invoice && (
                   <div className="space-y-5 pt-1">
-                    {/* Network & Coin Selector */}
+                    {/* Coin & Chain Selector */}
                     <div className="rounded-2xl border border-border bg-surface p-4 shadow-card space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold uppercase tracking-wider text-ink">
-                          {t("Choose Coin & Network")}
+                          {t("Choose Payment Option")}
                         </label>
                         <span className="text-[11px] text-muted font-medium bg-bg px-2.5 py-0.5 rounded-full border border-border">
                           {t("Same address on all chains")}
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                         {Object.values(CRYPTO_NETWORKS).map((net) => {
                           const active = selectedNetwork === net.id;
+                          const isRecommended = Boolean(net.isRecommended);
                           return (
                             <button
                               key={net.id}
@@ -499,24 +500,48 @@ export default function Wallet() {
                                 setSelectedNetwork(net.id);
                                 setMessage("");
                               }}
-                              className={`group relative flex items-center gap-3 rounded-xl border p-2.5 text-left transition-all duration-150 ${
+                              className={`group relative flex items-center justify-between rounded-xl border p-3 text-left transition-all duration-150 ${
                                 active
-                                  ? "border-brand bg-brand-soft/50 ring-2 ring-brand/20 shadow-sm"
-                                  : "border-border bg-bg/50 hover:bg-surface hover:border-brand-light"
+                                  ? "border-brand bg-brand-soft/50 ring-2 ring-brand/30 shadow-xs"
+                                  : "border-border bg-surface hover:border-brand-light hover:bg-brand-soft/10"
                               }`}
                             >
-                              <CryptoBadge networkId={net.id} size="md" />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-xs text-ink group-hover:text-brand transition-colors">
-                                    {net.token}
+                              <div className="flex items-center gap-3 min-w-0">
+                                <CryptoBadge networkId={net.id} size="md" />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-xs sm:text-sm text-ink group-hover:text-brand transition-colors">
+                                      {net.coinTitle}
+                                    </span>
+                                    <span className="text-muted/40 text-xs">|</span>
+                                    <span className="text-[11px] font-extrabold text-brand tracking-wide">
+                                      {net.chainTitle}
+                                    </span>
+                                  </div>
+                                  <span className="block text-[10px] text-muted truncate mt-0.5">
+                                    {net.subtitle || net.networkName}
                                   </span>
-                                  {active && (
-                                    <span className="h-2 w-2 rounded-full bg-brand ring-4 ring-brand/20" />
-                                  )}
                                 </div>
-                                <span className="block text-[10px] font-medium text-muted truncate">
-                                  {net.shortNetwork}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 flex-shrink-0 ms-2">
+                                {isRecommended && (
+                                  <span className="rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold text-white shadow-xs">
+                                    {t("Recommended")}
+                                  </span>
+                                )}
+                                <span
+                                  className={`flex h-4 w-4 items-center justify-center rounded-full border transition-all ${
+                                    active
+                                      ? "border-brand bg-brand text-white"
+                                      : "border-border bg-bg group-hover:border-brand/50"
+                                  }`}
+                                >
+                                  {active && (
+                                    <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  )}
                                 </span>
                               </div>
                             </button>
