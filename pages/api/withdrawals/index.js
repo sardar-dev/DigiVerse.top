@@ -1,6 +1,7 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { MIN_WITHDRAWAL, MAX_PENDING, validatePayout, dbError } from "../../../lib/withdrawals";
+import { notifyTelegramWithdrawal } from "../../../lib/telegram";
 
 // GET  -> the user's own recent requests + limits
 // POST -> { amount, address } creates a request; the amount leaves the
@@ -43,5 +44,18 @@ export default async function handler(req, res) {
   });
   if (error) return res.status(500).json({ success: false, error: dbError(error) });
   if (!data?.ok) return res.status(400).json({ success: false, error: data?.error || "failed", min: MIN_WITHDRAWAL });
+
+  // Send Telegram live alert to admin (fire & forget, never blocks user response)
+  try {
+    notifyTelegramWithdrawal({
+      email: session.user.email,
+      amount,
+      method: pay.method,
+      address: pay.address,
+      requestNumber: data.request_number,
+      newBalance: Number(data.balance),
+    }).catch((e) => console.warn("[withdrawal] telegram alert error:", e?.message));
+  } catch {}
+
   return res.status(200).json({ success: true, request_number: data.request_number, balance: Number(data.balance) });
 }

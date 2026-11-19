@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { verifyUsdtTopup } from "../../../lib/bscscan";
 import { claimTxHash, confirmTxHash, releaseTxHash } from "../../../lib/claimTxHash";
 import { frozenSeconds, recordWrongHash, isWrongHash, frozenResponse } from "../../../lib/hashLimit";
+import { notifyTelegramDeposit } from "../../../lib/telegram";
 
 // Customer must first create a deposit invoice (see
 // create-deposit-invoice.js), which assigns a unique exact amount
@@ -151,6 +152,18 @@ export default async function handler(req, res) {
   if (balErr) {
     return res.status(500).json({ success: false, error: balErr.message });
   }
+
+  // Notify admin via Telegram (fire & forget, never blocks response)
+  try {
+    notifyTelegramDeposit({
+      email: session.user.email,
+      amount: creditAmount,
+      network: invoice.network || "BSC",
+      token: invoice.token || "USDT",
+      txHash: tx_hash,
+      newBalance,
+    }).catch((e) => console.warn("[topup] telegram alert error:", e?.message));
+  } catch {}
 
   return res.status(200).json({ success: true, credited: creditAmount, balance: newBalance });
 }

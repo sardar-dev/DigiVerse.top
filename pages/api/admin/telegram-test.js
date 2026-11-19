@@ -30,8 +30,10 @@ export default async function handler(req, res) {
     ``,
     `✅ Your Telegram bot is actively connected to DigiVerse.top.`,
     `⚡ You will receive instant notifications here for:`,
-    `  • 🛒 Every Order Paid (Product, Amount, Customer, Auto/Manual)`,
-    `  • 👤 Every New User Signup (Email, Username, Referrer)`,
+    `  • 🛒 Every Order Paid & 🚨 Manual Orders (Auto-delivery failed)`,
+    `  • 💵 Customer Wallet Deposits (Amount, Token, Tx Hash)`,
+    `  • 💸 Withdrawal Requests (Amount, Method, Address)`,
+    `  • 👤 New User Signups (Email, Username, Referrer)`,
     ``,
     `⏱ <b>Test Time:</b> ${now}`,
   ].join("\n");
