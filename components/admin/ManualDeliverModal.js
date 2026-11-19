@@ -38,6 +38,16 @@ export default function ManualDeliverModal({ order, onClose, onDelivered }) {
             Activation info: <span className="font-mono">{order.activation_info}</span>
           </p>
         )}
+        {order.failure_reason && (
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-xs">
+            <div className="font-semibold text-amber-400 flex items-center gap-1.5">
+              <span>⚠️ Reason for Manual Delivery / Upstream Error:</span>
+            </div>
+            <div className="mt-1 font-mono text-[11px] text-ink break-all">
+              {order.failure_reason}
+            </div>
+          </div>
+        )}
         <FormTextarea
           label="Delivered item(s) / instructions — one per line"
           value={items}

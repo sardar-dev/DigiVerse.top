@@ -30,6 +30,31 @@ function CopyChip({ value, label, title }) {
   );
 }
 
+// Parses and formats supplier errors (including translations for foreign API responses)
+function formatSupplierNotice(reason) {
+  if (!reason) return null;
+  const raw = String(reason).trim();
+  let summary = null;
+
+  if (/thất bại/i.test(raw)) {
+    summary = "Supplier Out of Stock / Rejected";
+  } else if (/hết hàng/i.test(raw)) {
+    summary = "Supplier Out of Stock";
+  } else if (/balance too low|số dư không đủ/i.test(raw)) {
+    summary = "Supplier Wallet Low Balance";
+  } else if (/line_count_mismatch/i.test(raw)) {
+    summary = "Supplier Item Count Mismatch";
+  } else if (/returned no delivery items/i.test(raw)) {
+    summary = "Supplier Delivered Empty Stock";
+  } else if (/cannot_take_email/i.test(raw)) {
+    summary = "Supplier Does Not Accept Email";
+  } else if (/exceeds_paid/i.test(raw)) {
+    summary = "Supplier Cost Exceeds Sale Price";
+  }
+
+  return { summary, raw };
+}
+
 // What the customer actually received (credentials / links / codes).
 function DeliveredItems({ items }) {
   if (!items || (Array.isArray(items) && items.length === 0)) {
@@ -111,6 +136,20 @@ export default function OrdersTab({
               <td className="py-3 px-4 whitespace-nowrap">
                 <div className="font-mono text-sm text-ink">{o.order_number}</div>
                 <div className="mt-1"><StatusBadge status={o.status} /></div>
+                {o.failure_reason && (() => {
+                  const notice = formatSupplierNotice(o.failure_reason);
+                  return (
+                    <div className="mt-2 max-w-[220px] whitespace-normal rounded-lg border border-amber-500/25 bg-amber-500/10 p-2 text-left">
+                      <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-400">
+                        <span aria-hidden="true">⚠️</span>
+                        <span>{notice.summary || "API / Supplier Error"}</span>
+                      </div>
+                      <div className="mt-1 font-mono text-[10px] leading-tight text-ink break-all">
+                        {notice.raw}
+                      </div>
+                    </div>
+                  );
+                })()}
               </td>
               {/* Customer + paid with */}
               <td className="py-3 px-4 max-w-[180px] break-all text-ink">

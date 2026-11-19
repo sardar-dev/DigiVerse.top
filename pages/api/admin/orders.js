@@ -65,9 +65,15 @@ export default async function handler(req, res) {
       if (!order) return res.status(404).json({ success: false, error: "order_not_found" });
       const result = await placeBuffOrder(order);
       if (result.placed) {
+        await supabaseAdmin.from("orders").update({ failure_reason: null }).eq("id", id);
         return res.status(200).json({ success: true, message: "Order placed on TunVN" });
       }
-      return res.status(400).json({ success: false, error: result.reason || "buff_order_failed" });
+      const reason = result.reason || "buff_order_failed";
+      await supabaseAdmin
+        .from("orders")
+        .update({ failure_reason: `tunvn_retry_failed: ${reason}`.slice(0, 300) })
+        .eq("id", id);
+      return res.status(400).json({ success: false, error: reason });
     }
 
     if (action === "settle_buff" && id) {
