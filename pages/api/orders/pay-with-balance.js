@@ -154,7 +154,11 @@ export default async function handler(req, res) {
   }
   if (!result.success) {
     // fulfillOrder itself returned failure — check if it's a refundable failure
-    const refundableErrors = ["out_of_stock_refund_pending", "fulfillment_failed_refund_pending"];
+    const refundableErrors = [
+      "out_of_stock_refund_pending",
+      "fulfillment_failed_refund_pending",
+      "fulfillment_uncertain_pending_review",
+    ];
     if (refundableErrors.includes(result.error)) {
       try {
         if (Number(claimedOrder.gifts_redeemed || 0) > 0) {

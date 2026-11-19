@@ -753,6 +753,8 @@ function describeError(t, code, data) {
       return t("Sold out at the last moment — your payment will be refunded manually, sorry.");
     case "fulfillment_uncertain_pending_review":
       return t("Payment received — we're double-checking delivery, this may take a few minutes.");
+    case "fulfillment_uncertain_pending_review_refunded":
+      return t("Delivery could not be completed at this time — your wallet balance has been refunded automatically.");
     case "fulfillment_failed_refund_pending":
       return t("Order placed but delivery failed — your payment will be refunded. Please contact support.");
     case "fulfillment_failed_please_contact_support":
