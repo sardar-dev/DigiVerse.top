@@ -88,7 +88,7 @@ export default function SiteFooter() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/?search=Muse" className="text-muted transition-colors hover:text-brand">
+                  <Link href="/muse-ai-tokens" className="text-muted transition-colors hover:text-brand">
                     {t("Muse AI Tokens")}
                   </Link>
                 </li>

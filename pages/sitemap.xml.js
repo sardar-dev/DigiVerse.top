@@ -6,6 +6,7 @@ import { toProductCode } from "../lib/productLink";
 const STATIC_PAGES = [
   { path: "", changefreq: "daily", priority: "1.0" },
   { path: "/about", changefreq: "monthly", priority: "0.6" },
+  { path: "/muse-ai-tokens", changefreq: "daily", priority: "0.9" },
   { path: "/blog", changefreq: "weekly", priority: "0.8" },
   { path: "/terms", changefreq: "monthly", priority: "0.4" },
   { path: "/privacy", changefreq: "monthly", priority: "0.4" },
