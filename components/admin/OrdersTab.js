@@ -237,7 +237,25 @@ export default function OrdersTab({
                         Send to TunVN
                       </LinkButton>
                     )}
-                    <LinkButton onClick={() => onDeliverManual(o)}>Deliver</LinkButton>
+                    <LinkButton onClick={() => onDeliverManual(o)} className="font-medium text-brand">
+                      Deliver
+                    </LinkButton>
+                    <LinkButton
+                      onClick={() => {
+                        if (confirm(`Cancel order #${o.order_number} without refunding?`)) {
+                          setOrderStatus(o.id, "cancelled");
+                        }
+                      }}
+                      className="text-muted hover:text-danger"
+                    >
+                      Cancel
+                    </LinkButton>
+                    <LinkButton
+                      onClick={() => onRefund(o)}
+                      className="font-semibold text-danger hover:text-danger-hover"
+                    >
+                      Cancel & Refund
+                    </LinkButton>
                   </>
                 )}
                 {o.status === "fulfilling" && o.is_buff && (
@@ -280,6 +298,9 @@ export default function OrdersTab({
                       )
                     )}
                     <LinkButton onClick={() => onReconcileDelivered(o)}>Mark delivered</LinkButton>
+                    <LinkButton onClick={() => onRefund(o)} className="font-semibold text-danger">
+                      Cancel & Refund
+                    </LinkButton>
                     <LinkButton onClick={() => setOrderStatus(o.id, "failed")} className="text-danger">
                       Mark failed
                     </LinkButton>

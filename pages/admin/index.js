@@ -458,12 +458,12 @@ export default function Admin() {
 
   async function refundOrder(order) {
     const who = order.user_email || "the customer";
-    if (
-      !confirm(
-        `Refund $${Number(order.total).toFixed(2)} to ${who}'s wallet balance and mark order #${order.order_number} as refunded?`
-      )
-    )
-      return;
+    const amount = Number(order.total || 0);
+    const confirmPrompt =
+      amount > 0
+        ? `Cancel & refund $${amount.toFixed(2)} to ${who}'s wallet balance and mark order #${order.order_number} as refunded?`
+        : `Cancel order #${order.order_number} and return redeemed gift box to ${who}?`;
+    if (!confirm(confirmPrompt)) return;
     const res = await fetch("/api/admin/refund-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -107,6 +107,11 @@ export default async function handler(req, res) {
 
     const { error } = await supabaseAdmin.from("orders").update(patch).eq("id", id);
     if (error) return res.status(500).json({ success: false, error: error.message });
+
+    if (["cancelled", "refunded", "failed"].includes(status)) {
+      await supabaseAdmin.rpc("release_reserved_gifts", { p_order_id: id }).catch(() => {});
+    }
+
     return res.status(200).json({ success: true });
   }
 
