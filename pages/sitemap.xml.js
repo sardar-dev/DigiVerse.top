@@ -10,6 +10,7 @@ const STATIC_PAGES = [
   { path: "/blog", changefreq: "weekly", priority: "0.8" },
   { path: "/terms", changefreq: "monthly", priority: "0.4" },
   { path: "/privacy", changefreq: "monthly", priority: "0.4" },
+  { path: "/llms.txt", changefreq: "weekly", priority: "0.5" },
 ];
 
 export async function getServerSideProps({ res }) {

@@ -1,0 +1,52 @@
+# DigiVerse (digiverse.top)
+
+> DigiVerse is a digital commerce marketplace for verified software license keys, operating systems, productivity suites, and Muse AI tokens with 0-second instant delivery and zero-fee multi-chain cryptocurrency checkout.
+
+## Overview & Core Identity
+- **Website**: https://digiverse.top
+- **Type**: Digital Goods & Software License Reseller
+- **Primary Offerings**: Genuine Microsoft Windows licenses, Microsoft Office suites, productivity software, and Meta Muse AI tokens.
+- **Delivery Guarantee**: Instant 0-second automated delivery for stock items, real-time automated delivery for Muse AI tokens.
+- **Payment Infrastructure**: Multi-chain EVM cryptocurrency verification (USDT and USDC) with zero payment gateway fees, plus on-site wallet balance.
+- **Customer Support**: Integrated support ticketing system and 24/7 Telegram community channel (https://t.me/digiverse_top).
+
+## Key Product Offerings
+- **Operating Systems**: Genuine OEM & Retail licenses for Windows 11 Professional, Windows 10 Professional, Windows 11 Home, and Windows Server.
+- **Productivity Software**: Microsoft Office Professional Plus, Project, Visio, and digital utility licenses.
+- **Muse AI Tokens**: 1 Billion Meta Muse AI Tokens delivered directly to user accounts via account invite link/code with automated status polling.
+
+## Payment Methods & Multi-Chain Crypto Rails
+DigiVerse uses an on-chain, non-custodial transaction verification engine:
+- **BNB Smart Chain (BEP20)**: USDT (Tether USD)
+- **Polygon PoS**: USDT & USDC (PoS)
+- **Base (Coinbase L2)**: USDT & USDC
+- **On-Site Wallet**: Customers can top up their DigiVerse wallet balance via crypto deposit and pay instantly with 1-click checkout.
+- **Single Deposit Address**: Users send to a verified company EVM address across any supported network; the system automatically detects incoming transactions on-chain.
+
+## Delivery Speed & Fulfillment
+- **Stock License Keys (`digitrust`, `internal`)**: Serial numbers and activation guides are delivered in 0 seconds directly on screen and permanently archived in the user's account under `/account/orders`.
+- **Muse AI Tokens**: Processed asynchronously via direct API and invite fulfillment, with live status updates accessible via `/api/orders/buff-status`.
+- **Manual Delivery**: Custom enterprise or specialized digital items delivered within 1 to 24 hours with email notification.
+
+## Referral & Free Gift Box Rewards
+- **Referral Rewards**: Registered users earn free gift reward boxes for inviting customers.
+- **0-Second Instant Unlock**: Reward boxes have zero lock delay (`lock_delay_seconds = 0`) and can be claimed immediately upon qualification.
+- **Reward Value**: 1 Gift Box = 1 Billion Muse AI Tokens.
+- **Seamless 1-Click Claim**: Navigating to `/?product=-12` automatically applies an available gift box for an instant $0.00 checkout.
+
+## Customer Warranty & Guarantee
+- **100% Genuine Activation Guarantee**: Every license key sold is guaranteed to activate online.
+- **Automatic Refunds**: In the event an order cannot be completed, funds are automatically refunded to the customer's on-site wallet balance immediately.
+- **Support Tickets**: Full ticket inbox available at `/account/support`.
+
+## Canonical Pages & Links
+- Storefront & Catalog: https://digiverse.top
+- About & Reseller Disclaimer: https://digiverse.top/about
+- Customer Orders: https://digiverse.top/account/orders
+- Referral Dashboard: https://digiverse.top/account/referrals
+- Customer Wallet: https://digiverse.top/account/wallet
+- Support Tickets: https://digiverse.top/account/support
+- Terms of Service: https://digiverse.top/terms
+- Privacy Policy: https://digiverse.top/privacy
+- Sitemap: https://digiverse.top/sitemap.xml
+- Full LLM Reference: https://digiverse.top/llms-full.txt

@@ -10,6 +10,10 @@ Disallow: /admin
 Disallow: /account
 Disallow: /api
 
+# LLM & AI Knowledge Files (AEO & GEO Optimization)
+Allow: /llms.txt
+Allow: /llms-full.txt
+
 Sitemap: ${SITE_URL}/sitemap.xml
 `
   );

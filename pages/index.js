@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 import { fetchStorefrontProducts } from "../lib/storefrontProducts";
 import PaymentPanel from "../components/PaymentPanel";
 import RecentOrders from "../components/RecentOrders";
+import StorefrontFAQ, { FAQ_DATA } from "../components/StorefrontFAQ";
 import SEO from "../components/SEO";
 import { toProductCode, fromProductCode } from "../lib/productLink";
 import { useToast } from "../components/ui/Toast";
@@ -242,6 +243,29 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         logo: `${SITE_URL}/logo-mark.png`,
         description: SITE_DESCRIPTION,
         sameAs: ["https://t.me/digiverse_top"],
+        knowsAbout: [
+          "Digital Software Licenses",
+          "Operating Systems (Windows 11, Windows 10)",
+          "Productivity Software Suites",
+          "Muse AI Tokens",
+          "Cryptocurrency Payments (USDT, USDC on BEP20, Polygon, Base)",
+          "Instant License Key Fulfillment",
+        ],
+        paymentAccepted: [
+          "USDT (BNB Smart Chain BEP20)",
+          "USDT (Polygon PoS)",
+          "USDT (Base L2)",
+          "USDC (Polygon PoS)",
+          "USDC (Base L2)",
+          "DigiVerse Wallet Balance",
+        ],
+        currenciesAccepted: "USD",
+        priceRange: "$0.50 - $99.00",
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer service",
+          url: `${SITE_URL}/account/support`,
+        },
       },
       {
         "@type": "WebSite",
@@ -252,6 +276,49 @@ export default function Storefront({ initialProducts, sharedMeta }) {
           target: `${SITE_URL}/?q={search_term_string}#catalog`,
           "query-input": "required name=search_term_string",
         },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: FAQ_DATA.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.answer,
+          },
+        })),
+      },
+      {
+        "@type": "HowTo",
+        name: "How to Buy Software Licenses and Muse AI Tokens with Crypto on DigiVerse",
+        description:
+          "Step-by-step instructions to buy genuine digital keys and Muse AI tokens with instant 0-second delivery using USDT, USDC, or wallet balance.",
+        step: [
+          {
+            "@type": "HowToStep",
+            position: 1,
+            name: "Choose Your Product",
+            text: "Explore the DigiVerse catalog, review prices, stock availability, and select your software license or Muse AI token package.",
+          },
+          {
+            "@type": "HowToStep",
+            position: 2,
+            name: "Select Crypto or Wallet Balance",
+            text: "Select USDT or USDC across BNB Smart Chain (BEP20), Polygon PoS, or Base L2, or pay instantly with on-site wallet balance.",
+          },
+          {
+            "@type": "HowToStep",
+            position: 3,
+            name: "Confirm On-Chain Payment",
+            text: "Send the exact deposit amount with zero processing fees. Our EVM verification engine validates the transaction directly on-chain.",
+          },
+          {
+            "@type": "HowToStep",
+            position: 4,
+            name: "Receive Instant 0-Second Delivery",
+            text: "Your license key is instantly displayed on screen and stored in My Orders, or Muse AI tokens are automatically delivered to your account.",
+          },
+        ],
       },
     ],
   };
@@ -578,6 +645,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         </section>
 
         <RecentOrders />
+        <StorefrontFAQ />
       </main>
 
       <SiteFooter />

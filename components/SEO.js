@@ -114,6 +114,9 @@ export default function SEO({
       <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/manifest.webmanifest" />
+
+      {/* AI & Answer Engine Context (AEO & GEO Optimization) */}
+      <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM Context" />
       {/* viewport meta lives in pages/_document.js — Next.js requires it
           there, not per-page, so it isn't duplicated here. */}
 
