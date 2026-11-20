@@ -75,7 +75,7 @@ const FAQ = [
   },
   {
     q: "How long does delivery take?",
-    a: "Token top-ups are normally credited within a few minutes, and the product page shows the current estimate. If your order has not been credited after about 30 minutes, contact support from the support desk or on Telegram and we will check it.",
+    a: "Token top-ups are normally credited within 10–15 minutes. If your order has not been credited after about 30 minutes, contact support from the support desk or on Telegram and we will check it.",
   },
   {
     q: "Do you need my Muse password?",
@@ -174,7 +174,7 @@ export default function MuseTokens({ products }) {
             <div className="rounded-xl border border-brand/20 bg-brand-soft p-5 text-sm leading-relaxed text-ink">
               <strong className="font-semibold">Short answer:</strong> pick a Muse product below, enter your Muse
               invite code and the amount, and pay with USDT, USDC or your DigiVerse wallet. The tokens are credited
-              to your own Muse account, usually within a few minutes. We never ask for your password.
+              to your own Muse account, with auto delivery in about 10–15 minutes. We never ask for your password.
             </div>
           </header>
 
@@ -236,7 +236,7 @@ export default function MuseTokens({ products }) {
               <li><strong className="font-semibold">Get your invite code.</strong> It is the invite code of your own Muse account. You need a Muse account first, and Muse must be available where you live.</li>
               <li><strong className="font-semibold">Choose the amount.</strong> Top-ups are sold in units of 1 billion tokens. Pick how many units you want.</li>
               <li><strong className="font-semibold">Enter the code and pay.</strong> Pay with USDT or USDC (Polygon, Base or BNB Chain) or with your DigiVerse wallet balance.</li>
-              <li><strong className="font-semibold">Receive the tokens.</strong> They are credited to the account behind your code, usually within a few minutes. Track the order under My Orders.</li>
+              <li><strong className="font-semibold">Receive the tokens.</strong> They are credited to the account behind your code, usually within 10–15 minutes. Track the order under My Orders.</li>
             </ol>
             <p className="text-sm leading-relaxed text-muted">
               You never share a password. Double-check the invite code before you pay, because tokens go to whichever
