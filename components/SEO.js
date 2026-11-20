@@ -18,11 +18,14 @@ export default function SEO({
   imageHeight,
   keywords,
   jsonLd,
+  fullTitleOverride, // exact <title>, no brand suffix appended
 }) {
   const { locale = "en" } = useRouter();
 
   // Clean, high-CTR title without trailing raw emoji that break chat crawler decoders
-  const fullTitle = title
+  const fullTitle = fullTitleOverride
+    ? fullTitleOverride
+    : title
     ? `${title} | ${BRAND_NAME}`
     : `${BRAND_NAME} — Buy Digital Software Licenses & Muse AI Tokens`;
 

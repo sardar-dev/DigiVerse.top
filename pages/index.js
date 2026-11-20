@@ -190,6 +190,17 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     });
   }, [products, search, category]);
 
+  // Cheapest live price of the Muse top-up (per 1 billion tokens). Falls back
+  // to the launch price if the catalog has no priced top-up product.
+  const musePrice = useMemo(() => {
+    const prices = (products || [])
+      .filter((p) => p.tunvn_buff)
+      .map((p) => Number(p.sell_price ?? p.price))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    return prices.length ? Math.min(...prices) : 0.15;
+  }, [products]);
+  const musePriceText = `$${musePrice.toFixed(2)}`;
+
   const productJsonLd = sharedMeta
     ? {
         "@context": "https://schema.org",
@@ -336,8 +347,8 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         />
       ) : (
         <SEO
-          title="Buy Digital Software Licenses & Muse AI Tokens"
-          description="Instant digital goods marketplace. Buy Muse AI tokens, premium software license keys, and accounts with 0-second delivery. 100% warranty, pay securely with USDT & crypto."
+          fullTitleOverride={`DigiVerse – Buy Muse AI Tokens from ${musePriceText} | Digital Subscriptions`}
+          description={`Buy Muse AI Tokens on your own account from ${musePriceText} per 1 billion tokens. Invite code only, auto delivery in 10–15 minutes, USDT payment. Also Office 365, Canva, Gemini, Duolingo, STEAM and more at DigiVerse.top.`}
           keywords="digital software licenses, Muse AI tokens, buy Muse AI tokens, cheap license keys, Windows keys, office licenses, crypto software store, USDT digital goods, instant digital delivery, DigiVerse"
           jsonLd={storeJsonLd}
         />
@@ -640,6 +651,28 @@ export default function Storefront({ initialProducts, sharedMeta }) {
                   onShare={() => shareProduct(p, notify, t, locale)}
                 />
               ))}
+            </div>
+          </PageContainer>
+        </section>
+
+        <section aria-labelledby="muse-facts-heading" className="border-t border-border bg-surface/40">
+          <PageContainer>
+            <div className="py-8 sm:py-10">
+              <h2 id="muse-facts-heading" className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
+                Muse AI Tokens — {musePriceText} per 1 billion tokens
+              </h2>
+              <ul className="mt-3 space-y-1.5 text-sm leading-relaxed text-muted sm:text-base">
+                <li>Muse AI Tokens — {musePriceText} per 1 billion tokens, added to your own Muse account.</li>
+                <li>Order from 1B to 30B tokens in one purchase.</li>
+                <li>Invite code only: we never ask for your password.</li>
+                <li>Auto delivery in 10–15 minutes.</li>
+                <li>Pay with USDT (BEP20, Polygon or Base) or your DigiVerse wallet balance.</li>
+              </ul>
+              <p className="mt-3 text-sm">
+                <Link href="/muse-ai-tokens" className="font-semibold text-brand hover:underline">
+                  Full Muse AI Tokens guide and live prices
+                </Link>
+              </p>
             </div>
           </PageContainer>
         </section>
