@@ -1,5 +1,6 @@
 import { Html, Head, Main, NextScript } from "next/document";
 import { FB_PIXEL_ID } from "../lib/fpixel";
+import { GTM_ID } from "../lib/gtm";
 
 // Sets <html lang> and dir (Arabic = right-to-left) from the active locale.
 export default function Document(props) {
@@ -18,6 +19,15 @@ export default function Document(props) {
         />
       </Head>
       <body>
+        {/* Google Tag Manager (noscript fallback) */}
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
         <noscript>
           <img
             height="1"

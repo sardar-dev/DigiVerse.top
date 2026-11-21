@@ -6,6 +6,7 @@ import WhatsAppButton from "../components/WhatsAppButton";
 import NoticePopup from "../components/NoticePopup";
 import ToastContainer from "../components/ui/Toast";
 import * as fpixel from "../lib/fpixel";
+import * as gtm from "../lib/gtm";
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -14,16 +15,18 @@ export default function App({ Component, pageProps }) {
   // Track page views on route changes (client-side SPA navigation)
   useEffect(() => {
     fpixel.pageview();
+    gtm.pageview(router.asPath);
 
-    const handleRouteChange = () => {
+    const handleRouteChange = (url) => {
       fpixel.pageview();
+      gtm.pageview(url);
     };
 
     router.events.on("routeChangeComplete", handleRouteChange);
     return () => {
       router.events.off("routeChangeComplete", handleRouteChange);
     };
-  }, [router.events]);
+  }, [router.events, router.asPath]);
 
   // Returning visitor who chose Arabic/Russian before: open the site in it.
   useEffect(() => {
@@ -58,6 +61,23 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
+      {/* Google Tag Manager (GTM) */}
+      <Script
+        id="gtm-script"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+            })(window,document,'script','dataLayer','${gtm.GTM_ID}');
+          `,
+        }}
+      />
       {/* Global Meta Pixel (Facebook) Script */}
       <Script
         id="meta-pixel"
