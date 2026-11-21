@@ -1,6 +1,7 @@
 import { Html, Head, Main, NextScript } from "next/document";
 import { FB_PIXEL_ID } from "../lib/fpixel";
 import { GTM_ID } from "../lib/gtm";
+import { GA_MEASUREMENT_ID } from "../lib/gtag";
 
 // Sets <html lang> and dir (Arabic = right-to-left) from the active locale.
 export default function Document(props) {
@@ -16,6 +17,23 @@ export default function Document(props) {
         <meta
           name="p:domain_verify"
           content="219a4f20949ca6f7e4a72e815217faea"
+        />
+        {/* Google Analytics 4 (GA4) */}
+        <script
+          async
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_MEASUREMENT_ID}', {
+                page_path: window.location.pathname,
+              });
+            `,
+          }}
         />
       </Head>
       <body>

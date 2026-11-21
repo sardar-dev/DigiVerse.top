@@ -64,26 +64,6 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
-      {/* Google Analytics 4 (GA4) */}
-      <Script
-        id="google-analytics-script"
-        strategy="afterInteractive"
-        src={`https://www.googletagmanager.com/gtag/js?id=${gtag.GA_MEASUREMENT_ID}`}
-      />
-      <Script
-        id="google-analytics-init"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${gtag.GA_MEASUREMENT_ID}', {
-              page_path: window.location.pathname,
-            });
-          `,
-        }}
-      />
       {/* Google Tag Manager (GTM) */}
       <Script
         id="gtm-script"
