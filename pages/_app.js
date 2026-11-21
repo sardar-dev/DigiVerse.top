@@ -7,6 +7,7 @@ import NoticePopup from "../components/NoticePopup";
 import ToastContainer from "../components/ui/Toast";
 import * as fpixel from "../lib/fpixel";
 import * as gtm from "../lib/gtm";
+import * as gtag from "../lib/gtag";
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -16,10 +17,12 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     fpixel.pageview();
     gtm.pageview(router.asPath);
+    gtag.pageview(router.asPath);
 
     const handleRouteChange = (url) => {
       fpixel.pageview();
       gtm.pageview(url);
+      gtag.pageview(url);
     };
 
     router.events.on("routeChangeComplete", handleRouteChange);
@@ -61,6 +64,26 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
+      {/* Google Analytics 4 (GA4) */}
+      <Script
+        id="google-analytics-script"
+        strategy="afterInteractive"
+        src={`https://www.googletagmanager.com/gtag/js?id=${gtag.GA_MEASUREMENT_ID}`}
+      />
+      <Script
+        id="google-analytics-init"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${gtag.GA_MEASUREMENT_ID}', {
+              page_path: window.location.pathname,
+            });
+          `,
+        }}
+      />
       {/* Google Tag Manager (GTM) */}
       <Script
         id="gtm-script"
