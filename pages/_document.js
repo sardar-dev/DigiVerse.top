@@ -12,6 +12,10 @@ export default function Document(props) {
           name="facebook-domain-verification"
           content="4mna49badwlswc1ifefje5z6hdtt69"
         />
+        <meta
+          name="p:domain_verify"
+          content="219a4f20949ca6f7e4a72e815217faea"
+        />
       </Head>
       <body>
         <noscript>
