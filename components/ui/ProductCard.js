@@ -1,6 +1,8 @@
 import { useState } from "react";
+import Link from "next/link";
 import { PrimaryButton } from "./Button";
 import { useT } from "../../lib/i18n";
+import { getProductUrl } from "../../lib/productSlug";
 
 // Storefront product card. Shows provider-neutral labels only —
 // never exposes cost price or internal supplier plumbing to the customer.
@@ -43,20 +45,22 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
       <div className={outOfStock ? "flex flex-1 flex-col opacity-60 grayscale" : "flex flex-1 flex-col"}>
         {/* Top Header: Product Avatar + Delivery Tag + Share Action */}
         <div className="mb-3.5 flex items-start justify-between gap-2.5">
-          {showImage ? (
-            <img
-              loading="lazy"
-              decoding="async"
-              src={product.image_url}
-              alt=""
-              className="h-12 w-12 flex-shrink-0 rounded-xl border border-border/80 bg-bg p-0.5 object-cover shadow-2xs transition-transform duration-200 group-hover:scale-105"
-              onError={() => setImageFailed(true)}
-            />
-          ) : (
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-soft to-white text-base font-bold text-brand shadow-2xs ring-1 ring-border/80">
-              {letter}
-            </div>
-          )}
+          <Link href={getProductUrl(product)} className="block flex-shrink-0" aria-label={product.title}>
+            {showImage ? (
+              <img
+                loading="lazy"
+                decoding="async"
+                src={product.image_url}
+                alt=""
+                className="h-12 w-12 flex-shrink-0 rounded-xl border border-border/80 bg-bg p-0.5 object-cover shadow-2xs transition-transform duration-200 group-hover:scale-105"
+                onError={() => setImageFailed(true)}
+              />
+            ) : (
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-soft to-white text-base font-bold text-brand shadow-2xs ring-1 ring-border/80">
+                {letter}
+              </div>
+            )}
+          </Link>
 
           <div className="flex items-center gap-1.5">
             <span
@@ -102,7 +106,9 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
         {/* Title & Featured Indicator */}
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-base font-bold leading-snug text-ink transition-colors duration-200 group-hover:text-brand">
-            {product.title}
+            <Link href={getProductUrl(product)} className="hover:underline">
+              {product.title}
+            </Link>
           </h3>
           {product.featured && (
             <span
