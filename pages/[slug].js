@@ -612,13 +612,9 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                       <span className="text-muted">{t("Fulfillment Mode")}</span>
                       <span className="font-semibold text-ink">{deliveryLabel}</span>
                     </div>
-                    <div className="flex items-center justify-between py-1 border-b border-border/60">
+                    <div className="flex items-center justify-between py-1">
                       <span className="text-muted">{t("Warranty Policy")}</span>
                       <span className="font-semibold text-ink">{formatWarranty(product.warranty)}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-muted">{t("Supported Currencies")}</span>
-                      <span className="font-semibold text-ink">USDT, USDC, Wallet Balance</span>
                     </div>
                   </div>
                 </div>
