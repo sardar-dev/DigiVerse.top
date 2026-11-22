@@ -10,6 +10,7 @@ export default function SiteFooter() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [telegramLink, setTelegramLink] = useState("https://t.me/digiverse_top");
+  const [referralEnabled, setReferralEnabled] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setLoggedIn(!!data?.session));
@@ -17,6 +18,9 @@ export default function SiteFooter() {
     fetch("/api/settings")
       .then((r) => r.json())
       .then((d) => {
+        if (d && typeof d.referral_enabled === "boolean") {
+          setReferralEnabled(d.referral_enabled);
+        }
         if (d?.channel_type === "telegram" && d?.whatsapp_link) {
           setTelegramLink(d.whatsapp_link);
         } else if (d?.telegram_channel_link) {
@@ -92,12 +96,14 @@ export default function SiteFooter() {
                     {t("Muse AI Tokens")}
                   </Link>
                 </li>
-                <li>
-                  <Link href="/account/referrals" className="inline-flex items-center gap-1.5 text-muted transition-colors hover:text-brand">
-                    <span>{t("Referral Rewards")}</span>
-                    <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand">FREE</span>
-                  </Link>
-                </li>
+                {referralEnabled && (
+                  <li>
+                    <Link href="/account/referrals" className="inline-flex items-center gap-1.5 text-muted transition-colors hover:text-brand">
+                      <span>{t("Referral Rewards")}</span>
+                      <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand">FREE</span>
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link href="/account/orders" className="text-muted transition-colors hover:text-brand">
                     {t("Order History")}

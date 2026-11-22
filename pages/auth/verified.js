@@ -12,10 +12,20 @@ export default function EmailVerified() {
   const { t, locale } = useT();
   const [loading, setLoading] = useState(true);
   const [qualifyStatus, setQualifyStatus] = useState(null);
+  const [referralEnabled, setReferralEnabled] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
+
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (active && d && typeof d.referral_enabled === "boolean") {
+          setReferralEnabled(d.referral_enabled);
+        }
+      })
+      .catch(() => {});
 
     async function handleVerification() {
       // Small pause to allow Supabase auth helpers to finish parsing session from URL hash if present
@@ -73,10 +83,12 @@ export default function EmailVerified() {
         </h1>
 
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          {t("Your DigiVerse account is confirmed. You can now purchase products, manage orders, and earn referral gifts.")}
+          {referralEnabled
+            ? t("Your DigiVerse account is confirmed. You can now purchase products, manage orders, and earn referral gifts.")
+            : t("Your DigiVerse account is confirmed. You can now purchase products and manage orders.")}
         </p>
 
-        {qualifyStatus?.reward_issued && (
+        {referralEnabled && qualifyStatus?.reward_issued && (
           <div className="mt-5 rounded-xl border border-brand/30 bg-brand-soft/60 p-4 text-xs font-medium text-brand text-start">
             <div className="flex items-center gap-2 font-semibold text-sm mb-1">
               <span>🎁</span>

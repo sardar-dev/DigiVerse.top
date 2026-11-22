@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   // 2. Check system settings & master redemption switch
   const settings = await getReferralSettings();
 
-  if (!settings || !settings.redemption_enabled) {
+  if (!settings || !settings.redemption_enabled || settings.referral_enabled === false) {
     return res.status(200).json({
       success: true,
       eligible: false,

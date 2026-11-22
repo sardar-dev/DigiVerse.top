@@ -16,6 +16,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: "login_required" });
   }
 
+  const settings = await getReferralSettings();
+  if (settings && settings.referral_enabled === false) {
+    return res.status(200).json({ success: false, disabled: true, error: "referrals_disabled" });
+  }
+
   const userId = session.user.id;
 
   // Handle setting username for older users who don't have one
@@ -58,7 +63,6 @@ export default async function handler(req, res) {
 
   // 1b. Auto-reconciliation: ensure referral records & gifts exist for all qualified referrals
   try {
-    const settings = await getReferralSettings();
     const requireEmail = settings?.require_email_verification === true;
 
     // If user was referred by someone (stored in profiles.referred_by), ensure public.referrals has the record
@@ -205,9 +209,6 @@ export default async function handler(req, res) {
     ...r,
     displayName: referredUsernames[r.referred_id] || "Friend",
   }));
-
-  // 5. System settings
-  const settings = await getReferralSettings();
 
   // 6. Reliable live calculation of stats (Instant rewards, 0s lock delay)
   const now = new Date();

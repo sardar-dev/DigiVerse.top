@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
+import { getReferralSettings, updateReferralSettings } from "../../../lib/referralSettings";
 
 const HOSTS = {
   whatsapp: /^(chat\.whatsapp\.com|wa\.me|api\.whatsapp\.com|whatsapp\.com|www\.whatsapp\.com)$/i,
@@ -11,19 +12,22 @@ export default async function handler(req, res) {
   if (!session) return;
 
   if (req.method === "GET") {
-    const { data } = await supabaseAdmin
-      .from("app_meta")
-      .select("key, value")
-      .in("key", [
-        "whatsapp_link",
-        "channel_type",
-        "buy_modal_ticker",
-        "site_notice",
-        "google_auth_enabled",
-        "telegram_bot_token",
-        "telegram_chat_id",
-        "telegram_notifications_enabled",
-      ]);
+    const [{ data }, refSettings] = await Promise.all([
+      supabaseAdmin
+        .from("app_meta")
+        .select("key, value")
+        .in("key", [
+          "whatsapp_link",
+          "channel_type",
+          "buy_modal_ticker",
+          "site_notice",
+          "google_auth_enabled",
+          "telegram_bot_token",
+          "telegram_chat_id",
+          "telegram_notifications_enabled",
+        ]),
+      getReferralSettings().catch(() => null),
+    ]);
     const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
     let notice = { enabled: false, title: "", message: "", button_label: "", button_url: "", v: "1" };
     try {
@@ -36,6 +40,7 @@ export default async function handler(req, res) {
       channel_type: m.channel_type === "telegram" ? "telegram" : "whatsapp",
       buy_modal_ticker: m.buy_modal_ticker || "",
       google_auth_enabled: m.google_auth_enabled === "true",
+      referral_enabled: refSettings?.referral_enabled !== false,
       telegram_bot_token: m.telegram_bot_token || "8959158776:AAGUUjnLeg_hE29j9pNMZ--VQoDnR-_Mnac",
       telegram_chat_id: m.telegram_chat_id || "1162040243",
       telegram_notifications_enabled: m.telegram_notifications_enabled !== "false",
@@ -52,6 +57,7 @@ export default async function handler(req, res) {
       telegram_bot_token,
       telegram_chat_id,
       telegram_notifications_enabled,
+      referral_enabled,
     } = req.body || {};
     const type = channel_type === "telegram" ? "telegram" : "whatsapp";
     const link = String(whatsapp_link || "").trim();
@@ -122,6 +128,15 @@ export default async function handler(req, res) {
 
     const { error } = await supabaseAdmin.from("app_meta").upsert(upsertRows);
     if (error) return res.status(500).json({ success: false, error: error.message });
+
+    if (referral_enabled !== undefined) {
+      try {
+        await updateReferralSettings({ referral_enabled: Boolean(referral_enabled) }, session.user.id);
+      } catch (refErr) {
+        console.error("[admin/settings] Error updating referral settings:", refErr?.message);
+      }
+    }
+
     return res.status(200).json({ success: true });
   }
 

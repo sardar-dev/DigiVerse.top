@@ -19,6 +19,8 @@ export default function SettingsTab({
   setNotice,
   googleAuthEnabled,
   setGoogleAuthEnabled,
+  referralEnabled,
+  setReferralEnabled,
   telegramBotToken,
   setTelegramBotToken,
   telegramChatId,
@@ -127,6 +129,44 @@ export default function SettingsTab({
         </div>
         <p className="text-xs text-muted leading-relaxed">
           When set to <strong>DISABLED</strong>, the Continue with Google button remains hidden on login and signup pages. Once your Google Cloud Console credentials are configured, you can enable it here.
+        </p>
+      </div>
+
+      {/* Referral & Free Gift Box Master Switch */}
+      <div className="space-y-3 rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Marketing & Rewards</p>
+            <p className="text-sm font-semibold text-ink mt-0.5">🎁 Referral & Gift Box Program</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(referralEnabled)}
+            aria-label="Toggle Referral Program"
+            onClick={() => setReferralEnabled(!referralEnabled)}
+            className={`relative h-6 w-11 rounded-full transition ${referralEnabled ? "bg-brand" : "bg-border"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                referralEnabled ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+              referralEnabled
+                ? "bg-success-soft text-success border border-success/30"
+                : "bg-danger/10 text-danger border border-danger/25"
+            }`}
+          >
+            {referralEnabled ? "ACTIVE (Visible Across Site)" : "DISABLED (Hidden Everywhere)"}
+          </span>
+        </div>
+        <p className="text-xs text-muted leading-relaxed">
+          When <strong>DISABLED</strong>, all referral navigation links, gift wallet, referral banners on signup, and free gift redemption in checkout are completely hidden from customers as before the referral system was introduced. Existing database rewards remain safely preserved.
         </p>
       </div>
 

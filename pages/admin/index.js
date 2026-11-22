@@ -85,6 +85,7 @@ export default function Admin() {
   const [channelType, setChannelType] = useState("whatsapp");
   const [buyModalTicker, setBuyModalTicker] = useState("");
   const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
+  const [referralEnabled, setReferralEnabled] = useState(true);
   const [telegramBotToken, setTelegramBotToken] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
   const [telegramEnabled, setTelegramEnabled] = useState(true);
@@ -99,6 +100,7 @@ export default function Admin() {
       setChannelType(data.channel_type === "telegram" ? "telegram" : "whatsapp");
       setBuyModalTicker(data.buy_modal_ticker || "");
       setGoogleAuthEnabled(Boolean(data.google_auth_enabled));
+      setReferralEnabled(data.referral_enabled !== false);
       setTelegramBotToken(data.telegram_bot_token || "");
       setTelegramChatId(data.telegram_chat_id || "");
       setTelegramEnabled(data.telegram_notifications_enabled !== false);
@@ -116,6 +118,7 @@ export default function Admin() {
         channel_type: channelType,
         buy_modal_ticker: buyModalTicker,
         google_auth_enabled: googleAuthEnabled,
+        referral_enabled: referralEnabled,
         telegram_bot_token: telegramBotToken,
         telegram_chat_id: telegramChatId,
         telegram_notifications_enabled: telegramEnabled,
@@ -711,6 +714,8 @@ export default function Admin() {
           setNotice={setNotice}
           googleAuthEnabled={googleAuthEnabled}
           setGoogleAuthEnabled={setGoogleAuthEnabled}
+          referralEnabled={referralEnabled}
+          setReferralEnabled={setReferralEnabled}
           telegramBotToken={telegramBotToken}
           setTelegramBotToken={setTelegramBotToken}
           telegramChatId={telegramChatId}

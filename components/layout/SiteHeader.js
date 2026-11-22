@@ -109,6 +109,7 @@ export default function SiteHeader({
 
   const [ownSession, setOwnSession] = useState(undefined);
   const [ownBalance, setOwnBalance] = useState(undefined);
+  const [referralEnabled, setReferralEnabled] = useState(true);
 
   const needSession = sessionProp === undefined;
   const needBalance = balanceProp === undefined;
@@ -116,6 +117,16 @@ export default function SiteHeader({
 
   useEffect(() => {
     let cancelled = false;
+
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && d && typeof d.referral_enabled === "boolean") {
+          setReferralEnabled(d.referral_enabled);
+        }
+      })
+      .catch(() => {});
+
     (async () => {
       let sess = sessionProp;
       if (needSession) {
@@ -164,7 +175,9 @@ export default function SiteHeader({
   const mobileLinks = session
     ? [
         { href: "/", label: t("Store"), icon: <StoreIcon /> },
-        { href: "/account/referrals", label: t("Referrals 🎁"), icon: <GiftIcon />, badge: "Free" },
+        ...(referralEnabled
+          ? [{ href: "/account/referrals", label: t("Referrals 🎁"), icon: <GiftIcon />, badge: "Free" }]
+          : []),
         { href: "/account/wallet", label: t("Wallet"), icon: <WalletIcon /> },
         { href: "/account/orders", label: t("My Orders"), icon: <OrdersIcon /> },
         { href: "/account/support", label: t("Support"), icon: <SupportIcon />, live: true },
@@ -418,27 +431,29 @@ export default function SiteHeader({
 
                     {/* Navigation Items with Icon Badges and Microcopy */}
                     <div className="space-y-0.5">
-                      <Link
-                        role="menuitem"
-                        href="/account/referrals"
-                        onClick={() => setMenu(false)}
-                        className="group flex items-center justify-between rounded-xl px-2.5 py-2 text-ink transition-all hover:bg-brand-soft/70 active:scale-[0.99]"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand transition-colors group-hover:bg-brand group-hover:text-white shadow-sm">
-                            <GiftIcon className="h-4 w-4" />
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-xs font-semibold text-ink group-hover:text-brand transition-colors truncate">
-                              {t("Referrals & Gift Wallet 🎁")}
+                      {referralEnabled && (
+                        <Link
+                          role="menuitem"
+                          href="/account/referrals"
+                          onClick={() => setMenu(false)}
+                          className="group flex items-center justify-between rounded-xl px-2.5 py-2 text-ink transition-all hover:bg-brand-soft/70 active:scale-[0.99]"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand transition-colors group-hover:bg-brand group-hover:text-white shadow-sm">
+                              <GiftIcon className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-xs font-semibold text-ink group-hover:text-brand transition-colors truncate">
+                                {t("Referrals & Gift Wallet 🎁")}
+                              </div>
+                              <div className="text-[10px] text-muted">Claim free gift boxes</div>
                             </div>
-                            <div className="text-[10px] text-muted">Claim free gift boxes</div>
                           </div>
-                        </div>
-                        <span className="flex-shrink-0 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand ring-1 ring-brand/20 group-hover:bg-brand group-hover:text-white transition-colors">
-                          Free
-                        </span>
-                      </Link>
+                          <span className="flex-shrink-0 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand ring-1 ring-brand/20 group-hover:bg-brand group-hover:text-white transition-colors">
+                            Free
+                          </span>
+                        </Link>
+                      )}
 
                       <Link
                         role="menuitem"

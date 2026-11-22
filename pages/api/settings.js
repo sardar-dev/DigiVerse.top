@@ -1,13 +1,16 @@
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
+import { getReferralSettings } from "../../lib/referralSettings";
 
-// Public: the community channel button (WhatsApp or Telegram). Stored in
-// app_meta (no migration): `whatsapp_link` = the link, `channel_type` =
-// "whatsapp" | "telegram". Edge-cached, so it costs ~nothing per visit.
+// Public: the community channel button (WhatsApp or Telegram), referral status, and announcements.
+// Stored in app_meta and referral_settings. Edge-cached with short TTL for quick updates.
 export default async function handler(req, res) {
-  const { data } = await supabaseAdmin
-    .from("app_meta")
-    .select("key, value")
-    .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker", "site_notice", "google_auth_enabled"]);
+  const [{ data }, refSettings] = await Promise.all([
+    supabaseAdmin
+      .from("app_meta")
+      .select("key, value")
+      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker", "site_notice", "google_auth_enabled"]),
+    getReferralSettings().catch(() => null),
+  ]);
   const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
 
   // Notice popup: only sent to visitors when the admin has it switched on.
@@ -25,12 +28,13 @@ export default async function handler(req, res) {
     }
   } catch {}
 
-  res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+  res.setHeader("Cache-Control", "public, s-maxage=10, stale-while-revalidate=30");
   return res.status(200).json({
     whatsapp_link: m.whatsapp_link || "",
     channel_type: m.channel_type === "telegram" ? "telegram" : "whatsapp",
     buy_modal_ticker: m.buy_modal_ticker || "",
     google_auth_enabled: m.google_auth_enabled === "true",
+    referral_enabled: refSettings?.referral_enabled !== false,
     notice,
   });
 }

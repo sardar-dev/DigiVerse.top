@@ -30,6 +30,12 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: "login_required" });
   }
 
+  // Check if referral system is active
+  const initialSettings = await getReferralSettings();
+  if (initialSettings && initialSettings.referral_enabled === false) {
+    return res.status(200).json({ success: false, reason: "referrals_disabled" });
+  }
+
   // Verify user exists directly from auth.users
   const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.getUserById(userId);
   if (authErr || !authUser?.user) {

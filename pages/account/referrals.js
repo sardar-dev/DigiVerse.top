@@ -44,6 +44,10 @@ export default function ReferralsPage() {
     try {
       const res = await fetch("/api/referrals/me");
       const json = await res.json();
+      if (json.disabled || json.error === "referrals_disabled") {
+        window.location.href = locale === "en" ? "/" : `/${locale}/`;
+        return;
+      }
       if (json.success) {
         setProfile(json.profile);
         setStats(json.stats);
@@ -479,4 +483,23 @@ export default function ReferralsPage() {
       <SiteFooter />
     </div>
   );
+}
+
+export async function getServerSideProps({ locale = "en" }) {
+  try {
+    const { getReferralSettings } = await import("../../lib/referralSettings");
+    const settings = await getReferralSettings();
+    if (settings && settings.referral_enabled === false) {
+      const prefix = locale && locale !== "en" ? `/${locale}` : "";
+      return {
+        redirect: {
+          destination: prefix ? `${prefix}/` : "/",
+          permanent: false,
+        },
+      };
+    }
+  } catch (err) {
+    console.error("[account/referrals] getServerSideProps error:", err?.message);
+  }
+  return { props: {} };
 }

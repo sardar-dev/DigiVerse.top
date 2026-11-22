@@ -38,6 +38,7 @@ export default function Signup() {
   const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState("");
+  const [referralEnabled, setReferralEnabled] = useState(true);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -45,6 +46,9 @@ export default function Signup() {
       .then((d) => {
         if (d && typeof d.google_auth_enabled === "boolean") {
           setGoogleAuthEnabled(d.google_auth_enabled);
+        }
+        if (d && typeof d.referral_enabled === "boolean") {
+          setReferralEnabled(d.referral_enabled);
         }
       })
       .catch(() => {});
@@ -200,7 +204,7 @@ export default function Signup() {
     }
 
     // Auto-link profile and qualify referral immediately (dual gift reward for inviter + new user)
-    if (data?.user?.id) {
+    if (referralEnabled && data?.user?.id && cleanRef) {
       try {
         await fetch("/api/referrals/qualify", {
           method: "POST",
@@ -258,7 +262,9 @@ export default function Signup() {
             {t("We sent a verification link to {email}.", { email: email.trim().toLowerCase() })}
           </p>
           <div className="mt-4 rounded-xl border border-brand/20 bg-brand-soft/40 p-3.5 text-xs text-brand font-medium">
-            🔒 {t("Email verification is mandatory to activate your account and qualify for referral rewards.")}
+            🔒 {referralEnabled
+              ? t("Email verification is mandatory to activate your account and qualify for referral rewards.")
+              : t("Email verification is mandatory to activate your account.")}
           </div>
 
           {resendNotice && <Alert variant="success" className="mt-4">{resendNotice}</Alert>}
@@ -313,7 +319,7 @@ export default function Signup() {
           </div>
         )}
 
-        {refInviter && (
+        {refInviter && referralEnabled && (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-brand/30 bg-brand-soft px-3.5 py-2.5 text-xs font-semibold text-brand">
             <span className="text-base">🎁</span>
             <span>

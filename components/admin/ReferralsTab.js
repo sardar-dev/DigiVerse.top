@@ -927,8 +927,8 @@ export default function ReferralsTab() {
                   className="h-4 w-4 mt-0.5 rounded text-brand focus:ring-brand"
                 />
                 <div>
-                  <div className="text-xs font-bold text-ink">Enable Referral Program</div>
-                  <div className="text-[11px] text-muted mt-0.5">When off, new signups do not track referrals or award gifts.</div>
+                  <div className="text-xs font-bold text-ink">Master Referral & Gift System</div>
+                  <div className="text-[11px] text-muted mt-0.5">When OFF, all referral links, gift wallet, and UI are hidden across the entire site.</div>
                 </div>
               </label>
 
