@@ -30,9 +30,9 @@ export async function getServerSideProps({ res }) {
   const blogXml = blogPosts
     .map((p) => {
       const lastMod = p.updated || p.date || today;
-      const en = `<url><loc>${SITE_URL}/blog/${p.slug}</loc><lastmod>${lastMod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
-      const ar = `<url><loc>${SITE_URL}/ar/blog/${p.slug}</loc><lastmod>${lastMod}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`;
-      const ru = `<url><loc>${SITE_URL}/ru/blog/${p.slug}</loc><lastmod>${lastMod}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`;
+      const en = `<url><loc>${SITE_URL}${p.path}</loc><lastmod>${lastMod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
+      const ar = `<url><loc>${SITE_URL}/ar${p.path}</loc><lastmod>${lastMod}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`;
+      const ru = `<url><loc>${SITE_URL}/ru${p.path}</loc><lastmod>${lastMod}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`;
       return en + ar + ru;
     })
     .join("");

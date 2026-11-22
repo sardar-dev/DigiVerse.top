@@ -7,8 +7,8 @@ import { getAllPosts } from "../../lib/blog";
 import { useT, intlLocale } from "../../lib/i18n";
 
 export async function getStaticProps() {
-  const posts = getAllPosts().map(({ slug, title, description, date, readMinutes }) => ({
-    slug, title, description, date, readMinutes,
+  const posts = getAllPosts().map(({ slug, path, title, description, date, readMinutes }) => ({
+    slug, path, title, description, date, readMinutes,
   }));
   return { props: { posts } };
 }
@@ -36,7 +36,7 @@ export default function BlogIndex({ posts }) {
           <ul className="space-y-4">
             {posts.map((p) => (
               <li key={p.slug} className="rounded-xl border border-border bg-surface p-5 shadow-card">
-                <Link href={`/blog/${p.slug}`} className="text-lg font-semibold text-ink hover:text-brand">
+                <Link href={p.path} className="text-lg font-semibold text-ink hover:text-brand">
                   {p.title}
                 </Link>
                 <p className="mt-1 text-sm text-muted">{p.description}</p>

@@ -19,6 +19,8 @@ const nextConfig = {
   // engines (and Safe Browsing) see a single site, not two copies.
   async redirects() {
     return [
+      // This post lives at the domain root; send the old /blog/ URL there.
+      { source: "/blog/meta-muse-ai-alternatives", destination: "/meta-muse-ai-alternatives", permanent: true },
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.digiverse.top" }],
@@ -26,6 +28,15 @@ const nextConfig = {
         permanent: true,
       },
     ];
+  },
+
+  // Root-level URL for the Meta Muse alternatives post (served by the blog template).
+  async rewrites() {
+    return {
+      beforeFiles: [
+        { source: "/meta-muse-ai-alternatives", destination: "/blog/meta-muse-ai-alternatives" },
+      ],
+    };
   },
 
   // Standard hardening headers. frame-ancestors/X-Frame-Options stops

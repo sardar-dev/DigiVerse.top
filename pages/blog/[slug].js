@@ -45,7 +45,7 @@ function faqFromBody(body) {
 
 export default function Post({ post }) {
   const { t, locale } = useT();
-  const url = `${SITE_URL}${locale === "en" ? "" : `/${locale}`}/blog/${post.slug}`;
+  const url = `${SITE_URL}${locale === "en" ? "" : `/${locale}`}${post.path}`;
   const cta = post.ctaQuery ? `/?q=${encodeURIComponent(post.ctaQuery)}#catalog` : "";
   const ld = {
     "@context": "https://schema.org",
@@ -91,7 +91,7 @@ export default function Post({ post }) {
       <SEO
         title={post.title}
         description={post.description}
-        path={`/blog/${post.slug}`}
+        path={post.path}
         type="article"
         {...(post.image ? { image: post.image, imageWidth: 1200, imageHeight: 630, cardType: "summary_large_image" } : {})}
       />
