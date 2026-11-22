@@ -328,109 +328,118 @@ export default function Storefront({ initialProducts, referralEnabled: initialRe
             </div>
 
             {/* 3 Step Cards Grid */}
-            <ol className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+            <ol className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3 sm:gap-6">
               {/* Step 1 */}
-              <li className="group relative flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:border-brand-light hover:shadow-card-hover">
+              <li className="group relative flex flex-col justify-between rounded-2xl border border-border/85 bg-surface/95 p-6 sm:p-7 shadow-card backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5 hover:border-brand/40 hover:shadow-[0_16px_36px_-10px_rgba(49,105,245,0.18),0_0_0_1px_rgba(49,105,245,0.15)] before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-transparent before:via-brand before:to-transparent before:opacity-0 group-hover:before:opacity-100 before:transition-opacity">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/10 to-indigo-500/20 text-brand ring-1 ring-brand/10 transition-transform duration-200 group-hover:scale-110">
-                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/15 via-brand/10 to-indigo-500/20 text-brand ring-1 ring-brand/20 shadow-2xs transition-all duration-300 group-hover:scale-110 group-hover:rotate-[-2deg]">
+                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <circle cx="9" cy="21" r="1" />
                         <circle cx="20" cy="21" r="1" />
                         <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                       </svg>
                     </div>
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-bg font-mono text-xs font-bold text-muted ring-1 ring-border">
-                      01
-                    </span>
+                    <div className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-bg/90 px-2.5 py-1 text-[11px] font-mono font-bold text-muted transition-colors group-hover:border-brand/40 group-hover:text-brand shadow-2xs">
+                      <span className="text-[10px] text-muted/70 uppercase tracking-wider">STEP</span>
+                      <span>01</span>
+                    </div>
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                    <h3 className="text-base sm:text-lg font-bold tracking-tight text-ink transition-colors group-hover:text-brand">
                       {t("Choose a product")}
                     </h3>
-                    <p className="mt-1.5 text-xs sm:text-sm text-muted leading-relaxed">
+                    <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">
                       {t("Browse our catalog of verified AI tokens, accounts, and software licenses. Prices and stock are shown upfront.")}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-6 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-4 text-[11px] font-medium text-muted">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
-                    ⚡ {t("Instant Stock")}
+                <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 text-[11px] font-semibold">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-success/25 bg-success-soft px-2.5 py-1 text-success">
+                    <span>⚡</span>
+                    <span>{t("Instant Stock")}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
-                    🛡️ {t("Warranty")}
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-brand/20 bg-brand-soft px-2.5 py-1 text-brand">
+                    <span>🛡️</span>
+                    <span>{t("Verified Warranty")}</span>
                   </span>
                 </div>
               </li>
 
               {/* Step 2 */}
-              <li className="group relative flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:border-brand-light hover:shadow-card-hover">
+              <li className="group relative flex flex-col justify-between rounded-2xl border border-border/85 bg-surface/95 p-6 sm:p-7 shadow-card backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5 hover:border-purple-500/40 hover:shadow-[0_16px_36px_-10px_rgba(147,51,234,0.18),0_0_0_1px_rgba(147,51,234,0.15)] before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-transparent before:via-purple-500 before:to-transparent before:opacity-0 group-hover:before:opacity-100 before:transition-opacity">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/20 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500/10 transition-transform duration-200 group-hover:scale-110">
-                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/15 via-violet-500/10 to-pink-500/20 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500/20 shadow-2xs transition-all duration-300 group-hover:scale-110 group-hover:rotate-[-2deg]">
+                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <rect x="2" y="5" width="20" height="14" rx="3" />
                         <line x1="2" y1="10" x2="22" y2="10" />
                         <circle cx="17" cy="14" r="1.5" fill="currentColor" />
                       </svg>
                     </div>
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-bg font-mono text-xs font-bold text-muted ring-1 ring-border">
-                      02
-                    </span>
+                    <div className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-bg/90 px-2.5 py-1 text-[11px] font-mono font-bold text-muted transition-colors group-hover:border-purple-500/40 group-hover:text-purple-600 dark:group-hover:text-purple-400 shadow-2xs">
+                      <span className="text-[10px] text-muted/70 uppercase tracking-wider">STEP</span>
+                      <span>02</span>
+                    </div>
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                    <h3 className="text-base sm:text-lg font-bold tracking-tight text-ink transition-colors group-hover:text-purple-600 dark:group-hover:text-purple-400">
                       {t("Pay with Crypto or Wallet")}
                     </h3>
-                    <p className="mt-1.5 text-xs sm:text-sm text-muted leading-relaxed">
+                    <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">
                       {t("Pay securely with USDT or USDC across Polygon, Base, and BSC, or checkout in 1-click using your wallet balance.")}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-6 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-4 text-[11px] font-medium text-muted">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
-                    💎 {t("Polygon · Base · BSC")}
+                <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 text-[11px] font-semibold">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-brand/20 bg-brand-soft px-2.5 py-1 text-brand">
+                    <span>💎</span>
+                    <span>{t("Polygon · Base · BSC")}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
-                    👛 {t("Balance")}
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-purple-600 dark:text-purple-400">
+                    <span>👛</span>
+                    <span>{t("1-Click Balance")}</span>
                   </span>
                 </div>
               </li>
 
               {/* Step 3 */}
-              <li className="group relative flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:border-brand-light hover:shadow-card-hover">
+              <li className="group relative flex flex-col justify-between rounded-2xl border border-border/85 bg-surface/95 p-6 sm:p-7 shadow-card backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-500/40 hover:shadow-[0_16px_36px_-10px_rgba(16,185,129,0.18),0_0_0_1px_rgba(16,185,129,0.15)] before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-transparent before:via-emerald-500 before:to-transparent before:opacity-0 group-hover:before:opacity-100 before:transition-opacity">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/10 transition-transform duration-200 group-hover:scale-110">
-                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-cyan-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20 shadow-2xs transition-all duration-300 group-hover:scale-110 group-hover:rotate-[-2deg]">
+                      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                       </svg>
                     </div>
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-bg font-mono text-xs font-bold text-muted ring-1 ring-border">
-                      03
-                    </span>
+                    <div className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-bg/90 px-2.5 py-1 text-[11px] font-mono font-bold text-muted transition-colors group-hover:border-emerald-500/40 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 shadow-2xs">
+                      <span className="text-[10px] text-muted/70 uppercase tracking-wider">STEP</span>
+                      <span>03</span>
+                    </div>
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                    <h3 className="text-base sm:text-lg font-bold tracking-tight text-ink transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
                       {t("Receive instantly")}
                     </h3>
-                    <p className="mt-1.5 text-xs sm:text-sm text-muted leading-relaxed">
-                      {t("License keys and AI token buffs deliver automatically upon blockchain confirmation, saved permanently in My Orders.")}
+                    <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">
+                      {t("License keys and Muse AI tokens deliver automatically upon blockchain confirmation, saved permanently in My Orders.")}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-6 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-4 text-[11px] font-medium text-muted">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
-                    ⚡ {t("0-Second Dispatch")}
+                <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 text-[11px] font-semibold">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-success/25 bg-success-soft px-2.5 py-1 text-success">
+                    <span>⚡</span>
+                    <span>{t("0-Second Dispatch")}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg px-2 py-0.5 border border-border">
-                    📦 {t("Saved in Account")}
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                    <span>📦</span>
+                    <span>{t("Saved in Account")}</span>
                   </span>
                 </div>
               </li>
