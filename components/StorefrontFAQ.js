@@ -31,7 +31,7 @@ export const FAQ_DATA = [
     id: "warranty-and-refunds",
     question: "What is DigiVerse's replacement warranty and refund guarantee?",
     answer:
-      "Every license key and digital good sold on DigiVerse includes a 100% genuine activation warranty. In the rare event that an order cannot be fulfilled or an activation code encounters an issue, our automated system or 24/7 support team immediately issues a replacement or credits a full refund to your on-site wallet balance.",
+      "Every license key and digital product sold on DigiVerse includes a replacement warranty as stated in each product's description. In the rare event that an order cannot be fulfilled or an activation code encounters an issue during its warranty period, our automated system or 24/7 support team immediately issues a replacement or credits a full refund to your on-site wallet balance.",
   },
   {
     id: "referral-rewards-program",

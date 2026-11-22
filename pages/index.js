@@ -22,6 +22,7 @@ import DeliveredItems from "../components/ui/DeliveredItems";
 import { EmptyState, ErrorState, LoadingState } from "../components/ui/States";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
+import { formatWarranty } from "../lib/formatWarranty";
 import * as fpixel from "../lib/fpixel";
 
 function cleanSeoText(str) {
@@ -1088,7 +1089,7 @@ function BuyModal({ product, onClose, ticker, session }) {
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-success/20 bg-success-soft px-3.5 py-2.5 text-sm text-success">
           <span aria-hidden="true">🛡️</span>
           <span>
-            <strong>{t("Warranty:")}</strong> {product.warranty}
+            <strong>{t("Warranty:")}</strong> {formatWarranty(product.warranty)}
           </span>
         </div>
       )}

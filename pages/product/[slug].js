@@ -8,6 +8,7 @@ import { slugifyProduct, extractProductId, getProductUrl } from "../../lib/produ
 import { toProductCode } from "../../lib/productLink";
 import { SITE_URL } from "../../lib/siteConfig";
 import { useT } from "../../lib/i18n";
+import { formatWarranty } from "../../lib/formatWarranty";
 
 export async function getServerSideProps({ params, res, locale = "en" }) {
   const { slug } = params || {};
@@ -204,10 +205,10 @@ export default function ProductDetailPage({ product, related, canonicalSlug }) {
       },
       {
         "@type": "Question",
-        name: "What warranty or replacement guarantee is provided?",
+        name: "What is the warranty policy?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Every license and digital product on DigiVerse includes our ${product.warranty}. If you encounter any unexpected issues, our 24/7 support team provides an instant replacement or resolution via live support ticket or Telegram.`,
+          text: `Warranty terms and duration vary by product and are clearly stated in each product's description. If you encounter any technical issue or key problem during the stated warranty period, our support team will replace it promptly or provide assistance through our 24/7 support desk.`,
         },
       },
     ],
@@ -297,8 +298,8 @@ export default function ProductDetailPage({ product, related, canonicalSlug }) {
                   <div className="rounded-2xl border border-border/80 bg-surface p-3.5 flex items-center gap-2.5">
                     <span className="text-lg" aria-hidden="true">🛡️</span>
                     <div>
-                      <div className="font-semibold text-ink">{t("Full Warranty")}</div>
-                      <div className="text-[11px] text-muted">{product.warranty}</div>
+                      <div className="font-semibold text-ink">{t("Warranty Guarantee")}</div>
+                      <div className="text-[11px] text-muted">{formatWarranty(product.warranty)}</div>
                     </div>
                   </div>
                 </div>
@@ -411,7 +412,7 @@ export default function ProductDetailPage({ product, related, canonicalSlug }) {
                     </div>
                     <div className="flex items-center justify-between py-1 border-b border-border/60">
                       <span className="text-muted">{t("Replacement Warranty")}</span>
-                      <span className="font-semibold text-ink">{product.warranty}</span>
+                      <span className="font-semibold text-ink">{formatWarranty(product.warranty)}</span>
                     </div>
                     <div className="flex items-center justify-between py-1">
                       <span className="text-muted">{t("Supported Currencies")}</span>
@@ -460,7 +461,7 @@ export default function ProductDetailPage({ product, related, canonicalSlug }) {
                       {t("What is the warranty policy?")}
                     </h3>
                     <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">
-                      {t("Every product on DigiVerse comes with our full {warranty}. If you encounter any technical issue or key problem, our support team will replace it promptly or provide assistance through our 24/7 support desk.", { warranty: product.warranty })}
+                      {t("Warranty terms and duration vary for each product and are clearly stated in the product description above. If you encounter any technical issue or key problem during the stated warranty period, our support team will replace it promptly or provide assistance through our 24/7 support desk.")}
                     </p>
                   </div>
                 </div>
