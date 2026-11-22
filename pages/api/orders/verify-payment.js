@@ -5,6 +5,7 @@ import { fulfillOrder } from "../../../lib/fulfillOrder";
 import { claimTxHash, confirmTxHash, releaseTxHash } from "../../../lib/claimTxHash";
 import { frozenSeconds, recordWrongHash, isWrongHash, frozenResponse } from "../../../lib/hashLimit";
 import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
+import { notifyTelegramPaymentIssue } from "../../../lib/telegram";
 
 // Step 2 of checkout: customer submits the tx hash of their USDT
 // (BEP20) transfer. We verify it on-chain, and if it checks out we
@@ -56,6 +57,15 @@ export default async function handler(req, res) {
   const orderAgeMs = Date.now() - new Date(order.created_at).getTime();
   if (order.status === "pending_payment" && orderAgeMs >= 30 * 60 * 1000) {
     cleanupExpiredPendingOrders().catch(() => {});
+    notifyTelegramPaymentIssue({
+      order,
+      stage: `Payment Page > Crypto Verification (${rawNetwork || "EVM"})`,
+      method: `Crypto (${rawNetwork || "EVM"})`,
+      txHash: tx_hash,
+      error: "order_expired",
+      errorDetails: "Order expired after 30 minutes.",
+      clientIp: callerKey,
+    }).catch(() => {});
     return res.status(410).json({
       success: false,
       error: "order_expired",
@@ -74,7 +84,17 @@ export default async function handler(req, res) {
   // hash), this fails immediately.
   const claim = await claimTxHash(tx_hash, "order", order.id);
   if (!claim.claimed) {
-    const lock = await recordWrongHash(session.user.id);
+    const lock = await recordWrongHash(session?.user?.id || callerKey);
+    notifyTelegramPaymentIssue({
+      order,
+      stage: `Payment Page > Crypto Verification (${rawNetwork || "EVM"})`,
+      method: `Crypto (${rawNetwork || "EVM"})`,
+      txHash: tx_hash,
+      error: "tx_already_used",
+      errorDetails: "Transaction hash has already been claimed on another order or deposit.",
+      clientIp: callerKey,
+      userEmail: session?.user?.email,
+    }).catch(() => {});
     return res.status(409).json({
       success: false,
       error: lock ? "too_many_attempts" : "tx_already_used",
@@ -114,6 +134,19 @@ export default async function handler(req, res) {
       .eq("id", order.id);
     await releaseTxHash(tx_hash);
     const lock = isWrongHash(verdict.reason) ? await recordWrongHash(callerKey) : 0;
+
+    notifyTelegramPaymentIssue({
+      order: claimedOrder,
+      stage: `Payment Page > Crypto Verification (${rawNetwork || "EVM"})`,
+      method: `Crypto (${rawNetwork || "EVM"})`,
+      network: rawNetwork,
+      txHash: tx_hash,
+      error: verdict.reason,
+      errorDetails: verdict.message || `On-chain check returned: ${verdict.reason}`,
+      clientIp: callerKey,
+      userEmail: session?.user?.email,
+    }).catch(() => {});
+
     return res.status(lock ? 429 : 202).json({
       success: false,
       error: lock ? "too_many_attempts" : verdict.reason,

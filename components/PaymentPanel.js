@@ -127,6 +127,86 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
   const seconds = timeLeft % 60;
   const timeExpired = timeLeft === 0;
 
+  const reportPaymentError = (details = {}) => {
+    try {
+      const activeProd = product || order?.product || order?.products || null;
+      const payload = {
+        order_id: order?.id,
+        product_id: order?.product_id || activeProd?.id,
+        product_title: activeProd?.title || order?.product_title || `Product #${order?.product_id}`,
+        total: order?.total,
+        quantity: order?.quantity,
+        network: selectedNetwork,
+        method: details.method || (method === "wallet" ? "Wallet Balance" : method === "onchain" ? `Crypto (${selectedNetwork})` : "Payment Method Selection"),
+        ...details,
+      };
+
+      fetch("/api/orders/report-payment-error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {}
+  };
+
+  const getCurrentStageName = () => {
+    if (Number(order?.total) <= 0.0001) return "Payment Page > Free Gift Redemption";
+    if (method === "wallet") return "Payment Page > Wallet Balance View";
+    if (method === "onchain") return `Payment Page > Crypto On-Chain View (${selectedNetwork})`;
+    return "Payment Page > Method Selection";
+  };
+
+  useEffect(() => {
+    const handleWindowError = (event) => {
+      reportPaymentError({
+        eventType: "console_error",
+        stage: `${getCurrentStageName()} > Browser Runtime Error`,
+        console_error: event?.message || String(event),
+      });
+    };
+    const handleUnhandledRejection = (event) => {
+      reportPaymentError({
+        eventType: "console_error",
+        stage: `${getCurrentStageName()} > Unhandled Promise Rejection`,
+        console_error: event?.reason?.message || String(event?.reason || "Promise rejection"),
+      });
+    };
+
+    window.addEventListener("error", handleWindowError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    return () => {
+      window.removeEventListener("error", handleWindowError);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+    };
+  }, [method, selectedNetwork, order?.id]);
+
+  const handleBackToSelection = () => {
+    reportPaymentError({
+      eventType: "abandonment",
+      stage: `${getCurrentStageName()} > Back to Quantity Selection`,
+    });
+    if (onBack) onBack();
+  };
+
+  const handleBackFromWallet = () => {
+    reportPaymentError({
+      eventType: "abandonment",
+      stage: "Payment Page > Wallet Balance View > Returned to Method Selection",
+      method: "Wallet Balance",
+    });
+    setMethod(null);
+  };
+
+  const handleBackFromOnchain = () => {
+    reportPaymentError({
+      eventType: "abandonment",
+      stage: `Payment Page > Crypto On-Chain View (${selectedNetwork}) > Returned to Method Selection`,
+      method: `Crypto On-Chain (${selectedNetwork})`,
+    });
+    setMethod(null);
+  };
+
   async function payWithBalance() {
     setError("");
     setBusy(true);
@@ -142,9 +222,24 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
       } else {
         const msg = data.message || describeError(t, data.error, data) || t("Something went wrong. Please try again.");
         setError(msg);
+        reportPaymentError({
+          eventType: "payment_error",
+          stage: "Payment Page > Pay with Wallet Balance",
+          method: "Wallet Balance",
+          error: data.error || `http_${res.status}`,
+          error_details: msg,
+        });
       }
-    } catch {
-      setError(t("Network error — please check your connection and try again."));
+    } catch (err) {
+      const msg = t("Network error — please check your connection and try again.");
+      setError(msg);
+      reportPaymentError({
+        eventType: "payment_error",
+        stage: "Payment Page > Pay with Wallet Balance",
+        method: "Wallet Balance",
+        error: "network_error",
+        error_details: err?.message || msg,
+      });
     } finally {
       setBusy(false);
     }
@@ -165,9 +260,28 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
       } else {
         const msg = data.message || describeError(t, data.error, data) || t("Something went wrong. Please try again.");
         setError(msg);
+        reportPaymentError({
+          eventType: "payment_error",
+          stage: `Payment Page > Crypto Verification (${selectedNetwork})`,
+          method: `Crypto On-Chain (${selectedNetwork})`,
+          tx_hash: txHash,
+          network: selectedNetwork,
+          error: data.error || `http_${res.status}`,
+          error_details: msg,
+        });
       }
-    } catch {
-      setError(t("Network error — please check your connection and try again."));
+    } catch (err) {
+      const msg = t("Network error — please check your connection and try again.");
+      setError(msg);
+      reportPaymentError({
+        eventType: "payment_error",
+        stage: `Payment Page > Crypto Verification (${selectedNetwork})`,
+        method: `Crypto On-Chain (${selectedNetwork})`,
+        tx_hash: txHash,
+        network: selectedNetwork,
+        error: "network_error",
+        error_details: err?.message || msg,
+      });
     } finally {
       setBusy(false);
     }
@@ -194,7 +308,7 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
         <Alert variant="error">{error}</Alert>
         <div className="flex gap-3">
           {onBack && (
-            <SecondaryButton onClick={onBack} className="flex-1">
+            <SecondaryButton onClick={handleBackToSelection} className="flex-1">
               ← {t("Back")}
             </SecondaryButton>
           )}
@@ -345,7 +459,7 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
 
         {onBack && (
           <div className="pt-2">
-            <SecondaryButton onClick={onBack} className="w-full">
+            <SecondaryButton onClick={handleBackToSelection} className="w-full">
               ← {t("Back to quantity selection")}
             </SecondaryButton>
           </div>
@@ -379,7 +493,7 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
         )}
         <Alert variant="error">{error}</Alert>
         <div className="flex gap-3">
-          <SecondaryButton onClick={() => setMethod(null)} className="flex-1">
+          <SecondaryButton onClick={handleBackFromWallet} className="flex-1">
             {t("Back")}
           </SecondaryButton>
           <PrimaryButton
@@ -417,7 +531,7 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
   return (
     <div className="space-y-4 text-sm">
       <div className="flex items-center justify-between">
-        <LinkButton onClick={() => setMethod(null)}>{t("← Change payment method")}</LinkButton>
+        <LinkButton onClick={handleBackFromOnchain}>{t("← Change payment method")}</LinkButton>
         {!timeExpired && (
           <span className="text-xs font-mono text-muted">
             ⏱️ {minutes}:{seconds.toString().padStart(2, "0")}

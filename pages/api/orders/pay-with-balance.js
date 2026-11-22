@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { fulfillOrder } from "../../../lib/fulfillOrder";
 import * as tunvn from "../../../lib/suppliers/tunvn";
 import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
+import { notifyTelegramPaymentIssue } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -34,6 +35,14 @@ export default async function handler(req, res) {
     const ageMs = Date.now() - new Date(existingOrder.created_at).getTime();
     if (existingOrder.status === "pending_payment" && ageMs >= 30 * 60 * 1000) {
       cleanupExpiredPendingOrders().catch(() => {});
+      notifyTelegramPaymentIssue({
+        order: existingOrder,
+        stage: "Payment Page > Pay with Wallet Balance",
+        method: "Wallet Balance",
+        error: "order_expired",
+        errorDetails: "Order expired after 30 minutes.",
+        userEmail: session?.user?.email,
+      }).catch(() => {});
       return res.status(410).json({
         success: false,
         error: "order_expired",
@@ -89,6 +98,16 @@ export default async function handler(req, res) {
           .update({ status: "pending_payment", updated_at: new Date().toISOString() })
           .eq("id", order_id);
 
+        notifyTelegramPaymentIssue({
+          order: claimedOrder,
+          product: prod,
+          stage: "Payment Page > Pay with Wallet Balance",
+          method: "Wallet Balance",
+          error: "supplier_balance_limit",
+          errorDetails: `Supplier capacity limit: available ${maxAffordable}B < requested ${reqQty}B`,
+          userEmail: session?.user?.email,
+        }).catch(() => {});
+
         return res.status(409).json({
           success: false,
           error: "supplier_balance_limit",
@@ -126,6 +145,17 @@ export default async function handler(req, res) {
       .from("orders")
       .update({ status: "pending_payment", updated_at: new Date().toISOString() })
       .eq("id", order_id);
+
+    notifyTelegramPaymentIssue({
+      order: claimedOrder,
+      product: prod,
+      stage: "Payment Page > Pay with Wallet Balance",
+      method: "Wallet Balance",
+      error: "insufficient_balance",
+      errorDetails: "Customer wallet balance is insufficient to cover order total.",
+      userEmail: session?.user?.email,
+    }).catch(() => {});
+
     return res.status(402).json({ success: false, error: "insufficient_balance" });
   }
 

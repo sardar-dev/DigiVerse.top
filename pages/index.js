@@ -965,8 +965,78 @@ function BuyModal({ product, onClose, ticker, session }) {
   const checkParts = t("Check {link} once it's ready. If you need support, just quote your order number above.").split("{link}");
   const stepLabels = { form: t("1. Details"), summary: t("2. Review"), order: t("3. Payment"), done: t("4. Done") };
 
+  const handleCloseModal = () => {
+    if (step === "order" && order && order.status !== "paid" && order.status !== "completed") {
+      try {
+        fetch("/api/orders/report-payment-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            order_id: order.id,
+            product_id: product?.id,
+            product_title: product?.title,
+            total: order.total,
+            quantity: order.quantity,
+            stage: "Payment Page > Closed Checkout Modal",
+            event_type: "abandonment",
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch {}
+    }
+    onClose();
+  };
+
+  const handleBackToFormFromHeader = () => {
+    if (step === "order" && order) {
+      try {
+        fetch("/api/orders/report-payment-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            order_id: order.id,
+            product_id: product?.id,
+            product_title: product?.title,
+            total: order.total,
+            quantity: order.quantity,
+            stage: "Payment Page > Header Back Button (Change Quantity)",
+            event_type: "abandonment",
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch {}
+    }
+    setStep("form");
+  };
+
+  useEffect(() => {
+    if (step !== "order" || !order?.id) return;
+    const handleBeforeUnload = () => {
+      if (order.status !== "paid" && order.status !== "completed") {
+        try {
+          const payload = JSON.stringify({
+            order_id: order.id,
+            product_id: product?.id,
+            product_title: product?.title,
+            total: order.total,
+            quantity: order.quantity,
+            stage: "Payment Page > Browser Tab Closed / Unloaded",
+            event_type: "abandonment",
+          });
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon("/api/orders/report-payment-error", new Blob([payload], { type: "application/json" }));
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [step, order?.id, order?.status, product?.id, product?.title, order?.total, order?.quantity]);
+
   return (
-    <Modal title={product.title} onClose={onClose}>
+    <Modal title={product.title} onClose={handleCloseModal}>
       {/* Scrolling ticker — shown when admin has set text */}
       {ticker && (
         <div className="mb-3 overflow-hidden rounded-lg bg-brand">
@@ -989,7 +1059,7 @@ function BuyModal({ product, onClose, ticker, session }) {
           {(step === "summary" || step === "order") && (
             <button
               type="button"
-              onClick={() => setStep("form")}
+              onClick={handleBackToFormFromHeader}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:bg-brand-soft hover:border-brand/30 hover:text-brand active:scale-95 cursor-pointer"
             >
               <svg
@@ -1245,6 +1315,7 @@ function BuyModal({ product, onClose, ticker, session }) {
           product={product}
           onBack={() => setStep("form")}
           onDone={(result) => {
+            setOrder((prev) => (prev ? { ...prev, status: "paid" } : prev));
             fpixel.event("Purchase", {
               content_name: product.title,
               content_ids: [String(order.product_id)],
