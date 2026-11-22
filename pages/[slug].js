@@ -549,12 +549,12 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pb-16 items-start">
               {/* Product Info & Specifications (Left Column) */}
               <div className="lg:col-span-7 flex flex-col justify-start">
-                <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span className="rounded-full bg-brand-soft border border-brand/20 px-3 py-1 text-xs font-semibold text-brand">
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft/80 border border-brand/20 px-3 py-1 text-xs font-semibold text-brand backdrop-blur-xs shadow-2xs">
                     {product.category}
                   </span>
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold border ${
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border shadow-2xs ${
                       isManual
                         ? "bg-warning-soft text-warning border-warning/20"
                         : "bg-success-soft text-success border-success/20"
@@ -563,6 +563,15 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                     <span>{isManual ? "🕒" : "⚡"}</span>
                     <span>{deliveryLabel}</span>
                   </span>
+                  {product.inStock && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface border border-border/80 px-2.5 py-1 text-xs font-medium text-ink shadow-2xs">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                      </span>
+                      <span>{t("Verified Stock")}</span>
+                    </span>
+                  )}
                 </div>
 
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-ink leading-tight">
@@ -570,51 +579,99 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                 </h1>
 
                 {/* Visual Image / Letter Badge & Key Trust Highlights */}
-                <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-5 p-4 rounded-2xl border border-border bg-surface">
+                <div className="mt-6 relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-5 p-5 rounded-2xl border border-border/80 bg-surface shadow-card hover:shadow-card-hover transition-all duration-300">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-brand/40 to-transparent" />
+
                   {product.imageUrl ? (
-                    <img
-                      src={product.imageUrl}
-                      alt={product.title}
-                      className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border border-border object-cover bg-bg p-1 shrink-0 shadow-xs"
-                    />
+                    <div className="group/img relative flex-shrink-0">
+                      <img
+                        src={product.imageUrl}
+                        alt={product.title}
+                        className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border border-border/80 object-cover bg-bg p-1.5 shadow-2xs transition-transform duration-300 group-hover/img:scale-105"
+                      />
+                    </div>
                   ) : (
-                    <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-gradient-to-br from-brand-soft to-white flex items-center justify-center text-3xl font-extrabold text-brand shadow-xs border border-border">
+                    <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-gradient-to-br from-brand-soft to-white flex items-center justify-center text-3xl font-extrabold text-brand shadow-2xs border border-border/80 shrink-0">
                       {product.title.charAt(0).toUpperCase()}
                     </div>
                   )}
 
                   <div className="grid grid-cols-2 gap-3 w-full sm:flex-1 text-xs">
-                    <div className="rounded-xl border border-border/80 bg-bg/50 p-2.5">
-                      <span className="text-muted block">{t("Fulfillment")}</span>
-                      <span className="font-semibold text-ink">{isManual ? t("Manual (1–6 hrs)") : t("Instant (0-sec)")}</span>
+                    <div className="rounded-xl border border-border/70 bg-bg/50 p-3 hover:border-brand/30 hover:bg-brand-soft/20 transition-all">
+                      <span className="text-muted block text-[11px] font-medium flex items-center gap-1">
+                        <span>⚡</span>
+                        <span>{t("Fulfillment")}</span>
+                      </span>
+                      <span className="font-bold text-ink block mt-0.5 text-xs sm:text-sm">
+                        {isManual ? t("Manual (1–6 hrs)") : t("Instant (0-sec)")}
+                      </span>
                     </div>
-                    <div className="rounded-xl border border-border/80 bg-bg/50 p-2.5">
-                      <span className="text-muted block">{t("Warranty")}</span>
-                      <span className="font-semibold text-ink">{formatWarranty(product.warranty)}</span>
+                    <div className="rounded-xl border border-border/70 bg-bg/50 p-3 hover:border-brand/30 hover:bg-brand-soft/20 transition-all">
+                      <span className="text-muted block text-[11px] font-medium flex items-center gap-1">
+                        <span>🛡️</span>
+                        <span>{t("Warranty")}</span>
+                      </span>
+                      <span className="font-bold text-ink block mt-0.5 text-xs sm:text-sm truncate">
+                        {formatWarranty(product.warranty)}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Description & Overview */}
                 <div className="mt-8 space-y-4">
-                  <h2 className="text-lg font-bold text-ink">{t("Product Overview & Details")}</h2>
-                  <div className="rounded-2xl border border-border/80 bg-surface p-5 text-sm leading-relaxed text-ink/90 whitespace-pre-wrap">
-                    {product.description || t("Genuine digital license with instant fulfillment and verified replacement guarantee.")}
+                  <div className="rounded-2xl border border-border/80 bg-surface p-5 sm:p-6 shadow-card hover:shadow-card-hover transition-all duration-300">
+                    <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold text-ink mb-3.5">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-soft text-brand text-xs ring-1 ring-brand/10">
+                        📋
+                      </span>
+                      <span>{t("Product Overview & Details")}</span>
+                    </h2>
+                    <div className="rounded-xl border border-border/60 bg-bg/40 p-4 text-xs sm:text-sm leading-relaxed text-ink/90 whitespace-pre-wrap">
+                      {product.description || t("Genuine digital license with instant fulfillment and verified replacement guarantee.")}
+                    </div>
                   </div>
 
                   {/* Specifications List */}
-                  <div className="rounded-2xl border border-border/80 bg-surface p-5 text-xs sm:text-sm space-y-3">
-                    <div className="flex items-center justify-between py-1 border-b border-border/60">
-                      <span className="text-muted">{t("Product Category")}</span>
-                      <span className="font-semibold text-ink">{product.category}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1 border-b border-border/60">
-                      <span className="text-muted">{t("Fulfillment Mode")}</span>
-                      <span className="font-semibold text-ink">{deliveryLabel}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-muted">{t("Warranty Policy")}</span>
-                      <span className="font-semibold text-ink">{formatWarranty(product.warranty)}</span>
+                  <div className="rounded-2xl border border-border/80 bg-surface p-5 sm:p-6 shadow-card space-y-3">
+                    <h3 className="flex items-center gap-2 text-sm sm:text-base font-bold text-ink mb-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-soft text-brand text-xs ring-1 ring-brand/10">
+                        ⚙️
+                      </span>
+                      <span>{t("Specifications & Guarantee")}</span>
+                    </h3>
+                    <div className="divide-y divide-border/60 text-xs sm:text-sm">
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-muted flex items-center gap-1.5">
+                          <span>📁</span>
+                          <span>{t("Product Category")}</span>
+                        </span>
+                        <span className="font-semibold text-ink">{product.category}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-muted flex items-center gap-1.5">
+                          <span>⚡</span>
+                          <span>{t("Fulfillment Mode")}</span>
+                        </span>
+                        <span className="font-semibold text-ink">{deliveryLabel}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-muted flex items-center gap-1.5">
+                          <span>🛡️</span>
+                          <span>{t("Warranty Policy")}</span>
+                        </span>
+                        <span className="font-semibold text-ink">{formatWarranty(product.warranty)}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2.5">
+                        <span className="text-muted flex items-center gap-1.5">
+                          <span>🔒</span>
+                          <span>{t("Payment Security")}</span>
+                        </span>
+                        <span className="font-semibold text-success flex items-center gap-1">
+                          <span>✓</span>
+                          <span>{t("On-Chain EVM RPC Verified")}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -622,17 +679,24 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
 
               {/* Order & Checkout Section (Right Column) */}
               <div className="lg:col-span-5 lg:sticky lg:top-24">
-                <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-card space-y-5">
+                <div className="relative overflow-hidden rounded-3xl border border-border/90 bg-surface p-5 sm:p-7 shadow-[0_10px_35px_-5px_rgba(23,33,58,0.06)] ring-1 ring-border/50 space-y-5 transition-all">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand/20 via-brand to-brand/20" />
+
                   {/* Step Progress Tracker */}
-                  <div className="flex items-center justify-between border-b border-border/80 pb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-brand">
-                      {stepLabels[step]}
-                    </span>
+                  <div className="flex items-center justify-between border-b border-border/70 pb-3.5">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white shadow-xs">
+                        {step === "form" ? "1" : step === "summary" ? "2" : step === "order" ? "3" : "✓"}
+                      </span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-ink">
+                        {stepLabels[step]}
+                      </span>
+                    </div>
                     {(step === "summary" || step === "order") && (
                       <button
                         type="button"
                         onClick={() => setStep("form")}
-                        className="text-xs font-semibold text-muted hover:text-brand transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline transition-colors cursor-pointer"
                       >
                         ← {t("Change details")}
                       </button>
@@ -641,8 +705,8 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
 
                   {/* Scrolling ticker marquee — shown when admin has set announcement */}
                   {ticker && (
-                    <div className="overflow-hidden rounded-xl border border-border bg-bg py-1.5 text-xs text-muted">
-                      <div className="dv-ticker-track flex whitespace-nowrap">
+                    <div className="overflow-hidden rounded-xl border border-warning/30 bg-warning-soft/40 py-2 px-1 text-xs text-warning">
+                      <div className="dv-ticker-track flex whitespace-nowrap font-medium">
                         <span className="inline-block px-4">📢 {ticker}</span>
                         <span className="inline-block px-4" aria-hidden="true">📢 {ticker}</span>
                         <span className="inline-block px-4" aria-hidden="true">📢 {ticker}</span>
@@ -653,7 +717,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                   {/* ── CASE 1: OUT OF STOCK ── */}
                   {!product.inStock ? (
                     <div className="space-y-4 py-2">
-                      <div className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-center space-y-2">
+                      <div className="rounded-2xl border border-danger/30 bg-danger/10 p-5 text-center space-y-2">
                         <span className="text-3xl block">⚠️</span>
                         <h3 className="font-bold text-base text-danger">{t("Currently Sold Out")}</h3>
                         <p className="text-xs text-muted leading-relaxed">
@@ -663,7 +727,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                       <button
                         type="button"
                         disabled
-                        className="w-full rounded-xl bg-bg border border-border py-3 px-4 font-bold text-sm text-muted cursor-not-allowed opacity-60"
+                        className="w-full rounded-xl bg-bg border border-border py-3.5 px-4 font-bold text-sm text-muted cursor-not-allowed opacity-60"
                       >
                         {t("Out of Stock")}
                       </button>
@@ -675,19 +739,24 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                       {step === "form" && (
                         <form onSubmit={handleProceedToSummary} className="space-y-4">
                           {/* Unit Price */}
-                          <div className="flex items-baseline justify-between border-b border-border/70 pb-3" dir="ltr">
+                          <div className="flex items-baseline justify-between rounded-2xl border border-border/80 bg-gradient-to-br from-bg/90 via-surface to-brand-soft/20 p-4 shadow-2xs" dir="ltr">
                             <div>
-                              <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-0.5">
                                 {t("Unit Price")}
                               </span>
-                              <span className="font-mono text-3xl font-extrabold text-ink">
-                                ${product.price.toFixed(2)}
-                              </span>
-                              <span className="text-xs font-bold text-muted uppercase ms-1">USDT / USDC</span>
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="font-mono text-3xl sm:text-4xl font-black text-ink">
+                                  ${product.price.toFixed(2)}
+                                </span>
+                                <span className="text-xs font-bold text-muted uppercase">USDT / USDC</span>
+                              </div>
                             </div>
-                            <span className="text-xs font-semibold text-success">
-                              ✓ {t("Zero Payment Fees")}
-                            </span>
+                            <div className="text-end">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-1 text-[11px] font-bold text-success ring-1 ring-success/20">
+                                <span>✓</span>
+                                <span>{t("Zero Payment Fees")}</span>
+                              </span>
+                            </div>
                           </div>
 
                           {/* Free Gift Box auto-applied banner for Muse AI */}
@@ -705,20 +774,22 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                           )}
 
                           {/* Quantity Selector */}
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-ink flex justify-between">
-                              <span>{t("Quantity")}</span>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <label className="font-bold text-ink">{t("Quantity")}</label>
                               {product.availableStock > 0 && !product.tunvn_buff && (
-                                <span className="text-muted font-normal">
-                                  {product.availableStock} {t("available")}
+                                <span className="inline-flex items-center gap-1 rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted border border-border">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-success"></span>
+                                  <span>{product.availableStock} {t("available")}</span>
                                 </span>
                               )}
-                            </label>
+                            </div>
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => setQuantity(String(Math.max(1, (parseInt(quantity, 10) || 1) - 1)))}
-                                className="h-10 w-10 flex items-center justify-center rounded-xl border border-border bg-surface text-ink hover:bg-brand-soft hover:border-brand font-bold text-lg transition-colors cursor-pointer"
+                                className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/90 bg-surface text-ink hover:bg-brand-soft hover:border-brand/40 font-bold text-xl shadow-2xs active:scale-95 transition-all cursor-pointer"
+                                aria-label="Decrease quantity"
                               >
                                 –
                               </button>
@@ -728,12 +799,13 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                                 max={product.maxOrderQty || undefined}
                                 value={quantity}
                                 onChange={(e) => setQuantity(e.target.value)}
-                                className="h-10 flex-1 rounded-xl border border-border bg-bg px-3 text-center font-mono font-bold text-ink focus:border-brand focus:outline-none"
+                                className="h-11 flex-1 rounded-xl border border-border/90 bg-bg px-3 text-center font-mono text-lg font-extrabold text-ink focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none transition-all shadow-inner"
                               />
                               <button
                                 type="button"
                                 onClick={() => setQuantity(String((parseInt(quantity, 10) || 0) + 1))}
-                                className="h-10 w-10 flex items-center justify-center rounded-xl border border-border bg-surface text-ink hover:bg-brand-soft hover:border-brand font-bold text-lg transition-colors cursor-pointer"
+                                className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/90 bg-surface text-ink hover:bg-brand-soft hover:border-brand/40 font-bold text-xl shadow-2xs active:scale-95 transition-all cursor-pointer"
+                                aria-label="Increase quantity"
                               >
                                 +
                               </button>
@@ -773,7 +845,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                                 value={couponInput}
                                 onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                                 placeholder={t("Discount Code")}
-                                className="h-9 flex-1 rounded-lg border border-border bg-bg px-3 text-xs font-mono uppercase text-ink focus:border-brand focus:outline-none"
+                                className="h-10 flex-1 rounded-xl border border-border/80 bg-bg px-3 text-xs font-mono uppercase text-ink focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none transition-all"
                               />
                               {coupon ? (
                                 <button
@@ -782,7 +854,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                                     setCoupon(null);
                                     setCouponInput("");
                                   }}
-                                  className="h-9 px-3 rounded-lg border border-danger/30 text-danger text-xs font-semibold hover:bg-danger/10 cursor-pointer"
+                                  className="h-10 px-4 rounded-xl border border-danger/30 text-danger text-xs font-bold hover:bg-danger/10 transition-colors cursor-pointer"
                                 >
                                   {t("Remove")}
                                 </button>
@@ -791,7 +863,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                                   type="button"
                                   onClick={applyCoupon}
                                   disabled={couponBusy || !couponInput.trim()}
-                                  className="h-9 px-3 rounded-lg bg-surface border border-border text-ink hover:border-brand text-xs font-semibold disabled:opacity-50 cursor-pointer"
+                                  className="h-10 px-4 rounded-xl bg-surface border border-border text-ink hover:border-brand hover:bg-brand-soft/40 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
                                 >
                                   {couponBusy ? t("Checking…") : t("Apply")}
                                 </button>
@@ -806,80 +878,108 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                           </div>
 
                           {/* Subtotal & Total Preview */}
-                          <div className="rounded-xl border border-border bg-bg/50 p-3.5 space-y-1.5 text-xs">
+                          <div className="rounded-2xl border border-border/80 bg-bg/50 p-4 space-y-2 text-xs">
                             <div className="flex justify-between text-muted">
                               <span>{t("Subtotal")}</span>
                               <span className="font-mono text-ink">${(parsedQty * unitPriceNum).toFixed(2)}</span>
                             </div>
                             {giftDiscountAmount > 0 && (
-                              <div className="flex justify-between text-success">
+                              <div className="flex justify-between text-emerald-600 font-medium">
                                 <span>🎁 {t("Gift Box Discount")}</span>
                                 <span className="font-mono">-${giftDiscountAmount.toFixed(2)}</span>
                               </div>
                             )}
                             {coupon && (
-                              <div className="flex justify-between text-success">
+                              <div className="flex justify-between text-emerald-600 font-medium">
                                 <span>🏷️ {t("Coupon Discount")}</span>
                                 <span className="font-mono">-${(subtotal - coupon.final).toFixed(2)}</span>
                               </div>
                             )}
-                            <div className="flex justify-between pt-1 border-t border-border/70 text-sm font-bold text-ink">
+                            <div className="flex justify-between pt-2 border-t border-border/70 text-sm font-bold text-ink items-baseline">
                               <span>{t("Total Amount")}</span>
-                              <span className="font-mono text-base text-brand">${total} USDT</span>
+                              <div className="text-end">
+                                <span className="font-mono text-2xl font-black text-brand">${total}</span>
+                                <span className="text-xs font-bold text-muted ms-1">USDT</span>
+                              </div>
                             </div>
                           </div>
 
                           <Alert variant="error">{error}</Alert>
 
-                          <PrimaryButton type="submit" className="w-full py-3.5 font-bold text-sm shadow-md">
-                            {t("Continue to Review →")}
-                          </PrimaryButton>
+                          <button
+                            type="submit"
+                            className="group relative flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand to-indigo-600 px-5 py-3.5 text-sm font-bold text-white shadow-[0_4px_16px_rgba(49,105,245,0.35)] transition-all duration-200 hover:from-brand-dark hover:to-indigo-700 hover:shadow-[0_6px_22px_rgba(49,105,245,0.45)] active:scale-[0.98] cursor-pointer"
+                          >
+                            <span>{t("Continue to Review")}</span>
+                            <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+                          </button>
+
+                          {/* Buyer Trust Micro-Strip */}
+                          <div className="grid grid-cols-3 gap-2 pt-1 text-center text-[10px] text-muted font-medium">
+                            <div className="rounded-lg bg-bg/60 border border-border/60 py-1.5 px-1">
+                              <span className="block text-xs mb-0.5">⚡</span>
+                              <span>Instant Stock</span>
+                            </div>
+                            <div className="rounded-lg bg-bg/60 border border-border/60 py-1.5 px-1">
+                              <span className="block text-xs mb-0.5">🛡️</span>
+                              <span>Warranty</span>
+                            </div>
+                            <div className="rounded-lg bg-bg/60 border border-border/60 py-1.5 px-1">
+                              <span className="block text-xs mb-0.5">🔒</span>
+                              <span>0% EVM Fee</span>
+                            </div>
+                          </div>
                         </form>
                       )}
 
                       {/* STEP 2: ORDER SUMMARY CONFIRM */}
                       {step === "summary" && (
                         <div className="space-y-4 text-sm">
-                          <div className="rounded-xl border border-border divide-y divide-border bg-bg/40 text-xs">
-                            <div className="p-3 flex justify-between">
+                          <div className="rounded-2xl border border-border/80 divide-y divide-border/60 bg-bg/40 text-xs overflow-hidden">
+                            <div className="p-3.5 flex justify-between items-center">
                               <span className="text-muted">{t("Product")}</span>
-                              <span className="font-semibold text-ink text-end max-w-[200px] truncate">{product.title}</span>
+                              <span className="font-semibold text-ink text-end max-w-[220px] truncate">{product.title}</span>
                             </div>
-                            <div className="p-3 flex justify-between">
+                            <div className="p-3.5 flex justify-between items-center">
                               <span className="text-muted">{t("Quantity")}</span>
-                              <span className="font-mono font-bold text-ink">{parsedQty}</span>
+                              <span className="font-mono font-bold text-ink text-sm">{parsedQty}</span>
                             </div>
                             {product.requiresEmail && email && (
-                              <div className="p-3 flex justify-between">
+                              <div className="p-3.5 flex justify-between items-center">
                                 <span className="text-muted">{t("Email")}</span>
                                 <span className="font-mono text-ink truncate max-w-[200px]">{email}</span>
                               </div>
                             )}
                             {activationInfo && (
-                              <div className="p-3 flex justify-between">
+                              <div className="p-3.5 flex justify-between items-center">
                                 <span className="text-muted">{product.activationField || t("Activation")}</span>
                                 <span className="font-mono text-ink truncate max-w-[200px]">{activationInfo}</span>
                               </div>
                             )}
-                            <div className="p-3 flex justify-between text-sm font-bold bg-surface rounded-b-xl">
+                            <div className="p-3.5 flex justify-between items-baseline text-sm font-bold bg-surface">
                               <span className="text-ink">{t("Total to Pay")}</span>
-                              <span className="font-mono text-brand">${total} USDT</span>
+                              <div className="text-end">
+                                <span className="font-mono text-xl font-black text-brand">${total}</span>
+                                <span className="text-xs font-bold text-muted ms-1">USDT</span>
+                              </div>
                             </div>
                           </div>
 
                           <Alert variant="error">{error}</Alert>
 
                           <div className="flex gap-3">
-                            <SecondaryButton onClick={() => setStep("form")} className="flex-1">
+                            <SecondaryButton onClick={() => setStep("form")} className="flex-1 py-3 text-xs font-bold">
                               ← {t("Back")}
                             </SecondaryButton>
-                            <PrimaryButton
+                            <button
+                              type="button"
                               onClick={handleConfirmOrder}
                               disabled={creating}
-                              className="flex-1 py-3 text-sm font-bold shadow-md"
+                              className="group flex-1 min-h-[44px] flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-indigo-600 py-3 text-xs font-bold text-white shadow-md hover:from-brand-dark hover:to-indigo-700 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
                             >
-                              {creating ? t("Creating order…") : t("Confirm & Pay →")}
-                            </PrimaryButton>
+                              <span>{creating ? t("Creating order…") : t("Confirm & Pay")}</span>
+                              {!creating && <span className="group-hover:translate-x-0.5 transition-transform">→</span>}
+                            </button>
                           </div>
                         </div>
                       )}
