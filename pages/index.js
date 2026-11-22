@@ -930,10 +930,8 @@ function HeroSection({ inStock, search, setSearch }) {
                       {inStock.length}
                     </span>
                   </div>
-                  <span className="text-[11px] text-muted font-medium inline-flex items-center gap-1">
-                    <span>{t("Auto-sliding")}</span>
-                    <span className="text-border" aria-hidden="true">•</span>
-                    <span className="text-brand font-semibold">{t("Tap to buy")}</span>
+                  <span className="text-[11px] font-semibold text-brand">
+                    {t("Tap to buy")} →
                   </span>
                 </div>
 
