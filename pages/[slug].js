@@ -118,7 +118,7 @@ export async function getServerSideProps({ params, res, locale = "en" }) {
         delivery: product.delivery || null,
         deliveryBadge: product.delivery_badge || null,
         autoDelivery: Boolean(product.auto_delivery),
-        warranty: product.warranty || "100% Replacement Warranty",
+        warranty: product.warranty ? String(product.warranty).trim() : null,
         requiresEmail: Boolean(product.requires_email),
         activationField: product.activation_field || null,
         activationPlaceholder: product.activation_placeholder || null,
@@ -261,7 +261,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
   const pageTitle = `${cleanTitle} – Buy with Crypto (USDT) | DigiVerse`;
   const pageDescription = `Buy ${cleanTitle} at DigiVerse for \$${product.price.toFixed(2)} USDT. ${
     product.inStock ? "In stock with " + deliveryLabel + "." : ""
-  } Secure checkout via USDT & USDC across BNB Chain, Polygon, Base, with 100% replacement warranty.`;
+  } Secure checkout via USDT & USDC across BNB Chain, Polygon, Base with full customer support.`;
 
   const canonicalUrl = `${SITE_URL}/${canonicalSlug}`;
 
@@ -413,7 +413,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
       setError(t("Please enter a valid quantity."));
       return;
     }
-    if (product.requiresEmail && !isManual && !email) {
+    if (product.requiresEmail && !email) {
       setError(describeError(t, "email_required"));
       return;
     }
@@ -447,7 +447,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
         body: JSON.stringify({
           product_id: product.id,
           quantity: parsedQty,
-          email,
+          email: product.requiresEmail ? email : (session?.user?.email || null),
           activation_info: activationInfo,
           coupon_code: coupon ? coupon.code : undefined,
           gifts_to_redeem: effectiveGifts,
@@ -613,26 +613,13 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                       <span className="font-semibold text-ink">{deliveryLabel}</span>
                     </div>
                     <div className="flex items-center justify-between py-1 border-b border-border/60">
-                      <span className="text-muted">{t("Replacement Warranty")}</span>
+                      <span className="text-muted">{t("Warranty Policy")}</span>
                       <span className="font-semibold text-ink">{formatWarranty(product.warranty)}</span>
                     </div>
                     <div className="flex items-center justify-between py-1">
                       <span className="text-muted">{t("Supported Currencies")}</span>
                       <span className="font-semibold text-ink">USDT, USDC, Wallet Balance</span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Product FAQ Accordion (Left Column) */}
-                <div className="mt-10 pt-8 border-t border-border">
-                  <h3 className="text-lg font-bold text-ink mb-4">{t("Frequently Asked Questions")}</h3>
-                  <div className="space-y-3">
-                    {faqList.map((item, idx) => (
-                      <div key={idx} className="rounded-xl border border-border bg-surface p-4 text-xs sm:text-sm">
-                        <h4 className="font-semibold text-ink">{item.name}</h4>
-                        <p className="mt-1.5 text-muted leading-relaxed">{item.acceptedAnswer.text}</p>
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>
@@ -757,16 +744,18 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                             </div>
                           </div>
 
-                          {/* Customer Email */}
-                          <FormInput
-                            label={t("Your Email Address")}
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="you@example.com"
-                            required={product.requiresEmail || !isManual}
-                            hint={t("Your order receipt and access keys will be sent here.")}
-                          />
+                          {/* Customer Email — only shown if this product explicitly requires it */}
+                          {product.requiresEmail && (
+                            <FormInput
+                              label={t("Your Email Address")}
+                              type="email"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              placeholder="you@example.com"
+                              required
+                              hint={t("Your order receipt and access keys will be sent here.")}
+                            />
+                          )}
 
                           {/* Activation Info (e.g. invite link, username) */}
                           {product.activationField && (
@@ -864,7 +853,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                               <span className="text-muted">{t("Quantity")}</span>
                               <span className="font-mono font-bold text-ink">{parsedQty}</span>
                             </div>
-                            {email && (
+                            {product.requiresEmail && email && (
                               <div className="p-3 flex justify-between">
                                 <span className="text-muted">{t("Email")}</span>
                                 <span className="font-mono text-ink truncate max-w-[200px]">{email}</span>
@@ -992,6 +981,26 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                 </div>
               </div>
             </div>
+
+            {/* Product FAQ Section (Placed directly after details & quantity / checkout section) */}
+            <section className="mt-14 pt-10 border-t border-border">
+              <div className="max-w-3xl mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
+                  {t("Frequently Asked Questions")}
+                </h3>
+                <p className="text-xs sm:text-sm text-muted mt-1">
+                  {t("Common questions about purchasing and receiving {title}.", { title: cleanTitle })}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {faqList.map((item, idx) => (
+                  <div key={idx} className="rounded-2xl border border-border bg-surface p-5 shadow-xs text-xs sm:text-sm">
+                    <h4 className="font-semibold text-ink text-sm sm:text-base mb-2">{item.name}</h4>
+                    <p className="text-muted leading-relaxed">{item.acceptedAnswer.text}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             {/* Related Products Section */}
             {related && related.length > 0 && (

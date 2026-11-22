@@ -21,11 +21,13 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
   );
   const [shortDescription, setShortDescription] = useState(product.short_description || "");
   const [description, setDescription] = useState(product.description || "");
+  const [warranty, setWarranty] = useState(product.warranty || "");
 
   function save() {
     onSave({
       ...(title.trim() !== (product.title || "") ? { title: title.trim() } : {}),
       slug: slug.trim(),
+      warranty: warranty.trim() || null,
       image_url: imageUrl.trim(),
       category: category.trim(),
       featured,
@@ -56,6 +58,14 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
         placeholder="e.g. buy-muse-ai-tokens"
         maxLength={150}
         hint={`Direct product link: https://digiverse.top/${slug || "your-product-slug"}`}
+      />
+      <FormInput
+        label="Warranty Policy"
+        value={warranty}
+        onChange={(e) => setWarranty(e.target.value)}
+        placeholder="e.g. 1 Month, 30 Days, FW, NW (leave blank to default to 'Stated in product description')"
+        maxLength={100}
+        hint="Displayed on product landing page. If left blank, it displays 'Stated in product description'."
       />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormInput

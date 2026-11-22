@@ -144,8 +144,9 @@ export default async function handler(req, res) {
 
     // Description: admin can edit or override the supplier's full description.
     // Stored as-is; syncs never touch this field once it's been set manually.
-    const { description, slug } = req.body || {};
+    const { description, slug, warranty } = req.body || {};
     if (description !== undefined) patch.description = description || null;
+    if (warranty !== undefined) patch.warranty = warranty ? warranty.trim() : null;
     if (typeof slug === "string") {
       const cleanSlug = slug
         .trim()

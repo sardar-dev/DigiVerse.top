@@ -64,6 +64,7 @@ export default async function handler(req, res) {
       box_split, // "separator" (--- lines) | "line" (one box per line)
       sell_price_delta_percent, // bulk-only: e.g. 5 for +5%
       slug,
+      warranty,
     } = req.body || {};
 
     if (Array.isArray(ids) && ids.length > 0) {
@@ -170,6 +171,7 @@ export default async function handler(req, res) {
         slug: cleanSlug,
         title: title.trim(),
         description: description || null,
+        warranty: warranty ? String(warranty).trim() : null,
         sell_price: sell,
         cost_price: cost,
         real_stock: stock,
@@ -297,6 +299,7 @@ export default async function handler(req, res) {
         .replace(/-+/g, "-");
       if (cleanSlug) patch.slug = cleanSlug;
     }
+    if (warranty !== undefined) patch.warranty = warranty ? warranty.trim() : null;
     if (image_url !== undefined) patch.image_url = image_url || null;
     if (category !== undefined) patch.category = category || null;
     if (typeof featured === "boolean") patch.featured = featured;

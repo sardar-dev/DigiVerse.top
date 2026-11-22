@@ -96,6 +96,14 @@ export default function ManualProductsTab({
             maxLength={150}
             hint={`Direct product link: https://digiverse.top/${manualForm.slug || "your-product-slug"}`}
           />
+          <FormInput
+            label="Warranty Policy"
+            value={manualForm.warranty || ""}
+            onChange={(e) => setManualForm({ ...manualForm, warranty: e.target.value })}
+            placeholder="e.g. 1 Year, 30 Days, FW, NW (leave blank to default to 'Stated in product description')"
+            maxLength={100}
+            hint="Displayed on the product page. Leave blank to default to 'Stated in product description'."
+          />
           <FormTextarea
             label="Description (full, shown in checkout)"
             value={manualForm.description}
