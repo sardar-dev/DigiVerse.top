@@ -144,8 +144,16 @@ export default async function handler(req, res) {
 
     // Description: admin can edit or override the supplier's full description.
     // Stored as-is; syncs never touch this field once it's been set manually.
-    const { description } = req.body || {};
+    const { description, slug } = req.body || {};
     if (description !== undefined) patch.description = description || null;
+    if (typeof slug === "string") {
+      const cleanSlug = slug
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-");
+      if (cleanSlug) patch.slug = cleanSlug;
+    }
 
     // Title: any product (manual or supplier) can be renamed. A custom
     // title is "locked" so the next sync never overwrites it. An empty

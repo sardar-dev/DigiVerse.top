@@ -25,7 +25,7 @@ export default function ReferralsPage() {
   const [savingUsername, setSavingUsername] = useState(false);
   const [userError, setUserError] = useState("");
 
-  const claimHref = locale === "en" ? "/?product=-12" : `/${locale}/?product=-12`;
+  const claimHref = locale === "en" ? "/buy-muse-ai-tokens" : `/${locale}/buy-muse-ai-tokens`;
 
   useEffect(() => {
     loadData();

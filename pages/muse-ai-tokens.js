@@ -5,6 +5,7 @@ import SiteFooter from "../components/layout/SiteFooter";
 import PageContainer from "../components/layout/PageContainer";
 import { fetchStorefrontProducts } from "../lib/storefrontProducts";
 import { toProductCode } from "../lib/productLink";
+import { getProductUrl } from "../lib/productSlug";
 import { SITE_URL } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
 
@@ -209,7 +210,7 @@ export default function MuseTokens({ products }) {
                       <span className="text-lg font-bold text-ink">{money(p.price)}</span>
                       {p.inStock ? (
                         <Link
-                          href={`/?product=${p.code}`}
+                          href={getProductUrl(p)}
                           className="inline-flex min-h-10 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand/90"
                         >
                           Buy now

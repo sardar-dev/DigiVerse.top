@@ -177,25 +177,26 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
           </div>
         </div>
 
-        <PrimaryButton
-          onClick={onBuy}
-          disabled={disabled || outOfStock}
-          className={`min-h-10 px-4 sm:px-5 py-2 font-semibold text-xs sm:text-sm rounded-xl transition-all active:scale-95 ${
-            outOfStock ? "pointer-events-none cursor-not-allowed opacity-40 blur-[1px]" : ""
+        <Link
+          href={getProductUrl(product)}
+          className={`min-h-10 px-4 sm:px-5 py-2 font-semibold text-xs sm:text-sm rounded-xl transition-all inline-flex items-center justify-center gap-1.5 shadow-sm ${
+            outOfStock
+              ? "bg-bg text-muted border border-border hover:bg-surface cursor-pointer"
+              : "bg-brand text-white hover:bg-brand-hover active:scale-95 shadow-brand/20"
           }`}
-          aria-label={outOfStock ? t("{title} is out of stock", { title: product.title }) : undefined}
+          aria-label={outOfStock ? t("{title} is out of stock", { title: product.title }) : t("Buy {title}", { title: product.title })}
         >
           {outOfStock ? (
-            t("Out of stock")
+            <span>{t("Sold out")}</span>
           ) : (
-            <span className="inline-flex items-center gap-1.5">
+            <>
               <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               <span>{t("Buy now")}</span>
-            </span>
+            </>
           )}
-        </PrimaryButton>
+        </Link>
       </div>
     </div>
   );

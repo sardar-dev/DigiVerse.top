@@ -11,6 +11,7 @@ import CategorySelect from "./CategorySelect";
 // Products form.
 export default function ProductMerchandisingFields({ product, onSave, onCancel }) {
   const [title, setTitle] = useState(product.title || "");
+  const [slug, setSlug] = useState(product.slug || "");
   const [imageUrl, setImageUrl] = useState(product.image_url || "");
   const [category, setCategory] = useState(product.category || "");
   const [featured, setFeatured] = useState(Boolean(product.featured));
@@ -24,6 +25,7 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
   function save() {
     onSave({
       ...(title.trim() !== (product.title || "") ? { title: title.trim() } : {}),
+      slug: slug.trim(),
       image_url: imageUrl.trim(),
       category: category.trim(),
       featured,
@@ -46,6 +48,14 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
             ? "Custom title — syncs won't overwrite it. Clear the box and save to go back to the supplier's title."
             : "Edit to rename this product. Your title is kept even when the supplier syncs."
         }
+      />
+      <FormInput
+        label="URL Slug (SEO friendly path)"
+        value={slug}
+        onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+        placeholder="e.g. buy-muse-ai-tokens"
+        maxLength={150}
+        hint={`Direct product link: https://digiverse.top/${slug || "your-product-slug"}`}
       />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormInput

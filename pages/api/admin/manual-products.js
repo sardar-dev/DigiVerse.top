@@ -63,6 +63,7 @@ export default async function handler(req, res) {
       new_boxes, // pasted box text to add in the same save (auto-delivery products)
       box_split, // "separator" (--- lines) | "line" (one box per line)
       sell_price_delta_percent, // bulk-only: e.g. 5 for +5%
+      slug,
     } = req.body || {};
 
     if (Array.isArray(ids) && ids.length > 0) {
@@ -159,9 +160,14 @@ export default async function handler(req, res) {
       );
       if (idErr) return res.status(500).json({ success: false, error: idErr.message });
 
+      const cleanSlug = typeof slug === "string" && slug.trim()
+        ? slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-")
+        : title.trim().toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-");
+
       const insertPayload = {
         id: newId,
         provider: "manual",
+        slug: cleanSlug,
         title: title.trim(),
         description: description || null,
         sell_price: sell,
@@ -283,6 +289,14 @@ export default async function handler(req, res) {
       patch.activation_placeholder = normalizedPlaceholder;
     }
     if (short_description !== undefined) patch.short_description = short_description || null;
+    if (typeof slug === "string") {
+      const cleanSlug = slug
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-");
+      if (cleanSlug) patch.slug = cleanSlug;
+    }
     if (image_url !== undefined) patch.image_url = image_url || null;
     if (category !== undefined) patch.category = category || null;
     if (typeof featured === "boolean") patch.featured = featured;

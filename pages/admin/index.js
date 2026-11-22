@@ -142,6 +142,7 @@ export default function Admin() {
     return {
       id: null,
       title: "",
+      slug: "",
       description: "",
       short_description: "",
       sell_price: "",
@@ -178,6 +179,7 @@ export default function Admin() {
     const body = {
       ...(manualForm.id !== null ? { id: manualForm.id } : {}),
       title: manualForm.title,
+      slug: manualForm.slug ? manualForm.slug.trim() : null,
       description: manualForm.description,
       short_description: manualForm.short_description || null,
       sell_price: Number(manualForm.sell_price),
@@ -240,6 +242,7 @@ export default function Admin() {
     setManualForm({
       id: p.id,
       title: p.title,
+      slug: p.slug || "",
       description: p.description || "",
       short_description: p.short_description || "",
       sell_price: p.sell_price,

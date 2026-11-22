@@ -4,71 +4,64 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 import { fetchStorefrontProducts } from "../lib/storefrontProducts";
-import PaymentPanel from "../components/PaymentPanel";
 import RecentOrders from "../components/RecentOrders";
 import StorefrontFAQ, { FAQ_DATA } from "../components/StorefrontFAQ";
 import SEO from "../components/SEO";
 import { toProductCode, fromProductCode } from "../lib/productLink";
+import { slugifyProduct, getProductUrl } from "../lib/productSlug";
 import { useToast } from "../components/ui/Toast";
 import SiteHeader from "../components/layout/SiteHeader";
 import SiteFooter from "../components/layout/SiteFooter";
 import PageContainer from "../components/layout/PageContainer";
 import ProductCard from "../components/ui/ProductCard";
-import Modal from "../components/ui/Modal";
 import Alert from "../components/ui/Alert";
-import { FormInput } from "../components/ui/FormInput";
 import { PrimaryButton, SecondaryButton } from "../components/ui/Button";
-import DeliveredItems from "../components/ui/DeliveredItems";
-import { EmptyState, ErrorState, LoadingState } from "../components/ui/States";
+import { EmptyState, ErrorState } from "../components/ui/States";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
-import { formatWarranty } from "../lib/formatWarranty";
 import { getReferralSettings } from "../lib/referralSettings";
-import * as fpixel from "../lib/fpixel";
-
-function cleanSeoText(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/\bbuff\s*tokens?\b/gi, "Muse AI Tokens")
-    .replace(/\bbuff\b/gi, "Tokens")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 // Server-rendered so search engines (and the first paint) see the
 // actual product list immediately, not an empty page that fills in
 // after a client-side fetch.
-export async function getServerSideProps({ query, res }) {
+export async function getServerSideProps({ query, locale, res }) {
   // Same list for every visitor, so let Vercel's edge serve it for 30s
   // (and refresh in the background) instead of querying the database on
   // every page view.
   res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120");
   const { data } = await fetchStorefrontProducts();
   const list = data || [];
-  // Shared product links (?product=<id>) get a product-specific link
-  // preview (title/blurb/image) in WhatsApp/Telegram etc. Taken from the
-  // list we already fetched — no extra query.
-  const shared = query?.product
-    ? list.find((p) => String(p.id) === fromProductCode(query.product))
-    : null;
-  const sharedMeta = shared
-    ? {
-        id: String(shared.id),
-        title: cleanSeoText(shared.title),
-        description: cleanSeoText((shared.short_description || shared.description || "").slice(0, 250)),
-        image: shared.image_url || null,
-        price: Number(shared.sell_price),
-        category: shared.category || "Software",
-      }
-    : null;
+
+  // Permanent 301 redirect legacy /?product=<id> or /?buy=<id> queries
+  // to dedicated SEO-optimized product pages (e.g. /buy-muse-ai-tokens).
+  const rawParam = query?.product || query?.buy;
+  if (rawParam) {
+    const rawId = fromProductCode(rawParam);
+    const matched = list.find(
+      (p) =>
+        String(p.id) === String(rawId) ||
+        String(p.id) === String(rawParam) ||
+        p.slug === rawParam
+    );
+    if (matched) {
+      const prefix = locale && locale !== "en" ? `/${locale}` : "";
+      return {
+        redirect: {
+          destination: `${prefix}/${slugifyProduct(matched)}`,
+          permanent: true,
+          basePath: false,
+        },
+      };
+    }
+  }
 
   const refSettings = await getReferralSettings().catch(() => null);
   const referralEnabled = refSettings?.referral_enabled !== false;
 
-  return { props: { initialProducts: list, sharedMeta, referralEnabled } };
+  return { props: { initialProducts: list, referralEnabled } };
 }
 
-export default function Storefront({ initialProducts, sharedMeta, referralEnabled: initialReferralEnabled }) {
+export default function Storefront({ initialProducts, referralEnabled: initialReferralEnabled }) {
   const router = useRouter();
   const { t, locale } = useT();
   const { notify } = useToast();
@@ -76,12 +69,10 @@ export default function Storefront({ initialProducts, sharedMeta, referralEnable
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const [active, setActive] = useState(null); // product being purchased
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(""); // "" = all
   const [sharedNotFound, setSharedNotFound] = useState(false);
   const [adminMessages, setAdminMessages] = useState([]);
-  const [buyModalTicker, setBuyModalTicker] = useState("");
   const [referralEnabled, setReferralEnabled] = useState(initialReferralEnabled !== false);
 
   useEffect(() => {
@@ -92,11 +83,9 @@ export default function Storefront({ initialProducts, sharedMeta, referralEnable
     // flash. Falls back to a visible error only if we truly have
     // nothing to show.
     loadProducts(products.length === 0);
-    // Load buy modal ticker text (cached 60s — no DB hit per visitor)
     fetch("/api/settings")
       .then((r) => r.json())
       .then((d) => {
-        if (d.buy_modal_ticker) setBuyModalTicker(d.buy_modal_ticker);
         if (typeof d.referral_enabled === "boolean") setReferralEnabled(d.referral_enabled);
       })
       .catch(() => {});
@@ -113,36 +102,30 @@ export default function Storefront({ initialProducts, sharedMeta, referralEnable
       .catch(() => {});
   }, [session]);
 
-  // Shareable product links: /?product=<id> opens that product's buy
-  // popup automatically, so a link someone pastes elsewhere lands
-  // straight on the right item instead of a bare homepage. No new
-  // route/page needed — same popup, just opened on load.
-  // /?q=muse%20ai pre-fills the search box (used by blog links), so the
-  // visitor lands on the catalog already filtered to that product.
+  // Pre-fill search if ?q= is provided
   useEffect(() => {
     if (!router.isReady) return;
     const q = router.query.q;
     if (typeof q === "string" && q.trim()) setSearch(q.trim().slice(0, 60));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.q]);
 
+  // Client-side fallback redirect for legacy product query links
   useEffect(() => {
     if (!router.isReady) return;
     const rawParam = router.query.product || router.query.buy;
-    if (!rawParam || active) return;
-    if (products.length === 0) return; // wait for the list to load first
+    if (!rawParam || products.length === 0) return;
 
     const match = products.find(
-      (p) => String(p.id) === fromProductCode(rawParam) || String(p.id) === String(rawParam)
+      (p) =>
+        String(p.id) === fromProductCode(rawParam) ||
+        String(p.id) === String(rawParam) ||
+        p.slug === rawParam
     );
-    if (match && match.available_stock <= 0 && !match.tunvn_buff && String(match.id) !== "-12") {
-      setSharedNotFound(true); // sold out: don't open a buy popup for it
-    } else if (match) {
-      setActive(match);
+    if (match) {
+      router.replace(getProductUrl(match));
     } else {
       setSharedNotFound(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.product, router.query.buy, products]);
 
   function loadProducts(showLoadingState = true) {
@@ -209,49 +192,6 @@ export default function Storefront({ initialProducts, sharedMeta, referralEnable
     return prices.length ? Math.min(...prices) : 0.15;
   }, [products]);
   const musePriceText = `$${musePrice.toFixed(2)}`;
-
-  const productJsonLd = sharedMeta
-    ? {
-        "@context": "https://schema.org",
-        "@graph": [
-          {
-            "@type": "Product",
-            name: sharedMeta.title,
-            description:
-              sharedMeta.description ||
-              `Buy ${sharedMeta.title} with 0-second instant delivery on DigiVerse.`,
-            image: sharedMeta.image ? [sharedMeta.image] : [`${SITE_URL}/og-preview.jpg`],
-            category: sharedMeta.category || "Software",
-            offers: {
-              "@type": "Offer",
-              url: `${SITE_URL}/?product=${toProductCode(sharedMeta.id)}`,
-              priceCurrency: "USD",
-              price: sharedMeta.price ? sharedMeta.price.toFixed(2) : "0.00",
-              priceValidUntil: "2027-12-31",
-              availability: "https://schema.org/InStock",
-              itemCondition: "https://schema.org/NewCondition",
-              seller: {
-                "@type": "Organization",
-                name: "DigiVerse",
-                url: SITE_URL,
-              },
-            },
-          },
-          {
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: t("Home"), item: SITE_URL },
-              {
-                "@type": "ListItem",
-                position: 2,
-                name: sharedMeta.title,
-                item: `${SITE_URL}/?product=${toProductCode(sharedMeta.id)}`,
-              },
-            ],
-          },
-        ],
-      }
-    : null;
 
   const storeJsonLd = {
     "@context": "https://schema.org",
@@ -345,23 +285,12 @@ export default function Storefront({ initialProducts, sharedMeta, referralEnable
 
   return (
     <div className="flex min-h-screen flex-col bg-bg font-body text-ink">
-      {sharedMeta ? (
-        <SEO
-          title={`Buy ${sharedMeta.title} | Instant Delivery`}
-          description={`${sharedMeta.description ? sharedMeta.description + " — " : ""}${t("{price} on DigiVerse. Instant 0-second delivery and secure checkout.", { price: `$${sharedMeta.price.toFixed(2)}` })}`}
-          path={`/?product=${toProductCode(sharedMeta.id)}`}
-          image={sharedMeta.image || undefined}
-          keywords={`${sharedMeta.title}, buy ${sharedMeta.title}, instant software license, digital goods, DigiVerse`}
-          jsonLd={productJsonLd}
-        />
-      ) : (
-        <SEO
-          fullTitleOverride={`DigiVerse – Buy Muse AI Tokens from ${musePriceText} | Digital Subscriptions`}
-          description={`Buy Muse AI Tokens on your own account from ${musePriceText} per 1 billion tokens. Invite code only, auto delivery in 10–15 minutes, USDT payment. Also Office 365, Canva, Gemini, Duolingo, STEAM and more at DigiVerse.top.`}
-          keywords="digital software licenses, Muse AI tokens, buy Muse AI tokens, cheap license keys, Windows keys, office licenses, crypto software store, USDT digital goods, instant digital delivery, DigiVerse"
-          jsonLd={storeJsonLd}
-        />
-      )}
+      <SEO
+        fullTitleOverride={`DigiVerse – Buy Muse AI Tokens from ${musePriceText} | Digital Subscriptions`}
+        description={`Buy Muse AI Tokens on your own account from ${musePriceText} per 1 billion tokens. Invite code only, auto delivery in 10–15 minutes, USDT payment. Also Office 365, Canva, Gemini, Duolingo, STEAM and more at DigiVerse.top.`}
+        keywords="digital software licenses, Muse AI tokens, buy Muse AI tokens, cheap license keys, Windows keys, office licenses, crypto software store, USDT digital goods, instant digital delivery, DigiVerse"
+        jsonLd={storeJsonLd}
+      />
       <SiteHeader session={session} onSignOut={() => supabase.auth.signOut()} />
 
       <main className="flex-1">
@@ -656,7 +585,6 @@ export default function Storefront({ initialProducts, sharedMeta, referralEnable
                 <ProductCard
                   key={p.id}
                   product={p}
-                  onBuy={() => setActive(p)}
                   onShare={() => shareProduct(p, notify, t, locale)}
                 />
               ))}
@@ -678,7 +606,7 @@ export default function Storefront({ initialProducts, sharedMeta, referralEnable
                 <li>Pay with USDT (BEP20, Polygon or Base) or your DigiVerse wallet balance.</li>
               </ul>
               <p className="mt-3 text-sm">
-                <Link href="/muse-ai-tokens" className="font-semibold text-brand hover:underline">
+                <Link href="/buy-muse-ai-tokens" className="font-semibold text-brand hover:underline">
                   Full Muse AI Tokens guide and live prices
                 </Link>
               </p>
@@ -691,30 +619,13 @@ export default function Storefront({ initialProducts, sharedMeta, referralEnable
       </main>
 
       <SiteFooter />
-
-      {active && (
-        <BuyModal
-          product={active}
-          session={session}
-          ticker={buyModalTicker}
-          onClose={() => {
-            setActive(null);
-            // Drop ?product= so closing the popup doesn't reopen it
-            // on the next render / back navigation.
-            if (router.query.product) {
-              const { product: _drop, ...rest } = router.query;
-              router.replace({ pathname: "/", query: rest }, undefined, { shallow: true });
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
 
 function shareProduct(product, notify, t, locale) {
   const prefix = locale && locale !== "en" ? `/${locale}` : "";
-  const url = `${window.location.origin}${prefix}/?product=${toProductCode(product.id)}`;
+  const url = `${window.location.origin}${prefix}/${slugifyProduct(product)}`;
   if (navigator.share) {
     navigator.share({ title: product.title, url }).catch(() => {});
     return;
@@ -723,772 +634,6 @@ function shareProduct(product, notify, t, locale) {
     ?.writeText(url)
     .then(() => notify?.(t("Product link copied! 🔗")))
     .catch(() => window.prompt(t("Copy this link:"), url));
-}
-
-function BuyModal({ product, onClose, ticker, session }) {
-  const { t } = useT();
-  const [step, setStep] = useState("form"); // form | summary | order | done
-  const [quantity, setQuantity] = useState("1"); // string so input can be cleared while typing
-  const [email, setEmail] = useState("");
-  const [activationInfo, setActivationInfo] = useState("");
-  const [order, setOrder] = useState(null);
-  const [error, setError] = useState("");
-  const [items, setItems] = useState(null);
-  const [manual, setManual] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [couponInput, setCouponInput] = useState("");
-  const [coupon, setCoupon] = useState(null); // { code, discount, final } once applied
-  const [couponError, setCouponError] = useState("");
-  const [couponBusy, setCouponBusy] = useState(false);
-  const [availableGiftsData, setAvailableGiftsData] = useState(null);
-  const [giftsToRedeem, setGiftsToRedeem] = useState(0);
-  const [buffState, setBuffState] = useState(null);
-
-  useEffect(() => {
-    if (step !== "done" || !product?.tunvn_buff || !order?.id) return;
-    let stop = false;
-    async function check() {
-      try {
-        const res = await fetch("/api/orders/buff-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order_id: order.id }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (data.state === "done") {
-          setBuffState("done");
-          stop = true;
-        } else if (data.state === "failed") {
-          setBuffState("failed");
-          stop = true;
-        }
-      } catch {}
-    }
-    const tId = setTimeout(check, 3000);
-    const interval = setInterval(() => {
-      if (!stop) check();
-    }, 6000);
-    return () => {
-      stop = true;
-      clearTimeout(tId);
-      clearInterval(interval);
-    };
-  }, [step, product?.tunvn_buff, order?.id]);
-
-  useEffect(() => {
-    if ((product?.tunvn_buff || String(product?.id) === "-12") && product?.id) {
-      fetch(`/api/wallet/gifts/available?product_id=${product.id}`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.success && d.eligible && d.max_redeemable > 0) {
-            setAvailableGiftsData(d);
-            setGiftsToRedeem(1);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [product?.id, product?.tunvn_buff]);
-
-  useEffect(() => {
-    if (product?.id) {
-      fpixel.event("ViewContent", {
-        content_name: product.title,
-        content_ids: [String(product.id)],
-        content_type: "product",
-        value: Number(product.sell_price) || 0,
-        currency: "USD",
-      });
-    }
-  }, [product?.id, product?.title, product?.sell_price]);
-
-  const isManualDelivery =
-    product.delivery_badge === "manual"
-      ? true
-      : product.delivery_badge === "auto"
-      ? false
-      : product.provider === "manual" && !product.auto_delivery;
-
-  // activation_field is now a free-text label set by the admin
-  // (e.g. "Game ID", "Discord Username"). Legacy values "email"/"username"
-  // are kept working via friendly display names.
-  const activationLabel = product.activation_field
-    ? product.activation_field === "email"
-      ? t("Your email (for activation)")
-      : product.activation_field === "username"
-      ? t("Your username (for activation)")
-      : product.activation_field
-    : null;
-  const activationShort = product.activation_field
-    ? product.activation_field === "email"
-      ? t("Your email")
-      : product.activation_field === "username"
-      ? t("Your username")
-      : product.activation_field
-    : null;
-  const activationPlaceholder = product.activation_placeholder || activationLabel || "";
-
-  function reviewOrder() {
-    setError("");
-    const parsedQty = parseInt(quantity, 10);
-    // Validate quantity first — applies to all products
-    if (!quantity || isNaN(parsedQty) || parsedQty < 1) {
-      setError(t("Please enter a quantity of at least 1."));
-      return;
-    }
-    if (product.requires_email && product.provider !== "manual" && !email) {
-      setError(describeError(t, "email_required"));
-      return;
-    }
-    if (product.provider === "manual") {
-      const minQty = product.min_order_qty ?? 1;
-      const maxQty = product.max_order_qty ?? null;
-      if (parsedQty < minQty) {
-        setError(describeError(t, "qty_below_minimum", undefined, undefined, undefined, minQty));
-        return;
-      }
-      if (maxQty !== null && parsedQty > maxQty) {
-        setError(describeError(t, "qty_exceeds_maximum", undefined, undefined, maxQty));
-        return;
-      }
-      if (product.activation_field && !activationInfo.trim()) {
-        setError(describeError(t, "activation_info_required"));
-        return;
-      }
-      if (product.tunvn_buff) {
-        let code = activationInfo.trim();
-        if (code.includes("http://") || code.includes("https://") || code.includes("/")) {
-          try {
-            const u = new URL(code.startsWith("http") ? code : `https://${code}`);
-            const parts = u.pathname.split("/").filter(Boolean);
-            const codeFromPath = parts[parts.length - 1];
-            const codeFromParam = u.searchParams.get("invite") || u.searchParams.get("ref") || u.searchParams.get("code");
-            code = (codeFromParam || codeFromPath || code).trim();
-          } catch {
-            const m = code.match(/([A-Za-z0-9_-]{4,32})\s*$/);
-            if (m) code = m[1];
-          }
-          setActivationInfo(code);
-        }
-        if (!/^[A-Za-z0-9_-]{4,32}$/.test(code)) {
-          setError(t("Please enter a valid Muse AI invite code (4–32 characters)."));
-          return;
-        }
-      }
-    }
-    setStep("summary");
-  }
-
-  async function applyCoupon() {
-    setCouponError("");
-    if (!couponInput.trim()) return;
-    setCouponBusy(true);
-    try {
-      const res = await fetch("/api/coupons/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponInput, product_id: product.id, quantity: parseInt(quantity, 10) || 1 }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCoupon(data);
-      } else {
-        setCoupon(null);
-        setCouponError(describeError(t, data.error, undefined, data.min_order));
-      }
-    } catch {
-      setCouponError(t("Couldn't check that code — try again."));
-    }
-    setCouponBusy(false);
-  }
-
-  function removeCoupon() {
-    setCoupon(null);
-    setCouponInput("");
-    setCouponError("");
-  }
-
-  async function confirmOrder() {
-    setError("");
-    setCreating(true);
-    const res = await fetch("/api/orders/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        product_id: product.id,
-        quantity: Math.max(parseInt(quantity, 10) || 1, effectiveGifts),
-        email,
-        activation_info: activationInfo,
-        coupon_code: coupon ? coupon.code : undefined,
-        gifts_to_redeem: effectiveGifts,
-      }),
-    });
-    const data = await res.json();
-    setCreating(false);
-    if (!data.success) {
-      const errMsg = data.message || describeError(t, data.error, data.available, data.min_order, data.max_qty);
-      setError(errMsg);
-      if (data.max_qty !== undefined && Number(data.max_qty) >= 0) {
-        if (Number(data.max_qty) > 0) {
-          setQuantity(String(data.max_qty));
-        }
-      }
-      setCoupon(null);
-      setStep("form");
-      return;
-    }
-    setOrder(data.order);
-    if (data.order?.status && data.order.status !== "pending_payment") {
-      fpixel.event("Purchase", {
-        content_name: product.title,
-        content_ids: [String(product.id)],
-        content_type: "product",
-        value: Number(data.order?.total) || 0,
-        currency: "USD",
-        num_items: parseInt(quantity, 10) || 1,
-      });
-      setItems(data.items || data.order.items || []);
-      setManual(data.manual !== undefined ? data.manual : (data.order.manual || false));
-      setStep("done");
-      return;
-    }
-    fpixel.event("InitiateCheckout", {
-      content_name: product.title,
-      content_ids: [String(product.id)],
-      content_type: "product",
-      value: Number(data.order?.total) || 0,
-      currency: "USD",
-      num_items: parseInt(quantity, 10) || 1,
-    });
-    setStep("order");
-  }
-
-  const parsedQty = parseInt(quantity, 10) || 0;
-  const unitPriceNum = Number(product.sell_price) || 0;
-  const maxAvailableGifts = availableGiftsData?.max_redeemable || 0;
-  const effectiveGifts = Math.min(giftsToRedeem, maxAvailableGifts);
-  const currentTotalQty = Math.max(parsedQty, effectiveGifts);
-  const giftDiscountAmount = effectiveGifts * unitPriceNum;
-  const paidQty = Math.max(0, currentTotalQty - effectiveGifts);
-  const subtotal = Number((paidQty * unitPriceNum).toFixed(2));
-  const total = (coupon ? coupon.final : subtotal).toFixed(2);
-  const checkParts = t("Check {link} once it's ready. If you need support, just quote your order number above.").split("{link}");
-  const stepLabels = { form: t("1. Details"), summary: t("2. Review"), order: t("3. Payment"), done: t("4. Done") };
-
-  const handleCloseModal = () => {
-    if (step === "order" && order && order.status !== "paid" && order.status !== "completed") {
-      try {
-        fetch("/api/orders/report-payment-error", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            order_id: order.id,
-            product_id: product?.id,
-            product_title: product?.title,
-            total: order.total,
-            quantity: order.quantity,
-            stage: "Payment Page > Closed Checkout Modal",
-            event_type: "abandonment",
-          }),
-          keepalive: true,
-        }).catch(() => {});
-      } catch {}
-    }
-    onClose();
-  };
-
-  const handleBackToFormFromHeader = () => {
-    if (step === "order" && order) {
-      try {
-        fetch("/api/orders/report-payment-error", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            order_id: order.id,
-            product_id: product?.id,
-            product_title: product?.title,
-            total: order.total,
-            quantity: order.quantity,
-            stage: "Payment Page > Header Back Button (Change Quantity)",
-            event_type: "abandonment",
-          }),
-          keepalive: true,
-        }).catch(() => {});
-      } catch {}
-    }
-    setStep("form");
-  };
-
-  useEffect(() => {
-    if (step !== "order" || !order?.id) return;
-    const handleBeforeUnload = () => {
-      if (order.status !== "paid" && order.status !== "completed") {
-        try {
-          const payload = JSON.stringify({
-            order_id: order.id,
-            product_id: product?.id,
-            product_title: product?.title,
-            total: order.total,
-            quantity: order.quantity,
-            stage: "Payment Page > Browser Tab Closed / Unloaded",
-            event_type: "abandonment",
-          });
-          if (navigator.sendBeacon) {
-            navigator.sendBeacon("/api/orders/report-payment-error", new Blob([payload], { type: "application/json" }));
-          }
-        } catch {}
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [step, order?.id, order?.status, product?.id, product?.title, order?.total, order?.quantity]);
-
-  return (
-    <Modal title={product.title} onClose={handleCloseModal}>
-      {/* Scrolling ticker — shown when admin has set text */}
-      {ticker && (
-        <div className="mb-3 overflow-hidden rounded-lg bg-brand">
-          <div
-            className="flex whitespace-nowrap py-1.5 text-xs font-semibold text-white"
-            style={{ animation: "marquee 18s linear infinite" }}
-          >
-            <span className="inline-block px-4">📢 {ticker}</span>
-            <span className="inline-block px-4" aria-hidden="true">📢 {ticker}</span>
-            <span className="inline-block px-4" aria-hidden="true">📢 {ticker}</span>
-          </div>
-        </div>
-      )}
-
-      {step !== "done" && (
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            {stepLabels[step]}
-          </p>
-          {(step === "summary" || step === "order") && (
-            <button
-              type="button"
-              onClick={handleBackToFormFromHeader}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:bg-brand-soft hover:border-brand/30 hover:text-brand active:scale-95 cursor-pointer"
-            >
-              <svg
-                className="h-3.5 w-3.5 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span>{t("Change quantity")}</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {product.description && step === "form" && (
-        <p className="mb-4 max-h-56 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted">
-          {product.description}
-        </p>
-      )}
-
-      {product.warranty && step === "form" && (
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-success/20 bg-success-soft px-3.5 py-2.5 text-sm text-success">
-          <span aria-hidden="true">🛡️</span>
-          <span>
-            <strong>{t("Warranty:")}</strong> {formatWarranty(product.warranty)}
-          </span>
-        </div>
-      )}
-
-      {step === "form" && (
-        <div className="space-y-4">
-          {(product.tunvn_buff || String(product.id) === "-12") && availableGiftsData?.max_redeemable > 0 && (
-            <div className="rounded-xl border border-success/40 bg-success-soft/30 px-3.5 py-2.5 text-xs text-success flex items-center justify-between font-medium">
-              <span>🎁 {t("1 Free Gift Box auto-applied ({n} available)", { n: availableGiftsData.max_redeemable })}</span>
-              <span className="font-bold font-mono">$0.00 Total</span>
-            </div>
-          )}
-          {isManualDelivery && (
-            <Alert variant="warning">
-              {t("This product is delivered manually. Estimated delivery: {delivery}. You'll find it in My Orders once it's ready.", {
-                delivery: product.delivery || t("see details"),
-              })}
-            </Alert>
-          )}
-          <FormInput
-            label={t("Quantity")}
-            type="number"
-            min={product.provider === "manual" && product.min_order_qty ? product.min_order_qty : 1}
-            max={product.provider === "manual" && product.max_order_qty ? product.max_order_qty : product.available_stock}
-            value={quantity}
-            onChange={(e) => {
-              // Keep raw string so user can clear the box and retype freely
-              const raw = e.target.value;
-              setQuantity(raw === "" ? "" : raw.replace(/^0+(\d)/, "$1"));
-              setCoupon(null);
-            }}
-            onBlur={() => {
-              // On blur: if empty or invalid, reset to minimum (1 or min_order_qty)
-              const parsed = parseInt(quantity, 10);
-              const minQty = (product.provider === "manual" && product.min_order_qty) ? product.min_order_qty : 1;
-              if (!quantity || isNaN(parsed) || parsed < 1) {
-                setQuantity(String(minQty));
-              }
-            }}
-            hint={
-              product.provider === "manual" && product.max_order_qty
-                ? `${t("Max {n} per order", { n: product.max_order_qty })}${product.min_order_qty > 1 ? ` · ${t("Min {n}", { n: product.min_order_qty })}` : ""}`
-                : product.provider === "manual" && product.min_order_qty > 1
-                ? t("Min {n} per order", { n: product.min_order_qty })
-                : undefined
-            }
-          />
-          {product.requires_email && product.provider !== "manual" && (
-            <FormInput
-              label={t("Email for delivery")}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck="false"
-              data-lpignore="true"
-              data-form-type="other"
-            />
-          )}
-          {!session && !(product.requires_email && product.provider !== "manual") && (
-            <FormInput
-              label={t("Email address (optional, for receipt & order tracking)")}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck="false"
-              data-lpignore="true"
-              data-form-type="other"
-            />
-          )}
-          {activationLabel && (
-            <FormInput
-              label={activationLabel}
-              type="text"
-              value={activationInfo}
-              onChange={(e) => setActivationInfo(e.target.value)}
-              placeholder={activationPlaceholder}
-              hint={t("We'll use this to activate your subscription after payment.")}
-            />
-          )}
-          <Alert variant="error">{error}</Alert>
-          <PrimaryButton onClick={reviewOrder} className="w-full">
-            {t("Review order")}
-          </PrimaryButton>
-        </div>
-      )}
-
-      {step === "summary" && (
-        <div className="space-y-4 text-sm">
-          <div className="divide-y divide-border rounded-lg border border-border">
-            <Row label={t("Product")} value={product.title} />
-            <Row label={t("Quantity")} value={currentTotalQty} mono />
-            <Row label={t("Unit price")} value={`$${Number(product.sell_price).toFixed(2)}`} mono />
-            {email && <Row label={t("Contact / Delivery email")} value={email} />}
-            {activationLabel && (
-              <Row label={activationShort} value={activationInfo} />
-            )}
-            {isManualDelivery && (
-              <Row label={t("Delivery")} value={t("Manual — {delivery}", { delivery: product.delivery || t("see details") })} />
-            )}
-            {effectiveGifts > 0 && (
-              <div className="flex justify-between px-3.5 py-3 text-brand font-medium">
-                <span>🎁 {t("Referral Gift ({n}B free)", { n: effectiveGifts })}</span>
-                <span className="font-mono" dir="ltr">−${giftDiscountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            {coupon && (
-              <>
-                <Row label={t("Subtotal")} value={`$${subtotal.toFixed(2)}`} mono />
-                <div className="flex justify-between px-3.5 py-3 text-success">
-                  <span>
-                    {t("Coupon")} {coupon.code}
-                    {coupon.discount_type !== "percent" && quantity > 1 ? ` ${t("(per item × {n})", { n: quantity })}` : ""}
-                  </span>
-                  <span className="font-mono" dir="ltr">−${Number(coupon.discount).toFixed(2)}</span>
-                </div>
-              </>
-            )}
-            <div className="flex justify-between px-3.5 py-3 text-base font-semibold text-ink">
-              <span>{t("Total")}</span>
-              <span dir="ltr">${total}</span>
-            </div>
-          </div>
-
-          {/* Referral Gift Box Redemption Selector for Muse AI */}
-          {(product.tunvn_buff || String(product.id) === "-12") && availableGiftsData?.max_redeemable > 0 && (
-            <div className="rounded-xl border border-brand/30 bg-gradient-to-br from-brand-soft/40 to-surface p-3.5 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🎁</span>
-                  <div>
-                    <span className="font-semibold text-xs text-ink">{t("Redeem Muse AI Gift Boxes")}</span>
-                    <p className="text-[11px] text-muted">
-                      {t("1 Box = 1B Free Tokens ({n} available today)", { n: availableGiftsData.max_redeemable })}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={effectiveGifts <= 0}
-                    onClick={() => setGiftsToRedeem((g) => Math.max(0, g - 1))}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-ink hover:bg-border/40 disabled:opacity-30"
-                  >
-                    −
-                  </button>
-                  <span className="min-w-[24px] text-center font-mono font-bold text-sm text-brand">
-                    {effectiveGifts}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={effectiveGifts >= maxAvailableGifts}
-                    onClick={() => {
-                      setGiftsToRedeem((g) => {
-                        const next = Math.min(maxAvailableGifts, g + 1);
-                        if (next > parsedQty) {
-                          setQuantity(String(next));
-                        }
-                        return next;
-                      });
-                    }}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-ink hover:bg-border/40 disabled:opacity-30 cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              {effectiveGifts > 0 && (
-                <div className="flex items-center justify-between text-xs text-brand font-medium pt-1.5 border-t border-brand/20">
-                  <span>{t("Free Tokens: {n}B", { n: effectiveGifts })}</span>
-                  <span className="font-mono" dir="ltr">−${giftDiscountAmount.toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            {coupon ? (
-              <div className="flex items-center justify-between rounded-lg border border-success/30 bg-success-soft px-3.5 py-2.5 text-success">
-                <span>🎟️ {t("{code} applied", { code: coupon.code })}</span>
-                <button type="button" onClick={removeCoupon} className="text-xs font-medium underline">
-                  {t("Remove")}
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <FormInput
-                  value={couponInput}
-                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                  placeholder={t("Coupon code")}
-                  aria-label={t("Coupon code")}
-                  className="font-mono"
-                  autoComplete="off"
-                />
-                <SecondaryButton onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()}>
-                  {couponBusy ? "…" : t("Apply")}
-                </SecondaryButton>
-              </div>
-            )}
-            <Alert variant="error">{couponError}</Alert>
-          </div>
-          <Alert variant="error">{error}</Alert>
-          <div className="flex gap-3">
-            <SecondaryButton onClick={() => setStep("form")} className="flex-1">
-              {t("Back")}
-            </SecondaryButton>
-            <PrimaryButton onClick={confirmOrder} disabled={creating} className="flex-1">
-              {creating ? t("Creating…") : t("Confirm & continue")}
-            </PrimaryButton>
-          </div>
-        </div>
-      )}
-
-      {step === "order" && order && (
-        <PaymentPanel
-          order={order}
-          product={product}
-          onBack={() => setStep("form")}
-          onDone={(result) => {
-            setOrder((prev) => (prev ? { ...prev, status: "paid" } : prev));
-            fpixel.event("Purchase", {
-              content_name: product.title,
-              content_ids: [String(order.product_id)],
-              content_type: "product",
-              value: Number(order.total) || 0,
-              currency: "USD",
-              num_items: Number(order.quantity) || 1,
-            });
-            setItems(result.items);
-            setManual(result.manual);
-            setStep("done");
-          }}
-        />
-      )}
-
-      {step === "done" && manual && (
-        <div className="space-y-3 text-sm">
-          <p className="font-mono text-xs text-muted" dir="ltr">{t("Order #{n}", { n: order?.order_number })}</p>
-          {product.tunvn_buff && buffState === "done" ? (
-            <Alert variant="success">
-              🎉 <strong>{t("Tokens delivered successfully!")}</strong> {t("The Muse AI tokens have been credited to your account.")}
-            </Alert>
-          ) : (
-            <Alert variant="success">
-              {product.tunvn_buff ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 font-medium">
-                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-success border-t-transparent" />
-                    <span>{t("Payment confirmed! Crediting tokens to your invite code… (usually 1–2 minutes)")}</span>
-                  </div>
-                  <p className="text-xs text-muted">
-                    {t("We are auto-checking with supplier. You can wait here or check {link} anytime.", {
-                      link: "",
-                    })}{" "}
-                    <Link href="/account/orders" className="underline font-medium text-success">
-                      {t("My Orders")}
-                    </Link>
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {t("Payment confirmed. This product is delivered manually — estimated delivery {delivery}.", { delivery: product.delivery || t("soon") })}{" "}
-                  {checkParts[0]}
-                  <Link href="/account/orders" className="underline">
-                    {t("My Orders")}
-                  </Link>
-                  {checkParts[1]}
-                </>
-              )}
-            </Alert>
-          )}
-          <PrimaryButton onClick={onClose} className="w-full">
-            {t("Done")}
-          </PrimaryButton>
-        </div>
-      )}
-
-      {step === "done" && !manual && (
-        <div className="space-y-4 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-muted" dir="ltr">
-              {t("Order #{n}", { n: order?.order_number })}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              {t("Delivered")}
-            </span>
-          </div>
-
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 space-y-3">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold shadow-xs flex-shrink-0">
-                ✓
-              </span>
-              <div>
-                <h4 className="font-bold text-ink text-sm sm:text-base">
-                  {t("Your order is delivered!")}
-                </h4>
-                <p className="text-xs text-muted">
-                  {t("Copy your digital items below. They are also saved permanently under My Orders.")}
-                </p>
-              </div>
-            </div>
-
-            <DeliveredItems items={items} />
-          </div>
-
-          <div className="flex gap-2.5 pt-1">
-            <Link
-              href="/account/orders"
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-border bg-surface hover:bg-bg py-2.5 px-3 text-center text-xs sm:text-sm font-semibold text-ink shadow-xs transition-all flex items-center justify-center gap-1.5"
-            >
-              <svg className="h-4 w-4 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
-              </svg>
-              <span>{t("View in My Orders")}</span>
-            </Link>
-            <PrimaryButton onClick={onClose} className="flex-1 py-2.5 text-xs sm:text-sm">
-              {t("Done")}
-            </PrimaryButton>
-          </div>
-        </div>
-      )}
-    </Modal>
-  );
-}
-
-function Row({ label, value, mono }) {
-  return (
-    <div className="flex justify-between gap-3 px-3.5 py-3">
-      <span className="text-muted">{label}</span>
-      <span className={`text-end break-all text-ink ${mono ? "font-mono" : ""}`}>{value}</span>
-    </div>
-  );
-}
-
-function describeError(t, code, available, minOrder, maxQty, minQty) {
-  switch (code) {
-    case "qty_below_minimum":
-      return t("Minimum order quantity is {n}. Please increase the quantity.", { n: minQty });
-    case "qty_exceeds_maximum":
-      return t("Maximum order quantity is {n}. Please lower the quantity.", { n: maxQty });
-    case "not_enough_stock":
-      return Number(available) > 0
-        ? t("Only {n} left — lower the quantity and try again.", { n: available })
-        : t("Sorry, this product just sold out. Please check back soon.");
-    case "supplier_unavailable":
-      return t("This product is temporarily unavailable. Please try again later.");
-    case "email_required":
-      return t("This product needs an email address for delivery.");
-    case "activation_info_required":
-      return t("Please enter the info needed to activate your subscription.");
-    case "invalid_coupon":
-      return t("That coupon code isn't valid.");
-    case "coupon_inactive":
-      return t("That coupon is no longer active.");
-    case "coupon_expired":
-      return t("That coupon has expired.");
-    case "coupon_wrong_product":
-      return t("That coupon doesn't apply to this product.");
-    case "coupon_min_order":
-      return t("This coupon needs an order of at least {amount}.", { amount: `$${Number(minOrder || 0).toFixed(2)}` });
-    case "coupon_used_up":
-      return t("That coupon has reached its usage limit.");
-    case "coupon_unavailable":
-      return t("This coupon is temporarily disabled. Please try again later or contact support.");
-    case "coupon_already_used":
-      return t("You've already used this coupon.");
-    case "supplier_balance_limit":
-      return Number(maxQty) > 0
-        ? t("You can order up to {n}B tokens right now. Please lower the quantity.", { n: maxQty })
-        : t("This product is temporarily unavailable. Please try again later.");
-    case "buff_check_failed":
-      return t("Invalid invite code or service is currently unavailable. Please verify your invite code.");
-    case "invalid_invite_code":
-      return t("Please enter a valid Muse AI invite code (4–20 alphanumeric characters).");
-    case "stock_check_failed":
-      return t("Unable to verify supplier stock right now. Please try again in a few moments.");
-    default:
-      return code ? code.replaceAll("_", " ") : "";
-  }
 }
 
 // ── Hero section (extracted so mouse-glow useEffect stays isolated) ──────────

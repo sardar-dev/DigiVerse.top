@@ -83,6 +83,19 @@ export default function ManualProductsTab({
             value={manualForm.title}
             onChange={(e) => setManualForm({ ...manualForm, title: e.target.value })}
           />
+          <FormInput
+            label="URL Slug (SEO friendly path)"
+            value={manualForm.slug || ""}
+            onChange={(e) =>
+              setManualForm({
+                ...manualForm,
+                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+              })
+            }
+            placeholder="e.g. notion-education-plus-1-year-account"
+            maxLength={150}
+            hint={`Direct product link: https://digiverse.top/${manualForm.slug || "your-product-slug"}`}
+          />
           <FormTextarea
             label="Description (full, shown in checkout)"
             value={manualForm.description}

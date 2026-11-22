@@ -46,9 +46,9 @@ export async function getServerSideProps({ res }) {
         .map((p) => {
           const slug = slugifyProduct(p);
           const lastMod = p.updated_at ? p.updated_at.split("T")[0] : today;
-          const en = `<url><loc>${SITE_URL}/product/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`;
-          const ar = `<url><loc>${SITE_URL}/ar/product/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
-          const ru = `<url><loc>${SITE_URL}/ru/product/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
+          const en = `<url><loc>${SITE_URL}/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`;
+          const ar = `<url><loc>${SITE_URL}/ar/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
+          const ru = `<url><loc>${SITE_URL}/ru/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
           return en + ar + ru;
         })
         .join("");
