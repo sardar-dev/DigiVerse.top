@@ -103,5 +103,6 @@ DigiVerse.top/
 
 ## 7. Database Migration & SQL Execution Standards
 - **Chat SQL Delivery Requirement**: Whenever a task involves database changes, schema migrations, table alterations, or any SQL script execution, ALWAYS output the complete, ready-to-run SQL code block directly in the chat so the user can easily copy and run it in the Supabase SQL Editor.
+- **Strict Idempotency & Safe-to-Rerun Requirement**: Every SQL script provided MUST be 100% safe to re-run multiple times without errors, collisions, or data loss. Always use `IF NOT EXISTS`, `IF EXISTS`, `CREATE OR REPLACE`, `ON CONFLICT DO NOTHING / UPDATE`, idempotent conditional blocks (`DO $$ ... $$`), and guarded update clauses (`WHERE column IS NULL OR ...`). Never output scripts that fail if executed more than once.
 
 
