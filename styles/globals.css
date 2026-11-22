@@ -131,6 +131,23 @@ select:focus-visible,
   white-space: nowrap;
 }
 
+/* Product card ticker / infinite slider on mobile */
+@keyframes dv-product-ticker {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+.animate-product-ticker {
+  display: flex;
+  width: max-content;
+  animation: dv-product-ticker 24s linear infinite;
+  will-change: transform;
+}
+.animate-product-ticker:hover,
+.animate-product-ticker:active,
+.animate-product-ticker:focus-within {
+  animation-play-state: paused;
+}
+
 .dv-live-dot { position: relative; }
 .dv-live-dot::after {
   content: "";

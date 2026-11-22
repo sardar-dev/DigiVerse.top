@@ -899,51 +899,101 @@ function HeroSection({ inStock, search, setSearch }) {
             </div>
           </div>
 
-          {/* Mobile product strip — below text, hidden on desktop */}
-          {inStock.length > 0 && (
-            <div className="w-full max-w-full min-w-0 overflow-hidden md:hidden">
-              <div className="mb-2.5 flex items-center justify-between px-1">
-                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                  <span>{t("In stock now")}</span>
-                </div>
-                <span className="text-[11px] text-muted font-medium">{t("Swipe")} →</span>
-              </div>
-              <div className="flex w-full max-w-full min-w-0 gap-3 overflow-x-auto pb-3 pt-1 px-0.5 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {inStock.slice(0, 6).map((p) => (
-                  <a
-                    key={p.id}
-                    href="#catalog"
-                    className="flex w-36 flex-shrink-0 flex-col justify-between rounded-2xl border border-border/80 bg-surface/95 p-3 shadow-card backdrop-blur-md transition-all active:scale-[0.98] snap-start hover:border-brand-light"
-                  >
-                    {p.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        loading="lazy"
-                        decoding="async"
-                        src={p.image_url}
-                        alt=""
-                        className="h-11 w-11 rounded-xl border border-border/80 bg-bg p-0.5 object-cover shadow-2xs mx-auto"
-                      />
-                    ) : (
-                      <span className="flex h-11 w-11 mx-auto items-center justify-center rounded-xl bg-brand-soft text-lg font-bold text-brand">
-                        {(p.title || "?").trim().charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                    <span className="mt-2 line-clamp-2 text-center text-xs font-bold leading-tight text-ink min-h-[2rem]">
-                      {p.title}
+          {/* Mobile product ticker / auto-scrolling slider — below text, hidden on desktop */}
+          {inStock.length > 0 && (() => {
+            const baseItems = inStock.slice(0, 8);
+            const tickerItems =
+              baseItems.length < 4
+                ? [...baseItems, ...baseItems, ...baseItems, ...baseItems]
+                : [...baseItems, ...baseItems];
+
+            return (
+              <div className="w-full max-w-full min-w-0 overflow-hidden md:hidden pt-1">
+                {/* Micro Header */}
+                <div className="mb-2.5 flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
                     </span>
-                    <div className="mt-2.5 flex items-center justify-between border-t border-border/60 pt-2">
-                      <span className="font-mono text-xs font-extrabold text-brand" dir="ltr">
-                        ${Number(p.sell_price).toFixed(2)}
-                      </span>
-                      <span className="text-[10px] font-semibold text-success">⚡ {t("Instant")}</span>
-                    </div>
-                  </a>
-                ))}
+                    <span className="text-ink font-bold">{t("In stock now")}</span>
+                    <span className="rounded-full bg-success-soft text-success px-2 py-0.5 text-[10px] font-bold">
+                      {inStock.length}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-muted font-medium inline-flex items-center gap-1">
+                    <span>{t("Auto-sliding")}</span>
+                    <span className="text-border" aria-hidden="true">•</span>
+                    <span className="text-brand font-semibold">{t("Tap to buy")}</span>
+                  </span>
+                </div>
+
+                {/* Continuous Infinite Ticker Track with edge fade masks */}
+                <div
+                  className="relative w-full overflow-hidden py-1"
+                  style={{
+                    maskImage:
+                      "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+                    WebkitMaskImage:
+                      "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+                  }}
+                >
+                  <div className="animate-product-ticker gap-3">
+                    {tickerItems.map((p, idx) => (
+                      <Link
+                        key={`${p.id}-${idx}`}
+                        href={getProductUrl(p)}
+                        className="group flex w-[172px] shrink-0 flex-col justify-between rounded-2xl border border-border/85 bg-surface/95 p-3.5 shadow-card backdrop-blur-md transition-all active:scale-[0.97] hover:border-brand/40 hover:shadow-md cursor-pointer"
+                      >
+                        {/* Avatar & Delivery badge row */}
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          {p.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              loading="lazy"
+                              decoding="async"
+                              src={p.image_url}
+                              alt=""
+                              className="h-10 w-10 shrink-0 rounded-xl border border-border/80 bg-bg p-0.5 object-cover shadow-2xs group-hover:scale-105 transition-transform"
+                            />
+                          ) : (
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-soft to-white text-base font-bold text-brand shadow-2xs ring-1 ring-border/80">
+                              {(p.title || "?").trim().charAt(0).toUpperCase()}
+                            </span>
+                          )}
+
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success border border-success/20">
+                            <span>⚡</span>
+                            <span>{p.provider === "manual" && !p.auto_delivery ? t("Manual") : t("Instant")}</span>
+                          </span>
+                        </div>
+
+                        {/* Product Title */}
+                        <span className="line-clamp-2 text-xs font-bold leading-snug text-ink group-hover:text-brand transition-colors min-h-[2.2rem]">
+                          {p.title}
+                        </span>
+
+                        {/* Price & Action Button */}
+                        <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5">
+                          <div className="flex flex-col" dir="ltr">
+                            <span className="font-mono text-xs font-extrabold text-ink group-hover:text-brand transition-colors">
+                              ${Number(p.sell_price).toFixed(2)}
+                            </span>
+                            <span className="text-[9px] font-medium text-muted uppercase">USDT</span>
+                          </div>
+
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-brand-soft px-2 py-1 text-[10px] font-bold text-brand group-hover:bg-brand group-hover:text-white transition-colors">
+                            <span>{t("Buy")}</span>
+                            <span aria-hidden="true">→</span>
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
         </div>
       </PageContainer>
