@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     supabaseAdmin
       .from("app_meta")
       .select("key, value")
-      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker", "site_notice", "google_auth_enabled"]),
+      .in("key", ["whatsapp_link", "channel_type", "buy_modal_ticker", "site_notice", "google_auth_enabled", "restrict_email_domains"]),
     getReferralSettings().catch(() => null),
   ]);
   const m = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
@@ -34,6 +34,7 @@ export default async function handler(req, res) {
     channel_type: m.channel_type === "telegram" ? "telegram" : "whatsapp",
     buy_modal_ticker: m.buy_modal_ticker || "",
     google_auth_enabled: m.google_auth_enabled === "true",
+    restrict_email_domains: m.restrict_email_domains !== "false",
     referral_enabled: refSettings?.referral_enabled !== false,
     notice,
   });

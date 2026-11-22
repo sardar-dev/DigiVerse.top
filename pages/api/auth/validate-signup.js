@@ -10,8 +10,21 @@ export default async function handler(req, res) {
 
   const { username, email, password, ref, device_id } = req.body || {};
 
-  // 1. Email domain allowlist validation
-  const emailCheck = validateRegistrationEmail(email);
+  // 1. Fetch email domain restriction setting
+  let restrictEmailDomains = true;
+  try {
+    const { data: domainMeta } = await supabaseAdmin
+      .from("app_meta")
+      .select("value")
+      .eq("key", "restrict_email_domains")
+      .maybeSingle();
+    if (domainMeta && domainMeta.value === "false") {
+      restrictEmailDomains = false;
+    }
+  } catch {}
+
+  // 2. Email validation (conditional allowlist based on admin setting)
+  const emailCheck = validateRegistrationEmail(email, restrictEmailDomains);
   if (!emailCheck.valid) {
     return res.status(400).json({ success: false, error: emailCheck.error });
   }
@@ -30,7 +43,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // 2. Username resolution (optional if omitted from signup form)
+  // 3. Username resolution (optional if omitted from signup form)
   let cleanUsername = String(username || "").trim();
   if (cleanUsername) {
     if (!/^[a-zA-Z0-9_]{3,24}$/.test(cleanUsername)) {

@@ -19,6 +19,8 @@ export default function SettingsTab({
   setNotice,
   googleAuthEnabled,
   setGoogleAuthEnabled,
+  restrictEmailDomains,
+  setRestrictEmailDomains,
   referralEnabled,
   setReferralEnabled,
   telegramBotToken,
@@ -129,6 +131,44 @@ export default function SettingsTab({
         </div>
         <p className="text-xs text-muted leading-relaxed">
           When set to <strong>DISABLED</strong>, the Continue with Google button remains hidden on login and signup pages. Once your Google Cloud Console credentials are configured, you can enable it here.
+        </p>
+      </div>
+
+      {/* Allowed Email Providers Restriction */}
+      <div className="space-y-3 rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">User Registration</p>
+            <p className="text-sm font-semibold text-ink mt-0.5">🔒 Allowed Email Providers Only</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(restrictEmailDomains)}
+            aria-label="Toggle Email Domain Restriction"
+            onClick={() => setRestrictEmailDomains(!restrictEmailDomains)}
+            className={`relative h-6 w-11 rounded-full transition ${restrictEmailDomains ? "bg-brand" : "bg-border"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                restrictEmailDomains ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+              restrictEmailDomains
+                ? "bg-success-soft text-success border border-success/30"
+                : "bg-surface-alt text-muted border border-border"
+            }`}
+          >
+            {restrictEmailDomains ? "STRICT (Gmail, Outlook, Yahoo, Hotmail, iCloud)" : "OPEN (Any Email Provider Accepted)"}
+          </span>
+        </div>
+        <p className="text-xs text-muted leading-relaxed">
+          When set to <strong>STRICT</strong>, customer signups are restricted to trusted major email providers (Gmail, Outlook, Yahoo, Hotmail, iCloud) to prevent disposable/temporary email abuse. When <strong>OPEN</strong>, customers can sign up with any email domain worldwide.
         </p>
       </div>
 

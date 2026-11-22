@@ -38,6 +38,7 @@ export default function Signup() {
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState("");
   const [referralEnabled, setReferralEnabled] = useState(true);
+  const [restrictEmailDomains, setRestrictEmailDomains] = useState(true);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -48,6 +49,9 @@ export default function Signup() {
         }
         if (d && typeof d.referral_enabled === "boolean") {
           setReferralEnabled(d.referral_enabled);
+        }
+        if (d && typeof d.restrict_email_domains === "boolean") {
+          setRestrictEmailDomains(d.restrict_email_domains);
         }
       })
       .catch(() => {});
@@ -121,7 +125,7 @@ export default function Signup() {
     setResendNotice("");
 
     // 1. Client-side Email Domain Allowlist Check
-    const emailCheck = validateRegistrationEmail(email);
+    const emailCheck = validateRegistrationEmail(email, restrictEmailDomains);
     if (!emailCheck.valid) {
       return setError(emailCheck.error);
     }
@@ -353,7 +357,11 @@ export default function Signup() {
             placeholder="you@gmail.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            hint={t("Allowed domains: {domains}", { domains: ALLOWED_EMAIL_DOMAINS.join(", ") })}
+            hint={
+              restrictEmailDomains
+                ? t("Allowed domains: {domains}", { domains: ALLOWED_EMAIL_DOMAINS.join(", ") })
+                : undefined
+            }
           />
 
           <div>
