@@ -26,7 +26,6 @@ export default function Signup() {
     ? `/login?buying=${encodeURIComponent(buying)}&price=${encodeURIComponent(price || "")}&returnTo=${encodeURIComponent(returnTo || "")}`
     : "/login";
 
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -121,31 +120,20 @@ export default function Signup() {
     setError("");
     setResendNotice("");
 
-    // 1. Client-side Username Validation
-    const cleanUser = username.trim().toLowerCase();
-    if (!cleanUser) {
-      return setError(t("Username is required."));
-    }
-    if (!/^[a-zA-Z0-9_]{3,24}$/.test(cleanUser)) {
-      return setError(
-        t("Username must be 3–24 characters and can only contain letters, numbers, and underscores (_).")
-      );
-    }
-
-    // 2. Client-side Email Domain Allowlist Check
+    // 1. Client-side Email Domain Allowlist Check
     const emailCheck = validateRegistrationEmail(email);
     if (!emailCheck.valid) {
       return setError(emailCheck.error);
     }
 
-    // 3. Client-side Password Check: No restriction, allow any format/length
+    // 2. Client-side Password Check: No restriction, allow any format/length
     if (!password) {
       return setError(t("Password is required."));
     }
 
     setLoading(true);
 
-    // 4. Backend Pre-check for Uniqueness and Anti-Fraud
+    // 3. Backend Pre-check for Uniqueness and Anti-Fraud
     const deviceId = getDeviceId();
     const cleanRef = refInviter ? refInviter.trim().replace(/^@+/, "") : null;
     let backendValidation;
@@ -154,7 +142,6 @@ export default function Signup() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: cleanUser,
           email: emailCheck.normalizedEmail,
           password,
           ref: cleanRef || undefined,
@@ -170,16 +157,19 @@ export default function Signup() {
       // If validation endpoint times out, fall through to Supabase auth with metadata
     }
 
-    // 5. Supabase Auth Registration with user metadata
+    // 4. Supabase Auth Registration with user metadata
     const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://digiverse.top";
     const redirectUrl = `${siteUrl}/auth/verified`;
+    const resolvedUsername =
+      backendValidation?.cleanUsername ||
+      emailCheck.normalizedEmail.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").slice(0, 24);
 
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: emailCheck.normalizedEmail,
       password,
       options: {
         data: {
-          username: cleanUser,
+          username: resolvedUsername,
           ref: cleanRef || null,
           device_id: deviceId,
           registration_ip: backendValidation?.clientIp || null,
@@ -212,7 +202,7 @@ export default function Signup() {
           body: JSON.stringify({
             user_id: data.user.id,
             email: emailCheck.normalizedEmail,
-            username: cleanUser,
+            username: resolvedUsername,
             ref: cleanRef,
             device_id: deviceId,
           }),
@@ -303,7 +293,7 @@ export default function Signup() {
         </Link>
         <h1 className="mb-2 text-2xl font-bold tracking-tight text-ink">{t("Create an account")}</h1>
         <p className="mb-5 text-xs text-muted">
-          {t("Enter your username, email, and password to register.")}
+          {t("Enter your email and password to register.")}
         </p>
 
         {buying && (
@@ -353,19 +343,6 @@ export default function Signup() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <FormInput
-            id="username"
-            name="username"
-            label={t("Username")}
-            type="text"
-            required
-            autoComplete="username"
-            placeholder="e.g. ali123"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            hint={t("3–24 characters, letters, numbers, and underscores only.")}
-          />
-
           <FormInput
             id="email"
             name="email"

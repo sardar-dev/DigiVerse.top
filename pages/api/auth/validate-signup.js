@@ -10,34 +10,7 @@ export default async function handler(req, res) {
 
   const { username, email, password, ref, device_id } = req.body || {};
 
-  // 1. Username validation
-  const cleanUsername = String(username || "").trim();
-  if (!cleanUsername) {
-    return res.status(400).json({ success: false, error: "Username is required." });
-  }
-
-  if (!/^[a-zA-Z0-9_]{3,24}$/.test(cleanUsername)) {
-    return res.status(400).json({
-      success: false,
-      error: "Username must be 3–24 characters and can only contain letters, numbers, and underscores (_).",
-    });
-  }
-
-  // Check username uniqueness (case-insensitive)
-  const { data: existingUser } = await supabaseAdmin
-    .from("profiles")
-    .select("id")
-    .ilike("username", cleanUsername)
-    .maybeSingle();
-
-  if (existingUser) {
-    return res.status(400).json({
-      success: false,
-      error: "This username is already taken. Please choose another.",
-    });
-  }
-
-  // 2. Email domain allowlist validation
+  // 1. Email domain allowlist validation
   const emailCheck = validateRegistrationEmail(email);
   if (!emailCheck.valid) {
     return res.status(400).json({ success: false, error: emailCheck.error });
@@ -55,6 +28,46 @@ export default async function handler(req, res) {
       success: false,
       error: "An account with this email address already exists. Please log in instead.",
     });
+  }
+
+  // 2. Username resolution (optional if omitted from signup form)
+  let cleanUsername = String(username || "").trim();
+  if (cleanUsername) {
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(cleanUsername)) {
+      return res.status(400).json({
+        success: false,
+        error: "Username must be 3–24 characters and can only contain letters, numbers, and underscores (_).",
+      });
+    }
+
+    // Check username uniqueness (case-insensitive)
+    const { data: existingUser } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .ilike("username", cleanUsername)
+      .maybeSingle();
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: "This username is already taken. Please choose another.",
+      });
+    }
+  } else {
+    // Automatically generate clean username from email prefix
+    const base = emailCheck.normalizedEmail.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").toLowerCase();
+    const candidateBase = base.length >= 3 ? base.slice(0, 18) : `user_${base}`;
+    cleanUsername = candidateBase;
+
+    const { data: taken } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .ilike("username", cleanUsername)
+      .maybeSingle();
+
+    if (taken) {
+      cleanUsername = `${candidateBase.slice(0, 18)}_${Math.floor(1000 + Math.random() * 9000)}`;
+    }
   }
 
   // 3. Password validation: Allow any password chosen by user
