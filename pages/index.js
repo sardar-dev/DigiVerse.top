@@ -23,6 +23,7 @@ import { EmptyState, ErrorState, LoadingState } from "../components/ui/States";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SITE_DESCRIPTION } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
 import { formatWarranty } from "../lib/formatWarranty";
+import { getReferralSettings } from "../lib/referralSettings";
 import * as fpixel from "../lib/fpixel";
 
 function cleanSeoText(str) {
@@ -61,10 +62,13 @@ export async function getServerSideProps({ query, res }) {
       }
     : null;
 
-  return { props: { initialProducts: list, sharedMeta } };
+  const refSettings = await getReferralSettings().catch(() => null);
+  const referralEnabled = refSettings?.referral_enabled !== false;
+
+  return { props: { initialProducts: list, sharedMeta, referralEnabled } };
 }
 
-export default function Storefront({ initialProducts, sharedMeta }) {
+export default function Storefront({ initialProducts, sharedMeta, referralEnabled: initialReferralEnabled }) {
   const router = useRouter();
   const { t, locale } = useT();
   const { notify } = useToast();
@@ -78,6 +82,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
   const [sharedNotFound, setSharedNotFound] = useState(false);
   const [adminMessages, setAdminMessages] = useState([]);
   const [buyModalTicker, setBuyModalTicker] = useState("");
+  const [referralEnabled, setReferralEnabled] = useState(initialReferralEnabled !== false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -90,7 +95,10 @@ export default function Storefront({ initialProducts, sharedMeta }) {
     // Load buy modal ticker text (cached 60s — no DB hit per visitor)
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((d) => { if (d.buy_modal_ticker) setBuyModalTicker(d.buy_modal_ticker); })
+      .then((d) => {
+        if (d.buy_modal_ticker) setBuyModalTicker(d.buy_modal_ticker);
+        if (typeof d.referral_enabled === "boolean") setReferralEnabled(d.referral_enabled);
+      })
       .catch(() => {});
     return () => sub.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -291,7 +299,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
       },
       {
         "@type": "FAQPage",
-        mainEntity: FAQ_DATA.map((item) => ({
+        mainEntity: FAQ_DATA.filter((item) => referralEnabled || item.id !== "referral-rewards-program").map((item) => ({
           "@type": "Question",
           name: item.question,
           acceptedAnswer: {
@@ -679,7 +687,7 @@ export default function Storefront({ initialProducts, sharedMeta }) {
         </section>
 
         <RecentOrders />
-        <StorefrontFAQ />
+        <StorefrontFAQ referralEnabled={referralEnabled} />
       </main>
 
       <SiteFooter />

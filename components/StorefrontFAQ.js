@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "../lib/i18n";
 import PageContainer from "./layout/PageContainer";
 
@@ -41,13 +41,35 @@ export const FAQ_DATA = [
   },
 ];
 
-export default function StorefrontFAQ() {
+export default function StorefrontFAQ({ referralEnabled: propReferralEnabled }) {
   const { t } = useT();
   const [openIndex, setOpenIndex] = useState(0); // first question open by default for immediate AEO readability
+  const [referralEnabled, setReferralEnabled] = useState(
+    propReferralEnabled !== undefined ? propReferralEnabled : true
+  );
+
+  useEffect(() => {
+    if (propReferralEnabled !== undefined) {
+      setReferralEnabled(propReferralEnabled);
+      return;
+    }
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && typeof d.referral_enabled === "boolean") {
+          setReferralEnabled(d.referral_enabled);
+        }
+      })
+      .catch(() => {});
+  }, [propReferralEnabled]);
 
   const toggle = (idx) => {
     setOpenIndex((curr) => (curr === idx ? null : idx));
   };
+
+  const visibleFaq = FAQ_DATA.filter(
+    (item) => referralEnabled || item.id !== "referral-rewards-program"
+  );
 
   return (
     <section className="border-t border-border/70 bg-bg py-14 sm:py-18" aria-label="Frequently Asked Questions">
@@ -68,7 +90,7 @@ export default function StorefrontFAQ() {
         </div>
 
         <div className="space-y-3">
-          {FAQ_DATA.map((item, idx) => {
+          {visibleFaq.map((item, idx) => {
             const isOpen = openIndex === idx;
             return (
               <div
