@@ -105,8 +105,7 @@ export default function SiteHeader({
   const [open, setOpen] = useState(false); // mobile drawer
   const [menu, setMenu] = useState(false); // account dropdown
   const menuRef = useRef(null);
-  const mobileRef = useRef(null);
-  const toggleBtnRef = useRef(null);
+  const headerRef = useRef(null);
 
   const [ownSession, setOwnSession] = useState(undefined);
   const [ownBalance, setOwnBalance] = useState(undefined);
@@ -211,12 +210,7 @@ export default function SiteHeader({
       if (menu && menuRef.current && !menuRef.current.contains(e.target)) {
         setMenu(false);
       }
-      if (
-        open &&
-        mobileRef.current &&
-        !mobileRef.current.contains(e.target) &&
-        !toggleBtnRef.current?.contains(e.target)
-      ) {
+      if (open && headerRef.current && !headerRef.current.contains(e.target)) {
         setOpen(false);
       }
     };
@@ -237,7 +231,11 @@ export default function SiteHeader({
   }, [menu, open]);
 
   return (
-    <header className="sticky top-0 z-40 w-full max-w-full border-b border-border/80 bg-surface/85 backdrop-blur-xl transition-all duration-200 shadow-[0_1px_3px_0_rgba(23,33,58,0.02)]">
+    <>
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-40 w-full max-w-full border-b border-border/80 bg-surface/85 backdrop-blur-xl transition-all duration-200 shadow-[0_1px_3px_0_rgba(23,33,58,0.02)]"
+      >
       {/* Top subtle ambient highlight */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/35 to-transparent" />
 
@@ -619,12 +617,15 @@ export default function SiteHeader({
           )}
 
           <button
-            ref={toggleBtnRef}
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-surface/90 text-ink shadow-sm transition-all hover:border-brand/40 hover:bg-brand-soft active:scale-95 shrink-0"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-surface/90 text-ink shadow-sm transition-all hover:border-brand/40 hover:bg-brand-soft active:scale-95 shrink-0 touch-manipulation cursor-pointer"
             aria-label={t("Toggle menu")}
             aria-expanded={open}
-            onClick={() => setOpen((o) => !o)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen((o) => !o);
+            }}
           >
             <svg
               width="20"
@@ -632,7 +633,7 @@ export default function SiteHeader({
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden="true"
-              className="transition-transform duration-200"
+              className="transition-transform duration-200 pointer-events-none"
             >
               {open ? (
                 <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
@@ -647,7 +648,6 @@ export default function SiteHeader({
       {/* Mobile Menu Drawer */}
       {open && (
         <div
-          ref={mobileRef}
           className="border-t border-border bg-surface px-4 py-4 shadow-2xl md:hidden animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {session ? (
@@ -781,5 +781,15 @@ export default function SiteHeader({
         </div>
       )}
     </header>
+
+    {/* Mobile Drawer Backdrop */}
+    {open && (
+      <div
+        className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs md:hidden animate-in fade-in duration-150"
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
+    )}
+  </>
   );
 }
