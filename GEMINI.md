@@ -99,4 +99,9 @@ DigiVerse.top/
 - **Dynamic Sitemap Indexing (`pages/sitemap.xml.js`)**: All active storefront products are dynamically rendered into the sitemap with `daily` change frequency and `0.9` priority so Google crawls and indexes every product.
 - **Google Rich Results Schema**: Storefront and individual product pages inject structured `schema.org/Product`, `Offer` (`price`, `priceCurrency: "USD"`, `availability: "InStock"`), `BreadcrumbList`, and `WebSite` with `SearchAction` for Google rich snippets.
 
+---
+
+## 7. Database Migration & SQL Execution Standards
+- **Chat SQL Delivery Requirement**: Whenever a task involves database changes, schema migrations, table alterations, or any SQL script execution, ALWAYS output the complete, ready-to-run SQL code block directly in the chat so the user can easily copy and run it in the Supabase SQL Editor.
+
 
