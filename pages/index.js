@@ -592,28 +592,6 @@ export default function Storefront({ initialProducts, referralEnabled: initialRe
           </PageContainer>
         </section>
 
-        <section aria-labelledby="muse-facts-heading" className="border-t border-border bg-surface/40">
-          <PageContainer>
-            <div className="py-8 sm:py-10">
-              <h2 id="muse-facts-heading" className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
-                Muse AI Tokens — {musePriceText} per 1 billion tokens
-              </h2>
-              <ul className="mt-3 space-y-1.5 text-sm leading-relaxed text-muted sm:text-base">
-                <li>Muse AI Tokens — {musePriceText} per 1 billion tokens, added to your own Muse account.</li>
-                <li>Order from 1B to 30B tokens in one purchase.</li>
-                <li>Invite code only: we never ask for your password.</li>
-                <li>Auto delivery in 10–15 minutes.</li>
-                <li>Pay with USDT (BEP20, Polygon or Base) or your DigiVerse wallet balance.</li>
-              </ul>
-              <p className="mt-3 text-sm">
-                <Link href="/buy-muse-ai-tokens" className="font-semibold text-brand hover:underline">
-                  Full Muse AI Tokens guide and live prices
-                </Link>
-              </p>
-            </div>
-          </PageContainer>
-        </section>
-
         <RecentOrders />
         <StorefrontFAQ referralEnabled={referralEnabled} />
       </main>
