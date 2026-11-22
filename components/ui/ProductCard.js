@@ -19,8 +19,8 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
       : product.provider === "manual" && !product.auto_delivery;
   const threshold =
     product.low_stock_threshold != null ? Number(product.low_stock_threshold) : 3;
-  const lowStock = product.available_stock > 0 && product.available_stock <= threshold;
-  const outOfStock = product.available_stock <= 0;
+  const lowStock = !product.is_out_of_stock && product.available_stock > 0 && product.available_stock <= threshold;
+  const outOfStock = Boolean(product.is_out_of_stock) || product.available_stock <= 0;
   const letter = (product.title || "?").trim().charAt(0).toUpperCase();
   const rawBlurb = product.short_description || product.description;
   const cleanBlurb = (rawBlurb || "").replace(/^description:\s*/i, "").trim();

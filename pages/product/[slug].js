@@ -61,6 +61,8 @@ export async function getServerSideProps({ params, res, locale = "en" }) {
     "public, s-maxage=300, stale-while-revalidate=86400"
   );
 
+  const isForcedOut = Boolean(product.is_out_of_stock);
+
   return {
     props: {
       product: {
@@ -70,8 +72,9 @@ export async function getServerSideProps({ params, res, locale = "en" }) {
         description: product.description || product.short_description || "",
         shortDescription: product.short_description || "",
         price: Number(product.sell_price) || 0,
-        availableStock: Number(product.available_stock || 0),
-        inStock: Number(product.available_stock || 0) > 0 || Boolean(product.tunvn_buff),
+        availableStock: isForcedOut ? 0 : Number(product.available_stock || 0),
+        inStock: !isForcedOut && (Number(product.available_stock || 0) > 0 || Boolean(product.tunvn_buff)),
+        isOutOfStock: isForcedOut,
         category: product.category || "Digital Software",
         imageUrl: product.image_url || null,
         provider: product.provider || "internal",
@@ -92,7 +95,7 @@ export async function getServerSideProps({ params, res, locale = "en" }) {
         price: Number(p.sell_price) || 0,
         imageUrl: p.image_url || null,
         category: p.category || null,
-        inStock: Number(p.available_stock || 0) > 0 || Boolean(p.tunvn_buff),
+        inStock: !Boolean(p.is_out_of_stock) && (Number(p.available_stock || 0) > 0 || Boolean(p.tunvn_buff)),
       })),
       canonicalSlug,
     },

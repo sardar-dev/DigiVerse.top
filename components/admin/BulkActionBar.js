@@ -5,20 +5,38 @@ import { SecondaryButton, LinkButton } from "../ui/Button";
 // Deliberately narrow actions only (show/hide, +/-% price) — no bulk
 // delete, no bulk absolute price — so a slip here can't do
 // unrecoverable damage across many products at once.
-export default function BulkActionBar({ count, onShow, onHide, onAdjustPercent, onClear }) {
+export default function BulkActionBar({
+  count,
+  onShow,
+  onHide,
+  onMarkOutOfStock,
+  onMarkInStock,
+  onAdjustPercent,
+  onClear,
+}) {
   const [percent, setPercent] = useState("");
 
   if (count === 0) return null;
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-brand/30 bg-brand-soft px-4 py-2.5 text-sm">
-      <span className="font-medium text-ink">{count} selected</span>
-      <SecondaryButton onClick={onShow} className="px-3 py-1.5 text-xs">
+    <div className="mb-3 flex flex-wrap items-center gap-2.5 rounded-lg border border-brand/30 bg-brand-soft px-4 py-2.5 text-sm">
+      <span className="font-semibold text-ink">{count} selected</span>
+      <SecondaryButton onClick={onShow} className="px-2.5 py-1 text-xs">
         Show on site
       </SecondaryButton>
-      <SecondaryButton onClick={onHide} className="px-3 py-1.5 text-xs">
+      <SecondaryButton onClick={onHide} className="px-2.5 py-1 text-xs">
         Hide from site
       </SecondaryButton>
+      {onMarkOutOfStock && (
+        <SecondaryButton onClick={onMarkOutOfStock} className="px-2.5 py-1 text-xs text-danger hover:border-danger/40">
+          Mark Out of stock
+        </SecondaryButton>
+      )}
+      {onMarkInStock && (
+        <SecondaryButton onClick={onMarkInStock} className="px-2.5 py-1 text-xs text-success hover:border-success/40">
+          Restore In-stock
+        </SecondaryButton>
+      )}
       <div className="flex items-center gap-1.5">
         <input
           type="number"

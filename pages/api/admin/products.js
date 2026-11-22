@@ -33,20 +33,40 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     // Single-product update: { id, selected?, sell_price?, image_url?,
-    // category?, featured?, low_stock_threshold?, short_description? }
-    // Bulk update: { ids: [...], selected?, sell_price_delta_percent? }
-    const { id, ids, title, selected, sell_price, image_url, category, featured, low_stock_threshold, short_description, sell_price_delta_percent, auto_price, auto_margin } =
-      req.body || {};
+    // category?, featured?, low_stock_threshold?, short_description?, is_out_of_stock? }
+    // Bulk update: { ids: [...], selected?, is_out_of_stock?, sell_price_delta_percent? }
+    const {
+      id,
+      ids,
+      title,
+      selected,
+      is_out_of_stock,
+      sell_price,
+      image_url,
+      category,
+      featured,
+      low_stock_threshold,
+      short_description,
+      sell_price_delta_percent,
+      auto_price,
+      auto_margin,
+    } = req.body || {};
 
     if (Array.isArray(ids) && ids.length > 0) {
-      // Bulk actions — deliberately narrow: show/hide, and a
-      // percentage price adjustment (e.g. +5%). Never accepts an
-      // absolute price in bulk, so one bad input can't zero out many
-      // products' prices at once.
+      // Bulk actions — show/hide, force out of stock, and a
+      // percentage price adjustment (e.g. +5%).
       if (typeof selected === "boolean") {
         const { error } = await supabaseAdmin
           .from("products")
           .update({ selected, updated_at: new Date().toISOString() })
+          .in("id", ids);
+        if (error) return res.status(500).json({ success: false, error: error.message });
+        return res.status(200).json({ success: true, updated: ids.length });
+      }
+      if (typeof is_out_of_stock === "boolean") {
+        const { error } = await supabaseAdmin
+          .from("products")
+          .update({ is_out_of_stock, updated_at: new Date().toISOString() })
           .in("id", ids);
         if (error) return res.status(500).json({ success: false, error: error.message });
         return res.status(200).json({ success: true, updated: ids.length });
@@ -93,6 +113,7 @@ export default async function handler(req, res) {
 
     const patch = { updated_at: new Date().toISOString() };
     if (typeof selected === "boolean") patch.selected = selected;
+    if (typeof is_out_of_stock === "boolean") patch.is_out_of_stock = is_out_of_stock;
     if (typeof sell_price === "number") patch.sell_price = sell_price;
     // Setting a price by hand takes this product out of auto-pricing, so the
     // next sync doesn't overwrite it. (auto_price: true puts it back.)

@@ -14,6 +14,7 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
   const [imageUrl, setImageUrl] = useState(product.image_url || "");
   const [category, setCategory] = useState(product.category || "");
   const [featured, setFeatured] = useState(Boolean(product.featured));
+  const [isOutOfStock, setIsOutOfStock] = useState(Boolean(product.is_out_of_stock));
   const [lowStockThreshold, setLowStockThreshold] = useState(
     product.low_stock_threshold ?? ""
   );
@@ -26,6 +27,7 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
       image_url: imageUrl.trim(),
       category: category.trim(),
       featured,
+      is_out_of_stock: isOutOfStock,
       low_stock_threshold: lowStockThreshold === "" ? null : Number(lowStockThreshold),
       short_description: shortDescription.trim(),
       description: description.trim(),
@@ -109,6 +111,15 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
             className="h-4 w-4 accent-brand"
           />
           Featured (shown first on storefront)
+        </label>
+        <label className="flex items-center gap-2 pb-2.5 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={isOutOfStock}
+            onChange={(e) => setIsOutOfStock(e.target.checked)}
+            className="h-4 w-4 accent-danger"
+          />
+          <span className="font-semibold text-danger">Force Out of Stock</span> (stays on site, orders stopped)
         </label>
       </div>
       <div className="flex gap-3">

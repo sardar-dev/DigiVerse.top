@@ -54,6 +54,7 @@ export default async function handler(req, res) {
       requires_email,
       delivery, // estimated delivery time text, e.g. "Within 1-6 hours"
       selected, // active/inactive
+      is_out_of_stock, // force out of stock while keeping product on storefront
       activation_field, // null | free-text label shown to customer at checkout
       activation_placeholder, // optional placeholder text inside the activation input
       tunvn_buff, // true = fulfil via TunVN Buff Token API (needs migration 034)
@@ -71,6 +72,15 @@ export default async function handler(req, res) {
         const { error } = await supabaseAdmin
           .from("products")
           .update({ selected, updated_at: new Date().toISOString() })
+          .in("id", ids)
+          .eq("provider", "manual");
+        if (error) return res.status(500).json({ success: false, error: error.message });
+        return res.status(200).json({ success: true, updated: ids.length });
+      }
+      if (typeof is_out_of_stock === "boolean") {
+        const { error } = await supabaseAdmin
+          .from("products")
+          .update({ is_out_of_stock, updated_at: new Date().toISOString() })
           .in("id", ids)
           .eq("provider", "manual");
         if (error) return res.status(500).json({ success: false, error: error.message });
@@ -165,6 +175,7 @@ export default async function handler(req, res) {
         ...(tunvn_buff === true ? { tunvn_buff: true } : {}),
         ...(delivery_badge ? { delivery_badge } : {}),
         selected: Boolean(selected),
+        is_out_of_stock: Boolean(is_out_of_stock),
         activation_field: normalizedActivation,
         activation_placeholder: normalizedPlaceholder,
         short_description: short_description || null,
@@ -264,6 +275,7 @@ export default async function handler(req, res) {
     if (requires_email !== undefined) patch.requires_email = Boolean(requires_email);
     if (delivery !== undefined) patch.delivery = delivery;
     if (selected !== undefined) patch.selected = Boolean(selected);
+    if (is_out_of_stock !== undefined) patch.is_out_of_stock = Boolean(is_out_of_stock);
     if (activation_field !== undefined) {
       patch.activation_field = normalizedActivation;
     }

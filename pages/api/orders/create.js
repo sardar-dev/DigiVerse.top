@@ -47,6 +47,15 @@ export default async function handler(req, res) {
     return res.status(404).json({ success: false, error: "product_not_available" });
   }
 
+  // Admin forced out of stock: stop orders even if real stock exists
+  if (localProduct.is_out_of_stock) {
+    return res.status(409).json({
+      success: false,
+      error: "out_of_stock",
+      message: "This product is currently out of stock.",
+    });
+  }
+
   // Manual products: whatever the admin set as activation_field
   // ('email' or 'username') is required here. DigiTrust products use
   // the older, separate requires_email flag.

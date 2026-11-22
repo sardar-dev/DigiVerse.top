@@ -363,15 +363,26 @@ export default function ManualProductsTab({
             </label>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
-              checked={manualForm.selected}
-              onChange={(e) => setManualForm({ ...manualForm, selected: e.target.checked })}
-              className="h-4 w-4 accent-brand"
-            />
-            Active (shown on storefront)
-          </label>
+          <div className="flex flex-wrap items-center gap-6">
+            <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+              <input
+                type="checkbox"
+                checked={manualForm.selected}
+                onChange={(e) => setManualForm({ ...manualForm, selected: e.target.checked })}
+                className="h-4 w-4 accent-brand"
+              />
+              Active (shown on storefront)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(manualForm.is_out_of_stock)}
+                onChange={(e) => setManualForm({ ...manualForm, is_out_of_stock: e.target.checked })}
+                className="h-4 w-4 accent-danger"
+              />
+              <span className="font-semibold text-danger">Force Out of Stock</span> (stays on site, orders stopped)
+            </label>
+          </div>
           <div className="flex gap-3">
             <PrimaryButton onClick={saveManualProduct}>
               {manualForm.id !== null ? "Save changes" : "Create product"}
@@ -390,6 +401,8 @@ export default function ManualProductsTab({
           count={selected.size}
           onShow={() => runBulk({ selected: true })}
           onHide={() => runBulk({ selected: false })}
+          onMarkOutOfStock={() => runBulk({ is_out_of_stock: true })}
+          onMarkInStock={() => runBulk({ is_out_of_stock: false })}
           onAdjustPercent={(pct) => runBulk({ sell_price_delta_percent: pct })}
           onClear={clearSelection}
         />
@@ -414,6 +427,7 @@ export default function ManualProductsTab({
               <th className="py-3 px-4">Cost</th>
               <th className="py-3 px-4">Activation</th>
               <th className="py-3 px-4">Active</th>
+              <th className="py-3 px-4 text-center">Out of stock</th>
               <th className="py-3 px-4">Actions</th>
             </tr>
           </thead>
@@ -470,6 +484,17 @@ export default function ManualProductsTab({
                 <td className="py-3 px-4 font-mono text-muted">${Number(p.cost_price).toFixed(2)}</td>
                 <td className="py-3 px-4 text-muted">{p.activation_field || "—"}</td>
                 <td className="py-3 px-4 text-ink">{p.selected ? "Yes" : "No"}</td>
+                <td className="py-3 px-4 text-center">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(p.is_out_of_stock)}
+                    onChange={async (e) => {
+                      await bulkUpdateManualProducts([p.id], { is_out_of_stock: e.target.checked });
+                    }}
+                    className="h-4 w-4 accent-danger"
+                    title={p.is_out_of_stock ? "Marked as Out of stock (orders stopped)" : "Normal stock"}
+                  />
+                </td>
                 <td className="py-3 px-4 space-x-3 whitespace-nowrap">
                   <LinkButton onClick={() => editManualProduct(p)}>Edit</LinkButton>
                   {p.selected && (

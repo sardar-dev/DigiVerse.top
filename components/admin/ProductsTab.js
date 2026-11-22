@@ -119,6 +119,8 @@ export default function ProductsTab({
         count={selected.size}
         onShow={() => runBulk({ selected: true })}
         onHide={() => runBulk({ selected: false })}
+        onMarkOutOfStock={() => runBulk({ is_out_of_stock: true })}
+        onMarkInStock={() => runBulk({ is_out_of_stock: false })}
         onAdjustPercent={(pct) => runBulk({ sell_price_delta_percent: pct })}
         onClear={clearSelection}
       />
@@ -143,6 +145,7 @@ export default function ProductsTab({
             <th className="py-3 px-4">Supplier cost</th>
             <th className="py-3 px-4">Your price</th>
             <th className="py-3 px-4">Show on site</th>
+            <th className="py-3 px-4 text-center">Out of stock</th>
             <th className="py-3 px-4">Details</th>
           </tr>
         </thead>
@@ -151,7 +154,11 @@ export default function ProductsTab({
             <Fragment key={p.id}>
               <tr
                 className={`border-b border-border last:border-0 ${
-                  p.available_stock === 0 ? "opacity-50" : ""
+                  p.is_out_of_stock
+                    ? "bg-danger/5"
+                    : p.available_stock === 0
+                    ? "opacity-50"
+                    : ""
                 }`}
               >
                 <td className="py-3 px-4">
@@ -193,7 +200,15 @@ export default function ProductsTab({
                     p.real_stock
                   )}
                 </td>
-                <td className="py-3 px-4 font-mono text-ink">{p.available_stock}</td>
+                <td className="py-3 px-4 font-mono text-ink">
+                  {p.is_out_of_stock ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-danger/10 px-1.5 py-0.5 text-xs font-bold text-danger">
+                      Sold out (Forced)
+                    </span>
+                  ) : (
+                    p.available_stock
+                  )}
+                </td>
                 <td className="py-3 px-4 font-mono text-muted">
                   {p.sources?.length > 1 ? (
                     <div className="space-y-0.5">
@@ -265,6 +280,16 @@ export default function ProductsTab({
                     checked={p.selected}
                     onChange={(e) => updateProduct(p.id, { selected: e.target.checked })}
                     className="h-4 w-4 accent-brand"
+                    title={p.selected ? "Showing on site" : "Hidden from site"}
+                  />
+                </td>
+                <td className="py-3 px-4 text-center">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(p.is_out_of_stock)}
+                    onChange={(e) => updateProduct(p.id, { is_out_of_stock: e.target.checked })}
+                    className="h-4 w-4 accent-danger"
+                    title={p.is_out_of_stock ? "Marked as Out of Stock (orders stopped)" : "Normal stock"}
                   />
                 </td>
                 <td className="py-3 px-4">
@@ -275,7 +300,7 @@ export default function ProductsTab({
               </tr>
               {editingId === p.id && (
                 <tr className="border-b border-border last:border-0 bg-bg">
-                  <td colSpan={8} className="p-4">
+                  <td colSpan={9} className="p-4">
                     <ProductMerchandisingFields
                       product={p}
                       onSave={(patch) => {
