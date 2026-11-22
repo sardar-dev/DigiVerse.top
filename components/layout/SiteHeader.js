@@ -106,6 +106,7 @@ export default function SiteHeader({
   const [menu, setMenu] = useState(false); // account dropdown
   const menuRef = useRef(null);
   const mobileRef = useRef(null);
+  const toggleBtnRef = useRef(null);
 
   const [ownSession, setOwnSession] = useState(undefined);
   const [ownBalance, setOwnBalance] = useState(undefined);
@@ -210,7 +211,12 @@ export default function SiteHeader({
       if (menu && menuRef.current && !menuRef.current.contains(e.target)) {
         setMenu(false);
       }
-      if (open && mobileRef.current && !mobileRef.current.contains(e.target)) {
+      if (
+        open &&
+        mobileRef.current &&
+        !mobileRef.current.contains(e.target) &&
+        !toggleBtnRef.current?.contains(e.target)
+      ) {
         setOpen(false);
       }
     };
@@ -221,9 +227,11 @@ export default function SiteHeader({
       }
     };
     document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, { passive: true });
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
       document.removeEventListener("keydown", onKey);
     };
   }, [menu, open]);
@@ -611,6 +619,8 @@ export default function SiteHeader({
           )}
 
           <button
+            ref={toggleBtnRef}
+            type="button"
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-surface/90 text-ink shadow-sm transition-all hover:border-brand/40 hover:bg-brand-soft active:scale-95 shrink-0"
             aria-label={t("Toggle menu")}
             aria-expanded={open}
