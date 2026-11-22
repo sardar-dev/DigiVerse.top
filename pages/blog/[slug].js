@@ -59,6 +59,7 @@ export default function Post({ post }) {
         mainEntityOfPage: url,
         inLanguage: "en",
         keywords: post.keywords,
+        ...(post.image ? { image: `${SITE_URL}${post.image}` } : {}),
         author: { "@type": "Organization", name: "DigiVerse", url: SITE_URL },
         publisher: { "@type": "Organization", name: "DigiVerse", url: SITE_URL },
       },
@@ -87,7 +88,13 @@ export default function Post({ post }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-bg font-body text-ink">
-      <SEO title={post.title} description={post.description} path={`/blog/${post.slug}`} type="article" />
+      <SEO
+        title={post.title}
+        description={post.description}
+        path={`/blog/${post.slug}`}
+        type="article"
+        {...(post.image ? { image: post.image, imageWidth: 1200, imageHeight: 630, cardType: "summary_large_image" } : {})}
+      />
       <Head>
         <meta property="article:published_time" content={post.date} />
         <meta property="article:modified_time" content={post.updated} />
@@ -108,6 +115,18 @@ export default function Post({ post }) {
               {post.updated && post.updated !== post.date ? ` · ${t("Updated {date}", { date: fmt(post.updated, locale) })}` : ""} · {t("{n} min read", { n: post.readMinutes })}
             </p>
           </header>
+
+          {post.image && (
+            <img
+              src={post.image}
+              alt={post.imageAlt || post.title}
+              width={1200}
+              height={630}
+              fetchPriority="high"
+              decoding="async"
+              className="h-auto w-full rounded-xl border border-border"
+            />
+          )}
 
           <article>
             <Markdown source={post.body} />
