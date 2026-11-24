@@ -157,11 +157,12 @@ export default function MuseTokens({ products }) {
         title="Buy Muse AI Tokens with USDT, Fast Delivery"
         description="Buy Muse AI tokens with USDT, USDC or wallet balance. See live prices, how the invite-code top-up works, delivery time and how it compares with Meta."
         path="/muse-ai-tokens"
+        englishOnly
         keywords="buy muse ai tokens, muse ai tokens, muse token top up, buy muse ai access, muse ai invite code, muse tokens usdt"
         jsonLd={{ "@context": "https://schema.org", "@graph": graph }}
       />
       <SiteHeader />
-      <main className="flex-1">
+      <main className="flex-1" lang="en" dir="ltr">
         <PageContainer className="space-y-10 py-10" width="max-w-3xl">
           <nav aria-label="Breadcrumb" className="text-xs text-muted">
             <Link href="/" className="hover:underline">{t("Home")}</Link> / Muse AI Tokens

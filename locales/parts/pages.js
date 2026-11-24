@@ -1,6 +1,9 @@
 // Auth pages, About, Privacy, Terms, 404 and Blog UI.
 const part = {
   ar: {
+    "Privacy Policy for {site}: what data we collect when you sign up and order, how it is used and protected, and how to contact us with privacy questions.": "سياسة الخصوصية لـ {site}: ما البيانات التي نجمعها عند التسجيل والطلب، وكيف نستخدمها ونحميها، وكيف تتواصل معنا بشأن الخصوصية.",
+    "Terms of Service for {site}: digital products, USDT (BEP20) payments, delivery times, refunds and replacements, and the rules for using your account.": "شروط الخدمة لـ {site}: المنتجات الرقمية ومدفوعات USDT (BEP20) ومواعيد التسليم والاسترداد والاستبدال وقواعد استخدام حسابك.",
+    "Guides, comparisons and explainers about AI tools, Muse AI and digital subscriptions: honest, easy-to-read articles with prices, limits and tips.": "أدلة ومقارنات وشروحات حول أدوات الذكاء الاصطناعي وMuse AI والاشتراكات الرقمية: مقالات صادقة وسهلة القراءة مع الأسعار والحدود والنصائح.",
     // ---- auth ----
     "Email": "البريد الإلكتروني",
     "Password": "كلمة المرور",
@@ -111,6 +114,9 @@ const part = {
     "8. Contact": "8. التواصل",
   },
   ru: {
+    "Privacy Policy for {site}: what data we collect when you sign up and order, how it is used and protected, and how to contact us with privacy questions.": "Политика конфиденциальности {site}: какие данные мы собираем при регистрации и заказе, как их используем и защищаем и как связаться с нами по вопросам конфиденциальности.",
+    "Terms of Service for {site}: digital products, USDT (BEP20) payments, delivery times, refunds and replacements, and the rules for using your account.": "Условия использования {site}: цифровые товары, платежи в USDT (BEP20), сроки доставки, возвраты и замены, а также правила использования аккаунта.",
+    "Guides, comparisons and explainers about AI tools, Muse AI and digital subscriptions: honest, easy-to-read articles with prices, limits and tips.": "Руководства, сравнения и разборы об ИИ-инструментах, Muse AI и цифровых подписках: честные и простые статьи с ценами, лимитами и советами.",
     // ---- auth ----
     "Email": "Эл. почта",
     "Password": "Пароль",

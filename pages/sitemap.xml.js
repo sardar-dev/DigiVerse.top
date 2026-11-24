@@ -19,7 +19,8 @@ export async function getServerSideProps({ res }) {
   // 1. Static Pages (English, Arabic, Russian)
   const staticXml = STATIC_PAGES.map((p) => {
     const en = `<url><loc>${SITE_URL}${p.path}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`;
-    if (!p.path || p.path === "/llms.txt") return en;
+    // /muse-ai-tokens is English-only, so its ar/ru URLs canonicalize to the English page.
+    if (!p.path || p.path === "/llms.txt" || p.path === "/muse-ai-tokens") return en;
     const ar = `<url><loc>${SITE_URL}/ar${p.path}</loc><changefreq>${p.changefreq}</changefreq><priority>${(Number(p.priority) * 0.9).toFixed(1)}</priority></url>`;
     const ru = `<url><loc>${SITE_URL}/ru${p.path}</loc><changefreq>${p.changefreq}</changefreq><priority>${(Number(p.priority) * 0.9).toFixed(1)}</priority></url>`;
     return en + ar + ru;

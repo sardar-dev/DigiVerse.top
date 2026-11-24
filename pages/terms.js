@@ -13,7 +13,7 @@ export default function Terms() {
       <SEO
         title={t("Terms of Service")}
         description={t(
-          "Terms of Service for {site} — digital products, USDT (BEP20) payments, delivery and refunds.",
+          "Terms of Service for {site}: digital products, USDT (BEP20) payments, delivery times, refunds and replacements, and the rules for using your account.",
           { site: SITE_NAME }
         )}
         path="/terms"

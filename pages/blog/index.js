@@ -22,7 +22,7 @@ export default function BlogIndex({ posts }) {
     <div className="flex min-h-screen flex-col bg-bg font-body text-ink">
       <SEO
         title={t("Blog")}
-        description={t("Guides, comparisons and explainers about AI tools and digital subscriptions.")}
+        description={t("Guides, comparisons and explainers about AI tools, Muse AI and digital subscriptions: honest, easy-to-read articles with prices, limits and tips.")}
         path="/blog"
       />
       <SiteHeader />

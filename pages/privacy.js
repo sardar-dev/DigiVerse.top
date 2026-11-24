@@ -12,7 +12,7 @@ export default function Privacy() {
     <div className="flex min-h-screen flex-col bg-bg font-body text-ink">
       <SEO
         title={t("Privacy Policy")}
-        description={t("Privacy Policy for {site} — what data we collect and how it's used.", { site: SITE_NAME })}
+        description={t("Privacy Policy for {site}: what data we collect when you sign up and order, how it is used and protected, and how to contact us with privacy questions.", { site: SITE_NAME })}
         path="/privacy"
       />
       <SiteHeader />

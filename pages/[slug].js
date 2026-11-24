@@ -43,7 +43,10 @@ const RESERVED_PATHS = new Set([
 export async function getServerSideProps({ params, res, locale = "en" }) {
   const { slug } = params || {};
 
-  if (!slug || RESERVED_PATHS.has(slug)) {
+  // Cheap early exits: no DB call for reserved names or file-like probes
+  // (wp-login.php, .env, backup.zip ...). Cache the 404 briefly at the CDN.
+  if (!slug || RESERVED_PATHS.has(slug) || /\.[a-z0-9]{2,5}$/i.test(slug)) {
+    res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
     return { notFound: true };
   }
 
@@ -68,6 +71,8 @@ export async function getServerSideProps({ params, res, locale = "en" }) {
   );
 
   if (!product) {
+    // Unknown slug: let the CDN cache this 404 so repeated probes skip the DB.
+    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
     return { notFound: true };
   }
 

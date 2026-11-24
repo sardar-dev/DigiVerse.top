@@ -198,23 +198,23 @@ export default function SiteFooter() {
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg/60 px-2.5 py-1 text-[11px] font-semibold text-ink shadow-2xs">
-                  <img src="/crypto/usdt.svg" alt="USDT" className="h-3.5 w-3.5 rounded-full" />
+                  <img src="/crypto/usdt.svg" alt="USDT" width={14} height={14} className="h-3.5 w-3.5 rounded-full" />
                   <span>USDT</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg/60 px-2.5 py-1 text-[11px] font-semibold text-ink shadow-2xs">
-                  <img src="/crypto/usdc.svg" alt="USDC" className="h-3.5 w-3.5 rounded-full" />
+                  <img src="/crypto/usdc.svg" alt="USDC" width={14} height={14} className="h-3.5 w-3.5 rounded-full" />
                   <span>USDC</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg/60 px-2.5 py-1 text-[11px] font-semibold text-ink shadow-2xs">
-                  <img src="/crypto/bsc.svg" alt="BSC" className="h-3.5 w-3.5 rounded-full" />
+                  <img src="/crypto/bsc.svg" alt="BSC" width={14} height={14} className="h-3.5 w-3.5 rounded-full" />
                   <span>BNB Chain</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg/60 px-2.5 py-1 text-[11px] font-semibold text-ink shadow-2xs">
-                  <img src="/crypto/polygon.svg" alt="Polygon" className="h-3.5 w-3.5 rounded-full" />
+                  <img src="/crypto/polygon.svg" alt="Polygon" width={14} height={14} className="h-3.5 w-3.5 rounded-full" />
                   <span>Polygon</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg/60 px-2.5 py-1 text-[11px] font-semibold text-ink shadow-2xs">
-                  <img src="/crypto/base.svg" alt="Base" className="h-3.5 w-3.5 rounded-full" />
+                  <img src="/crypto/base.svg" alt="Base" width={14} height={14} className="h-3.5 w-3.5 rounded-full" />
                   <span>Base</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg/60 px-2.5 py-1 text-[11px] font-semibold text-ink shadow-2xs">
@@ -225,7 +225,7 @@ export default function SiteFooter() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted pt-1 sm:pt-0">
-              <span className="inline-flex items-center gap-1">⚡ {t("0-Second Instant Delivery")}</span>
+              <span className="inline-flex items-center gap-1">⚡ {t("Instant delivery on most products")}</span>
               <span className="text-border hidden sm:inline" aria-hidden="true">·</span>
               <span className="inline-flex items-center gap-1">🛡️ {t("100% Replacement Warranty")}</span>
             </div>

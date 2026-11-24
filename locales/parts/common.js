@@ -1,6 +1,7 @@
 // Shared UI: header, footer, language switcher, notice popup, generic bits.
 const part = {
   ar: {
+    "Instant delivery on most products": "تسليم فوري لمعظم المنتجات",
     "Store": "المتجر",
     "Referrals 🎁": "الإحالات 🎁",
     "Referrals & Gift Wallet 🎁": "الإحالات وصناديق الهدايا 🎁",
@@ -48,6 +49,7 @@ const part = {
       "غير مسموح بإنشاء حسابات متعددة من نفس الهاتف أو الجهاز. يرجى تسجيل الدخول إلى حسابك الحالي.",
   },
   ru: {
+    "Instant delivery on most products": "Мгновенная доставка большинства товаров",
     "Store": "Магазин",
     "Referrals 🎁": "Рефералы 🎁",
     "Referrals & Gift Wallet 🎁": "Рефералы и подарки 🎁",
