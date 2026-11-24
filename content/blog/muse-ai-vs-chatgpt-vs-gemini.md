@@ -44,7 +44,7 @@ ChatGPT and Gemini offer a similar idea, which is why choosing the right mode ma
 
 ## Muse AI the agent app (September 2026)
 
-Since this guide was first written, Meta has also launched **Muse as a personal AI agent** (September 8, 2026, first in the US). It can help with errands such as forms, shopping and email, and it asks for your approval before sensitive steps. It is free to try with a weekly token limit, and Meta sells two paid plans: Power at $20 per month and Maximum at $100 per month. If you are deciding whether to pay, read [Power vs Maximum](/blog/muse-ai-power-vs-maximum) and the [free limit guide](/blog/muse-ai-free-limit-how-many-tokens).
+Since this guide was first written, Meta has also launched **Muse as a personal AI agent** (September 8, 2026, first in the US). It can help with errands such as forms, shopping and email, and it asks for your approval before sensitive steps. It is free to try with a weekly token limit, and Meta sells two paid plans: Power at $20 per month and Maximum at $100 per month. If you are deciding whether to pay, read [Power vs Maximum](/muse-ai-power-vs-maximum) and the [free limit guide](/muse-ai-free-limit-how-many-tokens).
 
 ## Muse AI vs ChatGPT
 
@@ -95,7 +95,7 @@ Whatever you choose, do not paste passwords, bank details or private documents i
 
 ## Is Muse AI available in your country?
 
-Availability has been rolling out step by step. Muse Spark started in the United States and has been expanding to more regions, with some features in the European Union expected to arrive later. Reports differ on exact countries, so check the Meta AI app, meta.ai or your app store for the current list in your location. Our guide to [which countries can use Muse AI](/blog/is-muse-ai-available-in-your-country) is kept up to date, and if Muse is not available where you live, see these [Meta Muse AI alternatives](/meta-muse-ai-alternatives). Some agent features have been reported as limited to the US and Canada.
+Availability has been rolling out step by step. Muse Spark started in the United States and has been expanding to more regions, with some features in the European Union expected to arrive later. Reports differ on exact countries, so check the Meta AI app, meta.ai or your app store for the current list in your location. Our guide to [which countries can use Muse AI](/is-muse-ai-available-in-your-country) is kept up to date, and if Muse is not available where you live, see these [Meta Muse AI alternatives](/meta-muse-ai-alternatives). Some agent features have been reported as limited to the US and Canada.
 
 ## How to get started with Muse AI
 

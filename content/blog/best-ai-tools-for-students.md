@@ -32,7 +32,7 @@ A general assistant is the tool you will open most often. Use it to explain a ha
 - **ChatGPT** is the most familiar all-rounder. It is strong for explanations, practice tests and brainstorming. The free plan has daily usage caps, and Plus costs about $20 per month.
 - **Gemini** works best if your life is already in Google Docs, Drive and Gmail. It also handles long documents well.
 - **Claude** is popular for reading long PDFs and dense articles, and for careful writing feedback. It has a free plan with daily limits. Claude does not currently have a public individual student price, so free access mostly comes through partner universities.
-- **Muse AI** is the newer option from Meta. If you want to see how it stacks up, read our [Muse AI vs ChatGPT vs Gemini comparison](/blog/muse-ai-vs-chatgpt-vs-gemini).
+- **Muse AI** is the newer option from Meta. If you want to see how it stacks up, read our [Muse AI vs ChatGPT vs Gemini comparison](/muse-ai-vs-chatgpt-vs-gemini).
 
 **Student tip:** ask the AI to teach you, not to do the task for you. A prompt like "Explain this step by step, then give me three practice questions" builds skill. A prompt like "Write my answer" builds a habit that will hurt you in exams.
 

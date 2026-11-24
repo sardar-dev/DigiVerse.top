@@ -49,7 +49,7 @@ Goal of every article: answer exactly what the searcher wants, honestly, in easy
 |---|---|
 | Title (frontmatter `title`) | **Max 48 characters.** The site adds ` \| DigiVerse` (12 chars), so the full title stays under 60 and is not cut off in Google. Main keyword near the start. Include the year only if it helps. No dates like "November" that go stale. |
 | Description | 140–155 characters. Contains the main keyword, a concrete benefit and no quotes/line breaks. |
-| Slug (file name) | Lowercase, hyphens, 3–6 words, contains the main keyword, no stop-word clutter, no dates. Example: `meta-muse-ai-alternatives`. The file name `content/blog/<slug>.md` is the slug. |
+| Slug (file name) | Lowercase, hyphens, 3–6 words, contains the main keyword, no stop-word clutter, no dates. The slug is the public URL: `digiverse.top/<slug>`. Example: `meta-muse-ai-alternatives`. The file name `content/blog/<slug>.md` is the slug. |
 | H1 | Only one. The template renders it from `title`; do not write `# ` in the body. |
 | H2/H3 | Use `##` and `###` only. Put keywords naturally. H2s get anchor ids and an automatic "In this article" contents list (shown when there are 5 or more H2s). |
 | Keywords | `keywords:` in frontmatter, comma separated, 6–9 items, lowercase. |
@@ -82,15 +82,11 @@ cta_label: <one friendly line for the end box, optional>
 Notes:
 - `draft: true` keeps a post unpublished.
 - `cta_query` creates a box at the end linking to `/?q=<term>#catalog`. For Muse topics prefer linking to `/muse-ai-tokens` inside the text and set `cta_query: muse`.
-- Optional `url_path: /<slug>` serves the post at the domain root (see 4a). Default is `/blog/<slug>`, which is fine for most posts.
+- **All posts are served at the domain root: `https://digiverse.top/<slug>` (no `/blog/` in the URL).** This is automatic. `next.config.js` reads the file names in `content/blog/` and creates the rewrite and the 308 redirect from the old `/blog/<slug>` URL. Nothing to configure per post.
+- Internal links between posts must use `/<slug>`, never `/blog/<slug>`. Only the blog index page lives at `/blog`.
+- The slug must not equal an existing page or product slug (a file in `pages/` with that name is skipped by the config). Pick a specific, keyword-based slug.
+- The banner file still lives in `public/blog/<slug>.jpg` (it is an asset, not a page link).
 - Locale note: posts are English-only. The template already makes `/ar/...` and `/ru/...` copies canonical to the English page. Do not change that.
-
-### 4a. Root URL (no `/blog/`) only if requested
-
-1. Add `url_path: /<slug>` to the frontmatter.
-2. In `next.config.js` add a redirect `{ source: "/blog/<slug>", destination: "/<slug>", permanent: true }` and a `beforeFiles` rewrite `{ source: "/<slug>", destination: "/blog/<slug>" }` (copy the existing meta-muse entry).
-3. The blog index, sitemap and canonical use `post.path` automatically.
-4. Do not touch `pages/[slug].js` (product pages).
 
 ---
 

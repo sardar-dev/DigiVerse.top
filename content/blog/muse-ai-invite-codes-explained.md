@@ -18,7 +18,7 @@ According to Meta's announcement, as reported by reviewers:
 - You and the friend who shared the code each receive 1 billion tokens.
 - After the 48 hour window, the sign-up bonus no longer applies.
 
-For comparison, the free weekly limit is reported at about 100 million tokens, so 1 billion tokens is a large boost. Our guide to the [Muse free limit](/blog/muse-ai-free-limit-how-many-tokens) shows what that means in practice.
+For comparison, the free weekly limit is reported at about 100 million tokens, so 1 billion tokens is a large boost. Our guide to the [Muse free limit](/muse-ai-free-limit-how-many-tokens) shows what that means in practice.
 
 ## How many times can a code be used?
 
@@ -59,4 +59,4 @@ Common reasons are that the code has reached its use limit, the 48 hour window h
 
 ### Can invite codes unlock Muse in my country?
 
-No. Access depends on your Meta account and region. See [which countries can use Muse AI](/blog/is-muse-ai-available-in-your-country).
+No. Access depends on your Meta account and region. See [which countries can use Muse AI](/is-muse-ai-available-in-your-country).

@@ -290,12 +290,12 @@ export default function MuseTokens({ products }) {
           <section aria-labelledby="guides" className="space-y-3">
             <h2 id="guides" className="text-xl font-semibold text-ink">Muse AI guides</h2>
             <ul className="list-disc space-y-1.5 ps-5 text-ink/90">
-              <li><Link href="/blog/is-muse-ai-available-in-your-country" className="font-medium text-brand underline underline-offset-2">Is Muse AI available in your country?</Link></li>
-              <li><Link href="/blog/muse-ai-free-limit-how-many-tokens" className="font-medium text-brand underline underline-offset-2">Muse AI free limit: how far do the tokens go?</Link></li>
-              <li><Link href="/blog/muse-ai-power-vs-maximum" className="font-medium text-brand underline underline-offset-2">Muse AI Power vs Maximum: which plan do you need?</Link></li>
-              <li><Link href="/blog/muse-ai-invite-codes-explained" className="font-medium text-brand underline underline-offset-2">Muse AI invite codes explained</Link></li>
+              <li><Link href="/is-muse-ai-available-in-your-country" className="font-medium text-brand underline underline-offset-2">Is Muse AI available in your country?</Link></li>
+              <li><Link href="/muse-ai-free-limit-how-many-tokens" className="font-medium text-brand underline underline-offset-2">Muse AI free limit: how far do the tokens go?</Link></li>
+              <li><Link href="/muse-ai-power-vs-maximum" className="font-medium text-brand underline underline-offset-2">Muse AI Power vs Maximum: which plan do you need?</Link></li>
+              <li><Link href="/muse-ai-invite-codes-explained" className="font-medium text-brand underline underline-offset-2">Muse AI invite codes explained</Link></li>
               <li><Link href="/meta-muse-ai-alternatives" className="font-medium text-brand underline underline-offset-2">Meta Muse AI alternatives: 9 honest picks</Link></li>
-              <li><Link href="/blog/muse-ai-vs-chatgpt-vs-gemini" className="font-medium text-brand underline underline-offset-2">Muse AI vs ChatGPT vs Gemini</Link></li>
+              <li><Link href="/muse-ai-vs-chatgpt-vs-gemini" className="font-medium text-brand underline underline-offset-2">Muse AI vs ChatGPT vs Gemini</Link></li>
             </ul>
           </section>
 

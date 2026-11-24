@@ -41,7 +41,7 @@ You will find guides that explain how to sign up through a VPN. We do not recomm
 
 1. **Check the Muse app or muse.ai** from time to time. If your country launches, the sign-in screen will let you in.
 2. **Follow Meta's newsroom** for your region, because launch posts appear there first.
-3. **Try other assistants in the meantime.** Our comparison of [Muse AI, ChatGPT and Gemini](/blog/muse-ai-vs-chatgpt-vs-gemini) shows where each one is strong.
+3. **Try other assistants in the meantime.** Our comparison of [Muse AI, ChatGPT and Gemini](/muse-ai-vs-chatgpt-vs-gemini) shows where each one is strong.
 4. **Do not pay for access you cannot use.** Buying tokens does not unlock Muse in an unsupported country, because access depends on your account and region.
 
 Once you are in a supported country and have a Muse account, you can add tokens on our [Muse AI tokens page](/muse-ai-tokens) or buy them from Meta directly.
@@ -66,4 +66,4 @@ No. Access is tied to your Meta account and region. Tokens only add usage for an
 
 ### Do I need an invite code to use Muse?
 
-Signing up does not require one. If you enter a friend's invite code within 48 hours of signing up, you and your friend each get a token bonus. Read more in our guide to [Muse AI invite codes](/blog/muse-ai-invite-codes-explained).
+Signing up does not require one. If you enter a friend's invite code within 48 hours of signing up, you and your friend each get a token bonus. Read more in our guide to [Muse AI invite codes](/muse-ai-invite-codes-explained).

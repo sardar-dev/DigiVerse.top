@@ -1,3 +1,22 @@
+const fs = require("fs");
+const path = require("path");
+
+// Every published blog post is served at the domain root (/<slug>), with the
+// old /blog/<slug> URL permanently redirected. Slugs come from the file names in
+// content/blog. A slug that matches a real page file is skipped (no clash).
+function blogSlugs() {
+  try {
+    return fs
+      .readdirSync(path.join(__dirname, "content", "blog"))
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => f.replace(/\.md$/, ""))
+      .filter((s) => !fs.existsSync(path.join(__dirname, "pages", `${s}.js`)));
+  } catch {
+    return [];
+  }
+}
+const BLOG_SLUGS = blogSlugs();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -19,8 +38,8 @@ const nextConfig = {
   // engines (and Safe Browsing) see a single site, not two copies.
   async redirects() {
     return [
-      // This post lives at the domain root; send the old /blog/ URL there.
-      { source: "/blog/meta-muse-ai-alternatives", destination: "/meta-muse-ai-alternatives", permanent: true },
+      // Posts live at the domain root; send the old /blog/<slug> URL there.
+      ...BLOG_SLUGS.map((s) => ({ source: `/blog/${s}`, destination: `/${s}`, permanent: true })),
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.digiverse.top" }],
@@ -30,12 +49,10 @@ const nextConfig = {
     ];
   },
 
-  // Root-level URL for the Meta Muse alternatives post (served by the blog template).
+  // Root-level post URLs are rendered by the blog template (pages/blog/[slug].js).
   async rewrites() {
     return {
-      beforeFiles: [
-        { source: "/meta-muse-ai-alternatives", destination: "/blog/meta-muse-ai-alternatives" },
-      ],
+      beforeFiles: BLOG_SLUGS.map((s) => ({ source: `/${s}`, destination: `/blog/${s}` })),
     };
   },
 
