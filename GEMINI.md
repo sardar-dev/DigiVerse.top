@@ -113,4 +113,15 @@ DigiVerse.top/
   - **Database & Storage Efficiency**: Keep Supabase database queries fast, indexed, and minimal. Avoid heavy or repetitive queries that exhaust free-tier compute, egress bandwidth, or connection pool limits.
   - **Asset & Component Reuse**: Always reuse existing UI components, utility functions, and Tailwind classes instead of creating duplicate code or heavy assets. Keep serverless functions small, fast-starting, and memory-efficient.
 
+---
+
+## 9. SEO Article & Blog Writing Standards
+- **Mandatory Blueprint**: Whenever writing, updating, or planning any blog post or informational article, you MUST strictly follow `DIGIVERSE-SEO-ARTICLE-GUIDE.md`.
+- **Core Constraints & Requirements**:
+  - **Title Length**: Maximum 48 characters (site automatically appends ` | DigiVerse`, keeping full title under 60 chars).
+  - **Description**: 140–155 characters with main keyword and clear benefit.
+  - **Structure**: Answer the search query directly in the first 2–3 sentences. Follow with real H2 sections, FAQ section (`## Frequently asked questions` with 5–7 questions), and `## Sources`.
+  - **Banner Image**: Exactly 1200x630 JPEG under 60 KB saved at `public/blog/<slug>.jpg`. No third-party logos or trademarked marks.
+  - **Internal Links**: 3–5 internal links to existing DigiVerse pages and cross-links from related articles. Never duplicate target keywords.
+
 

@@ -36,14 +36,31 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
 
-  // Demo / Test Product (ID: -99) anti-spam protection: 1 purchase per minute
+  // Demo / Test Product (ID: -99) anti-spam protection: 1 completed order per minute
   const isDemoProduct = Number(product_id) === -99;
   if (isDemoProduct) {
     const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+
+    // Clean up previous unpaid/pending demo orders for this customer to keep drafts tidy
+    if (userId || email) {
+      try {
+        let cleanup = supabaseAdmin
+          .from("orders")
+          .delete()
+          .eq("product_id", -99)
+          .eq("status", "pending_payment");
+        if (userId) cleanup = cleanup.eq("user_id", userId);
+        else if (email) cleanup = cleanup.eq("email", email);
+        await cleanup;
+      } catch {}
+    }
+
+    // Only count completed / delivered / fulfilling demo orders within the last 60 seconds
     let query = supabaseAdmin
       .from("orders")
-      .select("id, created_at")
+      .select("id, created_at, status")
       .eq("product_id", -99)
+      .in("status", ["paid", "delivered", "fulfilling", "completed"])
       .gte("created_at", sixtySecondsAgo);
 
     if (userId) {

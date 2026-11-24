@@ -560,13 +560,15 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                   </span>
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border shadow-2xs ${
-                      isManual
+                      isDemo
+                        ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25"
+                        : isManual
                         ? "bg-warning-soft text-warning border-warning/20"
                         : "bg-success-soft text-success border-success/20"
                     }`}
                   >
                     <span>{isManual ? "🕒" : "⚡"}</span>
-                    <span>{deliveryLabel}</span>
+                    <span>{String(deliveryLabel).replace(/^[⚡🕒\s]+/, "")}</span>
                   </span>
                   {product.inStock && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-surface border border-border/80 px-2.5 py-1 text-xs font-medium text-ink shadow-2xs">
@@ -782,7 +784,12 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-xs">
                               <label className="font-bold text-ink">{t("Quantity")}</label>
-                              {product.availableStock > 0 && !product.tunvn_buff && (
+                              {isDemo ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                  <span>{t("Unlimited stock")}</span>
+                                </span>
+                              ) : product.availableStock > 0 && !product.tunvn_buff && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted border border-border">
                                   <span className="h-1.5 w-1.5 rounded-full bg-success"></span>
                                   <span>{product.availableStock} {t("available")}</span>

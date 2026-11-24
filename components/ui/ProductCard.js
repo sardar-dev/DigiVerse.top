@@ -76,7 +76,7 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
               {isDemo ? (
                 <>
                   <span>⚡</span>
-                  <span>{product.delivery_badge || t("0-Cost Test Order")}</span>
+                  <span>{String(product.delivery_badge || t("0-Cost Test Order")).replace(/^[⚡\s]+/, "")}</span>
                 </>
               ) : isManual ? (
                 <>
