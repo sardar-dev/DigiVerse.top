@@ -19,7 +19,11 @@ export async function getStaticPaths({ locales = ["en"] }) {
 export async function getStaticProps({ params }) {
   const post = getPost(params.slug);
   if (!post) return { notFound: true };
-  return { props: { post } };
+  const related = getAllPosts()
+    .filter((p) => p.slug !== post.slug)
+    .slice(0, 3)
+    .map(({ title, path }) => ({ title, path }));
+  return { props: { post, related } };
 }
 
 const fmt = (d, locale) =>
@@ -43,7 +47,7 @@ function faqFromBody(body) {
     .filter((x) => x.q && x.a);
 }
 
-export default function Post({ post }) {
+export default function Post({ post, related = [] }) {
   const { t, locale } = useT();
   const url = `${SITE_URL}${post.path}`; // posts are English-only: always the English URL
   const cta = post.ctaQuery ? `/?q=${encodeURIComponent(post.ctaQuery)}#catalog` : "";
@@ -145,6 +149,21 @@ export default function Post({ post }) {
                 {t("Search “{q}” in the store →", { q: post.ctaQuery })}
               </Link>
             </aside>
+          )}
+
+          {related.length > 0 && (
+            <nav aria-label={t("Related articles")} className="border-t border-border pt-6">
+              <h2 className="text-lg font-semibold text-ink">{t("Keep reading")}</h2>
+              <ul className="mt-3 space-y-2">
+                {related.map((r) => (
+                  <li key={r.path}>
+                    <Link href={r.path} className="text-brand underline-offset-2 hover:underline">
+                      {r.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           )}
         </PageContainer>
       </main>

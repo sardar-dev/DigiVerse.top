@@ -1,5 +1,5 @@
 ---
-title: Best AI Tools for Students in 2026 (Free and Paid)
+title: Best AI Tools for Students (Free and Paid, 2026)
 description: Best AI tools for students in 2026, by job: study, research, writing, notes and coding. Free plans, student discounts and how to use AI honestly.
 date: 2026-11-17
 updated: 2026-11-17

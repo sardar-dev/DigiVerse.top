@@ -1,5 +1,5 @@
 ---
-title: Is Muse AI Available in Your Country? (November 2026)
+title: Is Muse AI Available in Your Country? (2026)
 description: Which countries can use Meta's Muse AI right now, what Meta says about regions, and what to do if your country is not on the list yet.
 date: 2026-11-19
 updated: 2026-11-19

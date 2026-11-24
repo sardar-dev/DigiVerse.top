@@ -1,5 +1,5 @@
 ---
-title: Muse AI Power vs Maximum: Which Plan Do You Need?
+title: Muse AI Power vs Maximum: Which Plan to Pick?
 description: Meta's Muse AI Power ($20) and Maximum ($100) plans compared: tokens per week, cost per billion tokens, and who should pick which option.
 date: 2026-11-19
 updated: 2026-11-19
