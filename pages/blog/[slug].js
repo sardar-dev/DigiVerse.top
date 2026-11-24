@@ -4,7 +4,7 @@ import SEO from "../../components/SEO";
 import SiteHeader from "../../components/layout/SiteHeader";
 import SiteFooter from "../../components/layout/SiteFooter";
 import PageContainer from "../../components/layout/PageContainer";
-import Markdown from "../../components/blog/Markdown";
+import Markdown, { headingSlug } from "../../components/blog/Markdown";
 import { getAllPosts, getPost } from "../../lib/blog";
 import { SITE_URL } from "../../lib/siteConfig";
 import { useT, intlLocale } from "../../lib/i18n";
@@ -49,6 +49,9 @@ function faqFromBody(body) {
 
 export default function Post({ post, related = [] }) {
   const { t, locale } = useT();
+  const toc = (post.body.match(/^##\s+.+$/gm) || [])
+    .map((l) => l.replace(/^##\s+/, "").trim())
+    .map((text) => ({ text: text.replace(/[*`]/g, ""), id: headingSlug(text) }));
   const url = `${SITE_URL}${post.path}`; // posts are English-only: always the English URL
   const cta = post.ctaQuery ? `/?q=${encodeURIComponent(post.ctaQuery)}#catalog` : "";
   const ld = {
@@ -131,6 +134,19 @@ export default function Post({ post, related = [] }) {
               decoding="async"
               className="h-auto w-full rounded-xl border border-border"
             />
+          )}
+
+          {toc.length >= 5 && (
+            <nav aria-label={t("In this article")} className="rounded-xl border border-border bg-surface p-4">
+              <p className="text-sm font-semibold text-ink">{t("In this article")}</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
+                {toc.map((h) => (
+                  <li key={h.id}>
+                    <a href={`#${h.id}`} className="text-brand underline-offset-2 hover:underline">{h.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
           )}
 
           <article lang="en" dir="ltr">

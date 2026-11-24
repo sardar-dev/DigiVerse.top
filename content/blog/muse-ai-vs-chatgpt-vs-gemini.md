@@ -42,6 +42,10 @@ Muse Spark gives you different "gears" depending on how hard the question is:
 
 ChatGPT and Gemini offer a similar idea, which is why choosing the right mode matters as much as choosing the right model.
 
+## Muse AI the agent app (September 2026)
+
+Since this guide was first written, Meta has also launched **Muse as a personal AI agent** (September 8, 2026, first in the US). It can help with errands such as forms, shopping and email, and it asks for your approval before sensitive steps. It is free to try with a weekly token limit, and Meta sells two paid plans: Power at $20 per month and Maximum at $100 per month. If you are deciding whether to pay, read [Power vs Maximum](/blog/muse-ai-power-vs-maximum) and the [free limit guide](/blog/muse-ai-free-limit-how-many-tokens).
+
 ## Muse AI vs ChatGPT
 
 **Where ChatGPT is stronger**

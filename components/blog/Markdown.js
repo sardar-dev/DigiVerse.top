@@ -30,6 +30,11 @@ function inline(text, k) {
   });
 }
 
+// Stable anchor id for a heading (lets Google show "jump to" links).
+export function headingSlug(text) {
+  return String(text).toLowerCase().replace(/[`*_"'“”]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 export default function Markdown({ source }) {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const out = [];
@@ -72,7 +77,7 @@ export default function Markdown({ source }) {
       out.push(<h3 key={`h${n++}`} className="pt-2 text-lg font-semibold text-ink">{inline(m[1], `h${n}`)}</h3>);
     } else if ((m = line.match(/^##\s+(.*)/))) {
       flushPara(); flushList();
-      out.push(<h2 key={`h${n++}`} className="pt-4 text-xl font-semibold text-ink sm:text-2xl">{inline(m[1], `h${n}`)}</h2>);
+      out.push(<h2 key={`h${n++}`} id={headingSlug(m[1])} className="scroll-mt-24 pt-4 text-xl font-semibold text-ink sm:text-2xl">{inline(m[1], `h${n}`)}</h2>);
     } else if ((m = line.match(/^[-*]\s+(.*)/))) {
       flushPara();
       if (!list || list.ordered) { flushList(); list = { ordered: false, items: [] }; }
