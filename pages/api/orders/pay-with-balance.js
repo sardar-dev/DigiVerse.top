@@ -67,6 +67,18 @@ export default async function handler(req, res) {
     return res.status(409).json({ success: false, error: "order_not_available" });
   }
 
+  // Handle Demo / Test Product (ID: -99) immediately without touching wallet balance
+  if (claimedOrder.product_id === -99) {
+    let result;
+    try {
+      result = await fulfillOrder(claimedOrder);
+    } catch (e) {
+      console.error("[pay-with-balance] demo fulfillOrder threw:", e?.message);
+      return res.status(500).json({ success: false, error: "fulfillment_failed" });
+    }
+    return res.status(200).json({ success: true, items: result.items || [], manual: false });
+  }
+
   // TunVN buff check: ensure supplier API balance is sufficient BEFORE deducting customer's wallet!
   const { data: prod } = await supabaseAdmin
     .from("products")
