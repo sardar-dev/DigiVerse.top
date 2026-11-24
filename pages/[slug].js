@@ -243,6 +243,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
     };
   }, [step, product?.tunvn_buff, order?.id]);
 
+  const isDemo = String(product.id) === "-99" || product.category === "Demo / Testing 🧪";
   const isManual =
     product.deliveryBadge === "manual"
       ? true
@@ -250,7 +251,11 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
       ? false
       : product.provider === "manual" && !product.autoDelivery;
 
-  const deliveryLabel = isManual
+  const deliveryLabel = product.deliveryBadge
+    ? product.deliveryBadge
+    : isDemo
+    ? "⚡ 0-Cost Test Order"
+    : isManual
     ? product.delivery || t("Manual delivery within 1–6 hours")
     : t("Instant 0-second delivery");
 
@@ -569,7 +574,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
                         <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
                       </span>
-                      <span>{t("Verified Stock")}</span>
+                      <span>{isDemo ? t("Unlimited Stock") : t("Verified Stock")}</span>
                     </span>
                   )}
                 </div>

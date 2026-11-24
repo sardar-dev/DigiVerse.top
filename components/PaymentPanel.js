@@ -288,7 +288,8 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
   }
 
   // Free order covered 100% by referral gift boxes ($0.00)
-  if (Number(order.total) <= 0.0001) {
+  const isDemo = Number(order.product_id) === -99 || Number(product?.id) === -99;
+  if (!isDemo && Number(order.gifts_redeemed || 0) > 0 && Number(order.total) <= 0.0001) {
     return (
       <div className="space-y-4 text-sm">
         <div className="rounded-xl border border-success/30 bg-success-soft/30 p-5 text-center">
@@ -767,6 +768,18 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
           </div>
 
           <div className="space-y-1.5">
+            {isDemo && (
+              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3 text-xs text-ink shadow-xs mb-2">
+                <div className="flex items-center gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 mb-1">
+                  <span>💡</span>
+                  <span>{t("Testing Mode")}</span>
+                </div>
+                <p className="text-muted leading-relaxed">
+                  {t("Type anything in this box, it will be accepted because this is for testing purposes, not a real purchase.")}
+                </p>
+              </div>
+            )}
+
             <div className="flex items-center rounded-xl border border-border bg-bg px-3 py-2.5 transition-all focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
               <svg className="h-4 w-4 text-muted pe-1.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -778,7 +791,7 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
                   setTxHash(e.target.value.trim());
                   setError("");
                 }}
-                placeholder="0x…"
+                placeholder={isDemo ? t("Type anything in this box and click Confirm…") : "0x…"}
                 className="w-full bg-transparent font-mono text-xs font-medium text-ink outline-none placeholder:text-muted"
                 dir="ltr"
                 autoComplete="off"
@@ -788,7 +801,9 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
               />
             </div>
             <p className="text-[11px] text-muted">
-              {t("After sending, copy the transaction hash (TxID) from your wallet or exchange.")}
+              {isDemo
+                ? t("No real funds required. Any sample hash or text will complete the demo order.")
+                : t("After sending, copy the transaction hash (TxID) from your wallet or exchange.")}
             </p>
           </div>
 
@@ -805,7 +820,7 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </span>
-            <span>{busy ? t("Checking the blockchain…") : t("Confirm Payment")}</span>
+            <span>{busy ? (isDemo ? t("Verifying demo order…") : t("Checking the blockchain…")) : isDemo ? t("Confirm Test Order") : t("Confirm Payment")}</span>
           </button>
 
           {/* Need help? Contact us on Telegram */}

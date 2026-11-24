@@ -73,6 +73,36 @@ export default async function handler(req, res) {
     });
   }
 
+  // Handle Demo / Test Product (ID: -99): instantly verify any text/hash without querying blockchain RPC
+  if (order.product_id === -99) {
+    const { data: claimedOrder, error: claimErr } = await supabaseAdmin
+      .from("orders")
+      .update({
+        status: "paid",
+        tx_hash: String(rawTxHash || "demo_test_hash").slice(0, 66),
+        paid_with: "Crypto (Demo Test)",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", order.id)
+      .eq("status", "pending_payment")
+      .select()
+      .single();
+
+    if (claimErr || !claimedOrder) {
+      return res.status(409).json({ success: false, error: `order_already_${order.status}` });
+    }
+
+    let result;
+    try {
+      result = await fulfillOrder(claimedOrder);
+    } catch (e) {
+      console.error("[verify-payment] demo fulfillOrder threw:", e?.message);
+      return res.status(500).json({ success: false, error: "fulfillment_failed" });
+    }
+
+    return res.status(200).json({ success: true, items: result.items || [], manual: false });
+  }
+
   // If order belongs to an authenticated user, only that user can submit payment
   if (order.user_id && (!session || order.user_id !== session.user.id)) {
     return res.status(403).json({ success: false, error: "not_your_order" });

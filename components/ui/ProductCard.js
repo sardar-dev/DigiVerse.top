@@ -11,6 +11,7 @@ import { getProductUrl } from "../../lib/productSlug";
 // soft depth, crisp typography, clean status badges, and smooth hover elevation.
 export default function ProductCard({ product, onBuy, onShare, disabled }) {
   const { t } = useT();
+  const isDemo = String(product.id) === "-99" || product.category === "Demo / Testing 🧪";
   const isManual =
     product.delivery_badge === "manual"
       ? true
@@ -19,8 +20,8 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
       : product.provider === "manual" && !product.auto_delivery;
   const threshold =
     product.low_stock_threshold != null ? Number(product.low_stock_threshold) : 3;
-  const lowStock = !product.is_out_of_stock && product.available_stock > 0 && product.available_stock <= threshold;
-  const outOfStock = Boolean(product.is_out_of_stock) || product.available_stock <= 0;
+  const lowStock = !isDemo && !product.is_out_of_stock && product.available_stock > 0 && product.available_stock <= threshold;
+  const outOfStock = !isDemo && (Boolean(product.is_out_of_stock) || product.available_stock <= 0);
   const letter = (product.title || "?").trim().charAt(0).toUpperCase();
   const rawBlurb = product.short_description || product.description;
   const cleanBlurb = (rawBlurb || "").replace(/^description:\s*/i, "").trim();
@@ -65,12 +66,19 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
           <div className="flex items-center gap-1.5">
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-2xs border ${
-                isManual
+                isDemo
+                  ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25"
+                  : isManual
                   ? "bg-warning-soft text-warning border-warning/20"
                   : "bg-success-soft text-success border-success/20"
               }`}
             >
-              {isManual ? (
+              {isDemo ? (
+                <>
+                  <span>⚡</span>
+                  <span>{product.delivery_badge || t("0-Cost Test Order")}</span>
+                </>
+              ) : isManual ? (
                 <>
                   <svg className="h-3 w-3 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -130,7 +138,17 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
 
         {/* Stock & Delivery Details */}
         <div className="mb-4 mt-3 flex flex-wrap items-center gap-2.5 text-xs text-muted">
-          {outOfStock ? (
+          {isDemo ? (
+            <span className="inline-flex items-center gap-1.5 font-medium text-success">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              <span>
+                <strong className="font-semibold text-ink">{t("Unlimited")}</strong> {t("in stock")}
+              </span>
+            </span>
+          ) : outOfStock ? (
             <span className="inline-flex items-center gap-1.5 font-semibold text-danger">
               <span className="h-1.5 w-1.5 rounded-full bg-danger" />
               {t("Out of stock")}
@@ -170,10 +188,21 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
         <div className="flex flex-col" dir="ltr">
           <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">{t("Price")}</span>
           <div className="flex items-baseline gap-1">
-            <span className="font-mono text-xl font-extrabold tracking-tight text-ink transition-colors group-hover:text-brand">
-              ${Number(product.sell_price).toFixed(2)}
-            </span>
-            <span className="text-[10px] font-semibold text-muted uppercase">USDT</span>
+            {isDemo || Number(product.sell_price) <= 0 ? (
+              <>
+                <span className="font-mono text-xl font-extrabold tracking-tight text-brand">
+                  $0.00
+                </span>
+                <span className="text-[10px] font-bold text-success uppercase">FREE DEMO</span>
+              </>
+            ) : (
+              <>
+                <span className="font-mono text-xl font-extrabold tracking-tight text-ink transition-colors group-hover:text-brand">
+                  ${Number(product.sell_price).toFixed(2)}
+                </span>
+                <span className="text-[10px] font-semibold text-muted uppercase">USDT</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -182,6 +211,8 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
           className={`min-h-10 px-4 sm:px-5 py-2 font-semibold text-xs sm:text-sm rounded-xl transition-all inline-flex items-center justify-center gap-1.5 shadow-sm ${
             outOfStock
               ? "bg-bg text-muted border border-border hover:bg-surface cursor-pointer"
+              : isDemo
+              ? "bg-gradient-to-r from-brand to-indigo-600 text-white hover:opacity-95 active:scale-95 shadow-brand/25"
               : "bg-brand text-white hover:bg-brand-hover active:scale-95 shadow-brand/20"
           }`}
           aria-label={outOfStock ? t("{title} is out of stock", { title: product.title }) : t("Buy {title}", { title: product.title })}

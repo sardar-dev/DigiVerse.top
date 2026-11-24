@@ -36,6 +36,36 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
 
+  // Demo / Test Product (ID: -99) anti-spam protection: 1 purchase per minute
+  const isDemoProduct = Number(product_id) === -99;
+  if (isDemoProduct) {
+    const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+    let query = supabaseAdmin
+      .from("orders")
+      .select("id, created_at")
+      .eq("product_id", -99)
+      .gte("created_at", sixtySecondsAgo);
+
+    if (userId) {
+      query = query.eq("user_id", userId);
+    } else if (email) {
+      query = query.eq("email", email);
+    }
+
+    const { data: recentDemo } = await query.order("created_at", { ascending: false }).limit(1);
+
+    if (recentDemo && recentDemo.length > 0) {
+      const elapsedMs = Date.now() - new Date(recentDemo[0].created_at).getTime();
+      const remainingSec = Math.max(1, Math.ceil((60000 - elapsedMs) / 1000));
+      return res.status(429).json({
+        success: false,
+        error: "demo_cooldown",
+        remaining: remainingSec,
+        message: `⏳ Anti-Spam: Please wait ${remainingSec}s before placing another test order.`,
+      });
+    }
+  }
+
   const { data: localProduct, error: localErr } = await supabaseAdmin
     .from("products")
     .select("*")
