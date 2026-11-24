@@ -35,7 +35,7 @@ The reset looks weekly and appears to follow the date you signed up. One reviewe
 
 1. **Wait for the reset.** If you rarely hit the limit, this costs nothing.
 2. **Use an invite code.** Entering a friend's invite code within 48 hours of signing up gives both of you a bonus. Our guide to [Muse AI invite codes](/blog/muse-ai-invite-codes-explained) explains the details and the limits.
-3. **Upgrade to a plan.** Meta's Power plan costs $20 per month with 500 million tokens a week, and Maximum costs $100 per month with 3 billion a week. See [Power vs Maximum](/blog/muse-ai-power-vs-maximum).
+3. **Upgrade to a plan.** Meta's Power plan costs $20 per month with 500 million tokens a week, and Maximum costs $100 per month with 3 billion a week. See [Power vs Maximum](/blog/muse-ai-power-vs-maximum). If you would rather switch tools, compare [Meta Muse AI alternatives](/meta-muse-ai-alternatives).
 4. **Buy additional tokens.** Meta lets you buy extra tokens after you reach your weekly limit, with or without a subscription. Tokens bought from Meta do not expire. Independent sellers also offer top-ups, and you can see our current options on the [Muse AI tokens page](/muse-ai-tokens).
 
 ## Tips to make the free limit last

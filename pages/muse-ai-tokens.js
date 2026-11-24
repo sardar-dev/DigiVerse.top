@@ -293,6 +293,7 @@ export default function MuseTokens({ products }) {
               <li><Link href="/blog/muse-ai-free-limit-how-many-tokens" className="font-medium text-brand underline underline-offset-2">Muse AI free limit: how far do the tokens go?</Link></li>
               <li><Link href="/blog/muse-ai-power-vs-maximum" className="font-medium text-brand underline underline-offset-2">Muse AI Power vs Maximum: which plan do you need?</Link></li>
               <li><Link href="/blog/muse-ai-invite-codes-explained" className="font-medium text-brand underline underline-offset-2">Muse AI invite codes explained</Link></li>
+              <li><Link href="/meta-muse-ai-alternatives" className="font-medium text-brand underline underline-offset-2">Meta Muse AI alternatives: 9 honest picks</Link></li>
               <li><Link href="/blog/muse-ai-vs-chatgpt-vs-gemini" className="font-medium text-brand underline underline-offset-2">Muse AI vs ChatGPT vs Gemini</Link></li>
             </ul>
           </section>

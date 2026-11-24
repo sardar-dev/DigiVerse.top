@@ -45,7 +45,7 @@ function faqFromBody(body) {
 
 export default function Post({ post }) {
   const { t, locale } = useT();
-  const url = `${SITE_URL}${locale === "en" ? "" : `/${locale}`}${post.path}`;
+  const url = `${SITE_URL}${post.path}`; // posts are English-only: always the English URL
   const cta = post.ctaQuery ? `/?q=${encodeURIComponent(post.ctaQuery)}#catalog` : "";
   const ld = {
     "@context": "https://schema.org",
@@ -93,6 +93,7 @@ export default function Post({ post }) {
         description={post.description}
         path={post.path}
         type="article"
+        englishOnly
         {...(post.image ? { image: post.image, imageWidth: 1200, imageHeight: 630, cardType: "summary_large_image" } : {})}
       />
       <Head>
@@ -128,7 +129,7 @@ export default function Post({ post }) {
             />
           )}
 
-          <article>
+          <article lang="en" dir="ltr">
             <Markdown source={post.body} />
           </article>
 

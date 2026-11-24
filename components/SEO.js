@@ -19,6 +19,7 @@ export default function SEO({
   keywords,
   jsonLd,
   fullTitleOverride, // exact <title>, no brand suffix appended
+  englishOnly = false, // English-only content: canonical + alternates point at the English URL
 }) {
   const { locale = "en" } = useRouter();
 
@@ -34,7 +35,8 @@ export default function SEO({
   const kw = keywords || defaultKeywords;
 
   const prefix = (l) => (l === "en" ? "" : `/${l}`);
-  const url = `${SITE_URL}${prefix(locale)}${path}`;
+  const pageLocale = englishOnly ? "en" : locale;
+  const url = `${SITE_URL}${prefix(pageLocale)}${path}`;
 
   // Default to square branded preview image (600x600, ~29KB)
   // Perfectly optimized for WhatsApp (<300KB requirement), Telegram, Facebook, Twitter
@@ -62,7 +64,7 @@ export default function SEO({
       <link rel="canonical" href={url} />
 
       {/* Multilingual alternates */}
-      {["en", "ar", "ru"].map((l) => (
+      {(englishOnly ? ["en"] : ["en", "ar", "ru"]).map((l) => (
         <link key={l} rel="alternate" hrefLang={l} href={`${SITE_URL}${prefix(l)}${path}`} />
       ))}
       <link rel="alternate" hrefLang="x-default" href={`${SITE_URL}${path}`} />
@@ -80,7 +82,7 @@ export default function SEO({
       <meta property="og:url" content={url} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />
-      <meta property="og:locale" content={{ en: "en_US", ar: "ar_AR", ru: "ru_RU" }[locale] || "en_US"} />
+      <meta property="og:locale" content={{ en: "en_US", ar: "ar_AR", ru: "ru_RU" }[pageLocale] || "en_US"} />
       <meta property="og:image" content={img} />
       <meta property="og:image:secure_url" content={img} />
       <meta property="og:image:type" content={mimeType} />

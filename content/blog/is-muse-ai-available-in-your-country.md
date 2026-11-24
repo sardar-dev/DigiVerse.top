@@ -58,7 +58,7 @@ Not as of late October 2026. India has no announced launch date from Meta.
 
 ### Is Muse AI available in the UK or Europe?
 
-Not yet. Meta says it is working to bring Muse to more markets carefully, but it has not given timing.
+Not yet. Meta says it is working to bring Muse to more markets carefully, but it has not given timing. While you wait, see our list of [Meta Muse AI alternatives](/meta-muse-ai-alternatives) that work in more countries.
 
 ### Will buying Muse tokens unlock Muse in my country?
 

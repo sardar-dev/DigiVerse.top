@@ -71,7 +71,7 @@ Want a deeper side-by-side? Read our [Muse AI vs ChatGPT vs Gemini](/blog/muse-a
 
 **Best for:** people who already use Gmail, Google Docs, Drive and Calendar.
 
-Gemini fits naturally into Google apps. It has a Deep Research mode for long reports and an agent mode on higher plans. Reviewers list AI Pro at about $19.99 per month, with a cheaper AI Plus plan at $4.99.
+Gemini fits naturally into Google apps. It has a Deep Research mode for long reports and an agent mode on higher plans. Reviewers list AI Pro at about $19.99 per month. Cheaper plans exist, so check Google's page.
 
 **Watch out for:** the best agent features are on the expensive tiers, and the usage limits are described vaguely.
 
@@ -129,7 +129,7 @@ Jan runs open models locally and is free. Nothing leaves your machine, which is 
 
 Poke is an assistant you talk to through messages, and it connects to Gmail or Outlook. Reviewers list a free plan and a Pro plan at about $19 per month.
 
-**Watch out for:** it is a newer product, and reviewers note that its company has changed hands, so the roadmap may shift.
+**Watch out for:** it is a newer product with a smaller track record, so check how it handles your data before you connect your inbox.
 
 ## If you meant Muse Image
 

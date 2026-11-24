@@ -45,7 +45,8 @@ Independent sellers also offer top-ups to your own account. If you want to compa
 
 1. **Availability.** Muse works only in some countries. Check [where Muse AI is available](/blog/is-muse-ai-available-in-your-country) before you pay.
 2. **Renewal.** Plans renew monthly until you cancel, on the same date as your first purchase.
-3. **Your real usage.** Look at how much of your weekly allowance you use. Our guide to the [Muse free limit](/blog/muse-ai-free-limit-how-many-tokens) shows what tasks cost.
+3. **Other tools.** If neither plan fits, see [Meta Muse AI alternatives](/meta-muse-ai-alternatives) before you commit.
+4. **Your real usage.** Look at how much of your weekly allowance you use. Our guide to the [Muse free limit](/blog/muse-ai-free-limit-how-many-tokens) shows what tasks cost.
 
 ## Frequently asked questions
 
