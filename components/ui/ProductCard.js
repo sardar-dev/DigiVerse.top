@@ -2,7 +2,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { PrimaryButton } from "./Button";
 import { useT } from "../../lib/i18n";
-import { getProductUrl } from "../../lib/productSlug";
+import { getProductUrl, getProductInitial } from "../../lib/productSlug";
 
 // Storefront product card. Shows provider-neutral labels only —
 // never exposes cost price or internal supplier plumbing to the customer.
@@ -22,7 +22,7 @@ export default function ProductCard({ product, onBuy, onShare, disabled }) {
     product.low_stock_threshold != null ? Number(product.low_stock_threshold) : 3;
   const lowStock = !isDemo && !product.is_out_of_stock && product.available_stock > 0 && product.available_stock <= threshold;
   const outOfStock = !isDemo && (Boolean(product.is_out_of_stock) || product.available_stock <= 0);
-  const letter = (product.title || "?").trim().charAt(0).toUpperCase();
+  const letter = getProductInitial(product.title);
   const rawBlurb = product.short_description || product.description;
   const cleanBlurb = (rawBlurb || "").replace(/^description:\s*/i, "").trim();
   const [imageFailed, setImageFailed] = useState(false);

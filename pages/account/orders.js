@@ -11,6 +11,7 @@ import { LoadingState } from "../../components/ui/States";
 import { PrimaryButton, SecondaryButton } from "../../components/ui/Button";
 import DeliveredItems from "../../components/ui/DeliveredItems";
 import { useT, intlLocale } from "../../lib/i18n";
+import { getProductInitial } from "../../lib/productSlug";
 
 const when = (d, locale) =>
   new Date(d).toLocaleDateString(intlLocale(locale), {
@@ -431,7 +432,7 @@ export default function Orders() {
                         />
                       ) : (
                         <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-brand-soft text-lg font-bold text-brand shadow-2xs">
-                          {(o.products?.title || "?").trim().charAt(0).toUpperCase()}
+                          {getProductInitial(o.products?.title)}
                         </div>
                       )}
 

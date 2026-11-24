@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import { useEffect } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import Script from "next/script";
 import WhatsAppButton from "../components/WhatsAppButton";
@@ -64,6 +65,10 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+      </Head>
+
       {/* Google Tag Manager (GTM) */}
       <Script
         id="gtm-script"

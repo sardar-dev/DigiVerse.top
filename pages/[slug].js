@@ -11,7 +11,7 @@ import Alert from "../components/ui/Alert";
 import { PrimaryButton, SecondaryButton } from "../components/ui/Button";
 import { FormInput } from "../components/ui/FormInput";
 import { fetchStorefrontProducts } from "../lib/storefrontProducts";
-import { slugifyProduct, extractProductId, getProductUrl } from "../lib/productSlug";
+import { slugifyProduct, extractProductId, getProductUrl, getProductInitial } from "../lib/productSlug";
 import { toProductCode, fromProductCode } from "../lib/productLink";
 import { SITE_URL } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
@@ -604,7 +604,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                     </div>
                   ) : (
                     <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-gradient-to-br from-brand-soft to-white flex items-center justify-center text-3xl font-extrabold text-brand shadow-2xs border border-border/80 shrink-0">
-                      {product.title.charAt(0).toUpperCase()}
+                      {getProductInitial(product.title)}
                     </div>
                   )}
 
@@ -1149,7 +1149,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-xl bg-brand-soft text-brand font-bold flex items-center justify-center text-sm">
-                              {rel.title.charAt(0)}
+                              {getProductInitial(rel.title)}
                             </div>
                           )}
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${rel.inStock ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10" : "text-danger bg-danger/10"}`}>

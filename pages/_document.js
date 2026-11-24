@@ -9,7 +9,6 @@ export default function Document(props) {
   return (
     <Html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         <meta
           name="facebook-domain-verification"
           content="4mna49badwlswc1ifefje5z6hdtt69"

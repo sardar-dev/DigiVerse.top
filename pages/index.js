@@ -8,7 +8,7 @@ import RecentOrders from "../components/RecentOrders";
 import StorefrontFAQ, { FAQ_DATA } from "../components/StorefrontFAQ";
 import SEO from "../components/SEO";
 import { toProductCode, fromProductCode } from "../lib/productLink";
-import { slugifyProduct, getProductUrl } from "../lib/productSlug";
+import { slugifyProduct, getProductUrl, getProductInitial } from "../lib/productSlug";
 import { useToast } from "../components/ui/Toast";
 import SiteHeader from "../components/layout/SiteHeader";
 import SiteFooter from "../components/layout/SiteFooter";
@@ -867,7 +867,7 @@ function HeroSection({ inStock, search, setSearch }) {
                     />
                   ) : (
                     <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-brand-soft text-lg font-bold text-brand shadow-2xs">
-                      {(p.title || "?").trim().charAt(0).toUpperCase()}
+                      {getProductInitial(p.title)}
                     </span>
                   )}
                   <div className="min-w-0 flex-1 space-y-1">
@@ -967,7 +967,7 @@ function HeroSection({ inStock, search, setSearch }) {
                             />
                           ) : (
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-soft to-white text-base font-bold text-brand shadow-2xs ring-1 ring-border/80">
-                              {(p.title || "?").trim().charAt(0).toUpperCase()}
+                              {getProductInitial(p.title)}
                             </span>
                           )}
 
