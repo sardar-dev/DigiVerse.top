@@ -30,19 +30,18 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: "login_required" });
   }
 
-  // Check if referral system is active
-  const initialSettings = await getReferralSettings();
-  if (initialSettings && initialSettings.referral_enabled === false) {
-    return res.status(200).json({ success: false, reason: "referrals_disabled" });
-  }
-
   // Verify user exists directly from auth.users
   const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.getUserById(userId);
   if (authErr || !authUser?.user) {
     return res.status(404).json({ success: false, error: "user_not_found" });
   }
 
-  // Ensure public.profiles record always exists for this user immediately
+  const clientIp =
+    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    "";
+
+  // Ensure public.profiles record exists and reliably fire Telegram signup notification once
   try {
     const rawUsername =
       req.body?.username ||
@@ -50,42 +49,82 @@ export default async function handler(req, res) {
       (authUser.user.email ? authUser.user.email.split("@")[0] : `user_${userId.slice(0, 5)}`);
     const cleanUsername = rawUsername.toLowerCase().trim();
 
-    const { data: existingProf } = await supabaseAdmin
+    const { data: profRow } = await supabaseAdmin
       .from("profiles")
-      .select("id")
+      .select("id, signup_notified, username, email, device_id")
       .eq("id", userId)
       .maybeSingle();
 
-    const isNewUser = !existingProf;
+    let shouldNotify = false;
 
-    await supabaseAdmin.from("profiles").upsert(
-      {
+    if (!profRow) {
+      await supabaseAdmin.from("profiles").insert({
         id: userId,
         email: authUser.user.email || req.body?.email || null,
         username: cleanUsername,
         device_id: req.body?.device_id || authUser.user.user_metadata?.device_id || null,
-        registration_ip: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || null,
+        registration_ip: clientIp || null,
+        signup_notified: true,
         created_at: authUser.user.created_at || new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
+      });
+      shouldNotify = true;
+    } else if (profRow.signup_notified === false) {
+      // Profile was pre-created by Postgres handle_new_user() trigger — claim notification atomically
+      const { data: claimed } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          signup_notified: true,
+          email: profRow.email || authUser.user.email || req.body?.email || null,
+          username: profRow.username || cleanUsername,
+          device_id: profRow.device_id || req.body?.device_id || authUser.user.user_metadata?.device_id || null,
+          registration_ip: clientIp || null,
+        })
+        .eq("id", userId)
+        .eq("signup_notified", false)
+        .select("id")
+        .maybeSingle();
 
-    if (isNewUser) {
+      if (claimed) {
+        shouldNotify = true;
+      }
+    }
+
+    if (shouldNotify) {
       notifyTelegramSignup({
         username: cleanUsername,
         email: authUser.user.email || req.body?.email || "—",
         referrer: req.body?.ref || authUser.user.user_metadata?.ref || null,
-        clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
+        clientIp: clientIp || "—",
       }).catch((e) => console.warn("[qualify] telegram alert error:", e?.message));
     }
   } catch (e) {
-    console.warn("[referrals/qualify] ensure profile error:", e.message);
+    console.warn("[referrals/qualify] ensure profile error:", e?.message);
   }
 
-  const clientIp =
-    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
-    req.socket?.remoteAddress ||
-    "";
+  // Check if referral code was provided in request, metadata, or already linked in profile
+  const rawRef = (
+    req.body?.ref ||
+    authUser.user.user_metadata?.ref ||
+    ""
+  ).toString().trim().replace(/^@+/, "");
+
+  // If user has no referral code and no existing referral record, account setup is complete!
+  if (!rawRef) {
+    const { data: existingRef } = await supabaseAdmin
+      .from("referrals")
+      .select("id")
+      .eq("referred_id", userId)
+      .maybeSingle();
+    if (!existingRef) {
+      return res.status(200).json({ success: true, reason: "direct_signup" });
+    }
+  }
+
+  // Check if referral system is active
+  const initialSettings = await getReferralSettings();
+  if (initialSettings && initialSettings.referral_enabled === false) {
+    return res.status(200).json({ success: true, reason: "referrals_disabled" });
+  }
 
   // Check Admin Whitelist
   let isWhitelisted = false;

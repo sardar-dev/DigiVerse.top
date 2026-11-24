@@ -4,3 +4,4 @@
 insert into public.app_meta (key, value, updated_at)
 values ('restrict_email_domains', 'true', now())
 on conflict (key) do nothing;
+

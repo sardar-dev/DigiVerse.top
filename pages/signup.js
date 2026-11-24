@@ -197,8 +197,8 @@ export default function Signup() {
       return setError(signUpError.message);
     }
 
-    // Auto-link profile and qualify referral immediately (dual gift reward for inviter + new user)
-    if (referralEnabled && data?.user?.id && cleanRef) {
+    // Ensure user profile setup, link referral if present, and fire Telegram notification
+    if (data?.user?.id) {
       try {
         await fetch("/api/referrals/qualify", {
           method: "POST",
@@ -207,7 +207,7 @@ export default function Signup() {
             user_id: data.user.id,
             email: emailCheck.normalizedEmail,
             username: resolvedUsername,
-            ref: cleanRef,
+            ref: cleanRef || null,
             device_id: deviceId,
           }),
         });
