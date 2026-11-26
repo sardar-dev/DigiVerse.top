@@ -33,6 +33,7 @@ const PALETTES = [
 ];
 const CAPTIONS = ["Digital subscription", "License key", "Account", "AI tokens", "Gift card", "None"];
 const SIZE = 512;
+const MAX_ORIGINAL = 1024; // longest side kept for "Original"
 
 // ---------- helpers ----------
 function loadImage(src) {
@@ -126,6 +127,18 @@ const initialsOf = (name) =>
 
 function draw(canvas, o) {
   const ctx = canvas.getContext("2d");
+  if (o.style === "original" && o.logo) {
+    // As-is: same picture, same proportions, no tile, no text, no crop.
+    const iw = o.logo.naturalWidth || o.logo.width || SIZE;
+    const ih = o.logo.naturalHeight || o.logo.height || SIZE;
+    const k = Math.min(1, MAX_ORIGINAL / Math.max(iw, ih));
+    canvas.width = Math.max(1, Math.round(iw * k));
+    canvas.height = Math.max(1, Math.round(ih * k));
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(o.logo, 0, 0, canvas.width, canvas.height);
+    return;
+  }
   canvas.width = canvas.height = SIZE;
   ctx.clearRect(0, 0, SIZE, SIZE);
   const pal = o.palette;
@@ -207,15 +220,18 @@ function draw(canvas, o) {
 // WebP at ~512px, quality lowered step by step until it is under TARGET_BYTES.
 // Browsers that cannot encode WebP (older Safari) get a 384px PNG instead.
 const TARGET_BYTES = 40 * 1024;
+const ORIGINAL_STEPS = [[1024, 0.9], [1024, 0.82], [800, 0.76], [640, 0.7]];
 const STEPS = [[512, 0.86], [512, 0.76], [448, 0.7], [384, 0.62]];
 
 function scaled(src, size) {
-  if (size === src.width) return src;
+  const k = Math.min(1, size / Math.max(src.width, src.height));
+  if (k === 1) return src;
   const c = document.createElement("canvas");
-  c.width = c.height = size;
+  c.width = Math.max(1, Math.round(src.width * k));
+  c.height = Math.max(1, Math.round(src.height * k));
   const x = c.getContext("2d");
   x.imageSmoothingQuality = "high";
-  x.drawImage(src, 0, 0, size, size);
+  x.drawImage(src, 0, 0, c.width, c.height);
   return c;
 }
 const blobOf = (canvas, type, q) => new Promise((res) => canvas.toBlob(res, type, q));
@@ -227,15 +243,16 @@ const dataUrlOf = (blob) =>
     f.readAsDataURL(blob);
   });
 
-export async function compressCanvas(canvas) {
+export async function compressCanvas(canvas, original = false) {
   let best = null;
-  for (const [size, q] of STEPS) {
+  // Original keeps more pixels (and a higher target) so the picture stays as it was.
+  for (const [size, q] of original ? ORIGINAL_STEPS : STEPS) {
     const blob = await blobOf(scaled(canvas, size), "image/webp", q);
     if (!blob || blob.type !== "image/webp") break; // no WebP encoder in this browser
     best = blob;
-    if (blob.size <= TARGET_BYTES) break;
+    if (blob.size <= (original ? TARGET_BYTES * 3 : TARGET_BYTES)) break;
   }
-  if (!best) best = await blobOf(scaled(canvas, 384), "image/png");
+  if (!best) best = await blobOf(scaled(canvas, original ? 768 : 384), "image/png");
   return { blob: best, dataUrl: await dataUrlOf(best) };
 }
 
@@ -345,7 +362,7 @@ export default function ImagePicker({ title, onPick }) {
     setSaving(true);
     setErr("");
     try {
-      const { dataUrl, blob } = await compressCanvas(canvasRef.current);
+      const { dataUrl, blob } = await compressCanvas(canvasRef.current, style === "original");
       const r = await fetch("/api/admin/image-upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -465,7 +482,7 @@ export default function ImagePicker({ title, onPick }) {
                 ref={canvasRef}
                 width={SIZE}
                 height={SIZE}
-                className="h-40 w-40 rounded-2xl border border-border bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:16px_16px]"
+                className="h-40 w-40 rounded-2xl object-contain border border-border bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:16px_16px]"
                 aria-label="Preview of the product image"
               />
               <div className="min-w-[14rem] flex-1 space-y-2 text-xs text-muted">
@@ -473,7 +490,7 @@ export default function ImagePicker({ title, onPick }) {
                   {[
                     ["tile", "Tile (recommended)"],
                     ["plain", "Plain on white"],
-                    ...(logo ? [["initials", "Initials only"]] : []),
+                    ...(logo ? [["initials", "Initials only"], ["original", "Original (as is)"]] : []),
                   ].map(([id, label]) => (
                     <button
                       key={id}
@@ -486,7 +503,7 @@ export default function ImagePicker({ title, onPick }) {
                   ))}
                 </div>
 
-                {style !== "plain" && (
+                {style !== "plain" && style !== "original" && (
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span>Color</span>
                     {auto && logo && (
@@ -535,7 +552,10 @@ export default function ImagePicker({ title, onPick }) {
                     </select>
                   </div>
                 )}
-                {style !== "tile" && (
+                {style === "original" && (
+                  <p>Your picture is saved as it is: same proportions, no tile, no text, no crop. It is only compressed to save space.</p>
+                )}
+                {style !== "tile" && style !== "original" && (
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value.slice(0, 28))}
