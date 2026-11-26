@@ -296,7 +296,7 @@ export default function ImagePicker({ title, onPick }) {
     setNote("");
   }
 
-  async function useLogoFrom(objectUrlPromise, label) {
+  async function useLogoFrom(objectUrlPromise, label, startStyle = "tile") {
     setErr("");
     setWorking(true);
     try {
@@ -304,7 +304,7 @@ export default function ImagePicker({ title, onPick }) {
       setLogo(img);
       setAuto(dominant(img));
       setPaletteId("auto");
-      setStyle("tile");
+      setStyle(startStyle);
       setName((n) => n || label || brand());
       setComposing(true);
     } catch (e) {
@@ -393,7 +393,7 @@ export default function ImagePicker({ title, onPick }) {
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {tab("find", "🔎 Find logo", openFind)}
-        {tab("upload", "📤 Upload", () => { setMode("upload"); setComposing(false); setErr(""); })}
+        {tab("upload", "📤 Upload my own image", () => { setMode("upload"); setComposing(false); setErr(""); })}
         {tab("url", "🔗 From link", () => { setMode("url"); setComposing(false); setErr(""); })}
         {tab("tile", "🎨 No logo (initials)", openTile)}
         {mode && (
@@ -442,7 +442,7 @@ export default function ImagePicker({ title, onPick }) {
 
           {mode === "upload" && !composing && (
             <label className="block text-xs text-muted">
-              Choose a PNG, JPG, WebP or SVG (max 5 MB). It is placed on a DigiVerse tile before saving.
+              Choose your own PNG, JPG, WebP or SVG (max 5 MB). It is saved exactly as it is: no tile, no text, no crop (only compressed). You can still switch to Tile or Plain in the next step.
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -451,7 +451,7 @@ export default function ImagePicker({ title, onPick }) {
                   const f = e.target.files?.[0];
                   if (!f) return;
                   if (f.size > 5 * 1024 * 1024) return setErr("That file is larger than 5 MB.");
-                  useLogoFrom(toObjectUrl(f), brandOf(f.name.replace(/\.[a-z0-9]+$/i, "")));
+                  useLogoFrom(toObjectUrl(f), brandOf(f.name.replace(/\.[a-z0-9]+$/i, "")), "original");
                 }}
               />
             </label>
