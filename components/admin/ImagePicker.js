@@ -202,6 +202,43 @@ function draw(canvas, o) {
   }
 }
 
+// ---------- compression ----------
+// Shrinks the finished image before it is stored (free Supabase has 1 GB):
+// WebP at ~512px, quality lowered step by step until it is under TARGET_BYTES.
+// Browsers that cannot encode WebP (older Safari) get a 384px PNG instead.
+const TARGET_BYTES = 40 * 1024;
+const STEPS = [[512, 0.86], [512, 0.76], [448, 0.7], [384, 0.62]];
+
+function scaled(src, size) {
+  if (size === src.width) return src;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const x = c.getContext("2d");
+  x.imageSmoothingQuality = "high";
+  x.drawImage(src, 0, 0, size, size);
+  return c;
+}
+const blobOf = (canvas, type, q) => new Promise((res) => canvas.toBlob(res, type, q));
+const dataUrlOf = (blob) =>
+  new Promise((res, rej) => {
+    const f = new FileReader();
+    f.onload = () => res(f.result);
+    f.onerror = () => rej(new Error("Could not read the image."));
+    f.readAsDataURL(blob);
+  });
+
+export async function compressCanvas(canvas) {
+  let best = null;
+  for (const [size, q] of STEPS) {
+    const blob = await blobOf(scaled(canvas, size), "image/webp", q);
+    if (!blob || blob.type !== "image/webp") break; // no WebP encoder in this browser
+    best = blob;
+    if (blob.size <= TARGET_BYTES) break;
+  }
+  if (!best) best = await blobOf(scaled(canvas, 384), "image/png");
+  return { blob: best, dataUrl: await dataUrlOf(best) };
+}
+
 // ---------- component ----------
 export default function ImagePicker({ title, onPick }) {
   const [mode, setMode] = useState(null); // null | "find" | "upload" | "url" | "tile"
@@ -308,7 +345,7 @@ export default function ImagePicker({ title, onPick }) {
     setSaving(true);
     setErr("");
     try {
-      const dataUrl = canvasRef.current.toDataURL("image/png");
+      const { dataUrl, blob } = await compressCanvas(canvasRef.current);
       const r = await fetch("/api/admin/image-upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -318,6 +355,7 @@ export default function ImagePicker({ title, onPick }) {
       if (!r.ok || !d.success) throw new Error(d.detail || d.error || `Upload failed (${r.status})`);
       onPick(d.url);
       reset();
+      setNote(`Saved ${Math.max(1, Math.round(blob.size / 1024))} KB ${blob.type.replace("image/", "").toUpperCase()}`);
     } catch (e) {
       setErr(e.message);
     }
@@ -347,6 +385,8 @@ export default function ImagePicker({ title, onPick }) {
           </button>
         )}
       </div>
+
+      {!mode && note && <div className="text-xs text-muted">{note}</div>}
 
       {mode && (
         <div className="space-y-3 rounded-lg border border-border bg-bg p-3">
