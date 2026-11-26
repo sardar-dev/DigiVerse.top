@@ -1,6 +1,15 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
-import { splitBoxes, MAX_BOX_LENGTH, MAX_BOXES_PER_SAVE } from "../../../lib/stockBoxes";
+import { splitBoxes, MAX_BOX_LENGTH, MAX_BOXES_PER_SAVE, MAX_SHARED_LENGTH, SHARED_STOCK } from "../../../lib/stockBoxes";
+
+// "Same content for every order" mode: the text lives in a server-only table.
+async function saveSharedText(productId, text) {
+  const { error } = await supabaseAdmin
+    .from("product_shared_delivery")
+    .upsert({ product_id: productId, content: text, updated_at: new Date().toISOString() });
+  if (error) throw new Error(error.message);
+}
+const MIGRATION_053 = "Run supabase/migration_053_shared_delivery.sql in Supabase first.";
 
 // Inserts delivery boxes for an auto-delivery product and recounts its
 // stock. Returns how many were added.
@@ -32,6 +41,18 @@ export default async function handler(req, res) {
       .order("updated_at", { ascending: false })
       .limit(200);
     if (error) return res.status(500).json({ success: false, error: error.message });
+    // Admin-only: attach the shared delivery text of "same for everyone" products.
+    const sharedIds = data.filter((p) => p.delivery_mode === "shared").map((p) => p.id);
+    if (sharedIds.length) {
+      const { data: texts } = await supabaseAdmin
+        .from("product_shared_delivery")
+        .select("product_id, content")
+        .in("product_id", sharedIds);
+      const byId = new Map((texts || []).map((t) => [t.product_id, t.content]));
+      data.forEach((p) => {
+        if (p.delivery_mode === "shared") p.shared_delivery_text = byId.get(p.id) || "";
+      });
+    }
     return res.status(200).json({ success: true, products: data });
   }
 
@@ -62,6 +83,8 @@ export default async function handler(req, res) {
       delivery_badge, // "auto" | "manual" | null
       new_boxes, // pasted box text to add in the same save (auto-delivery products)
       box_split, // "separator" (--- lines) | "line" (one box per line)
+      delivery_mode, // "unique" (a box per order) | "shared" (same text for every order)
+      shared_delivery_text, // the text every buyer gets when delivery_mode is "shared"
       sell_price_delta_percent, // bulk-only: e.g. 5 for +5%
       slug,
       warranty,
@@ -122,6 +145,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "box_too_long" });
     }
 
+    const sharedText = typeof shared_delivery_text === "string" ? shared_delivery_text.trim() : undefined;
+    if (delivery_mode !== undefined && delivery_mode !== "unique" && delivery_mode !== "shared") {
+      return res.status(400).json({ success: false, error: "invalid_delivery_mode" });
+    }
+    if (sharedText && sharedText.length > MAX_SHARED_LENGTH) {
+      return res.status(400).json({ success: false, error: "shared_text_too_long" });
+    }
+
     // activation_field is now a free-text label (e.g. "Your Game ID")
     // — no whitelist needed, just length cap.
     if (activation_field !== undefined && activation_field !== null && activation_field !== "") {
@@ -151,7 +182,11 @@ export default async function handler(req, res) {
       }
       // Auto-delivery products start with 0 stock; stock is then
       // always the number of unsold boxes.
-      const stock = auto_delivery === true ? 0 : Number(available_stock);
+      const isShared = auto_delivery === true && delivery_mode === "shared";
+      if (isShared && !sharedText) {
+        return res.status(400).json({ success: false, error: "shared_text_required" });
+      }
+      const stock = isShared ? SHARED_STOCK : auto_delivery === true ? 0 : Number(available_stock);
       if (!Number.isInteger(stock) || stock < 0) {
         return res.status(400).json({ success: false, error: "invalid_stock" });
       }
@@ -180,6 +215,7 @@ export default async function handler(req, res) {
         delivery: delivery || (auto_delivery === true ? "Instant" : "Within 24 hours"),
         // Only sent when on, so normal products work before migration_012.
         ...(auto_delivery === true ? { auto_delivery: true } : {}),
+        ...(isShared ? { delivery_mode: "shared" } : {}),
         ...(tunvn_buff === true ? { tunvn_buff: true } : {}),
         ...(delivery_badge ? { delivery_badge } : {}),
         selected: Boolean(selected),
@@ -219,10 +255,19 @@ export default async function handler(req, res) {
           .single());
       }
 
-      if (insertErr) return res.status(500).json({ success: false, error: insertErr.message });
+      if (insertErr) {
+        const msg = /delivery_mode/i.test(insertErr.message) ? MIGRATION_053 : insertErr.message;
+        return res.status(500).json({ success: false, error: msg });
+      }
 
       let addedBoxes = 0;
-      if (auto_delivery === true) {
+      if (isShared) {
+        try {
+          await saveSharedText(inserted.id, sharedText);
+        } catch (e) {
+          return res.status(500).json({ success: false, error: `product_created_but_text_failed: ${e.message}` });
+        }
+      } else if (auto_delivery === true) {
         try {
           addedBoxes = await addBoxes(inserted.id, boxesToAdd);
         } catch (e) {
@@ -270,6 +315,24 @@ export default async function handler(req, res) {
     if (typeof auto_delivery === "boolean" && auto_delivery !== wasAuto) {
       patch.auto_delivery = auto_delivery;
     }
+    const wasShared = existing.delivery_mode === "shared";
+    const nowShared = nowAuto && (delivery_mode !== undefined ? delivery_mode === "shared" : wasShared);
+    if (nowShared) {
+      if (!sharedText) {
+        // Keep the saved text if the form did not send a new one.
+        const { data: cur } = await supabaseAdmin
+          .from("product_shared_delivery")
+          .select("content")
+          .eq("product_id", id)
+          .maybeSingle();
+        if (!cur?.content) return res.status(400).json({ success: false, error: "shared_text_required" });
+      }
+      // Unlimited stock: nothing to count and nothing to decrement.
+      patch.available_stock = SHARED_STOCK;
+      patch.real_stock = SHARED_STOCK;
+    }
+    if (nowShared !== wasShared) patch.delivery_mode = nowShared ? "shared" : "unique";
+
     // While auto-delivery is on, stock is computed from the boxes.
     if (available_stock !== undefined && !nowAuto) {
       const stock = Number(available_stock);
@@ -343,13 +406,23 @@ export default async function handler(req, res) {
         .single());
     }
 
-    if (updateErr) return res.status(500).json({ success: false, error: updateErr.message });
+    if (updateErr) {
+      const msg = /delivery_mode/i.test(updateErr.message) ? MIGRATION_053 : updateErr.message;
+      return res.status(500).json({ success: false, error: msg });
+    }
     let addedBoxes = 0;
-    if (nowAuto) {
+    if (nowShared) {
+      try {
+        if (sharedText) await saveSharedText(id, sharedText);
+      } catch (e) {
+        const msg = /product_shared_delivery/i.test(e.message) ? MIGRATION_053 : e.message;
+        return res.status(500).json({ success: false, error: `text_failed: ${msg}` });
+      }
+    } else if (nowAuto) {
       try {
         addedBoxes = await addBoxes(id, boxesToAdd);
-        // Switched on without new boxes: stock = count of existing boxes.
-        if (!wasAuto && addedBoxes === 0) {
+        // Switched on (or back from "shared") without new boxes: stock = count of existing boxes.
+        if ((!wasAuto || wasShared) && addedBoxes === 0) {
           await supabaseAdmin.rpc("sync_auto_stock", { p_product_id: id });
         }
       } catch (e) {

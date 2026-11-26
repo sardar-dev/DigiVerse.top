@@ -142,7 +142,13 @@ export default function ManualProductsTab({
               step="1"
               className="font-mono"
               disabled={manualForm.auto_delivery}
-              placeholder={manualForm.auto_delivery ? "Counted from boxes" : undefined}
+              placeholder={
+                manualForm.auto_delivery
+                  ? manualForm.delivery_mode === "shared"
+                    ? "Unlimited"
+                    : "Counted from boxes"
+                  : undefined
+              }
             />
           </div>
 
@@ -221,6 +227,27 @@ export default function ManualProductsTab({
 
           {manualForm.auto_delivery && (
             <div className="space-y-3 rounded-xl border border-brand/30 bg-brand-soft/40 p-4">
+              <FormSelect
+                label="What does each buyer receive?"
+                value={manualForm.delivery_mode || "unique"}
+                onChange={(e) => setManualForm({ ...manualForm, delivery_mode: e.target.value })}
+              >
+                <option value="unique">A unique box per order (accounts, keys — each used once)</option>
+                <option value="shared">The same content for every order (link, text, instructions)</option>
+              </FormSelect>
+
+              {manualForm.delivery_mode === "shared" ? (
+                <FormTextarea
+                  label="Content sent to every buyer"
+                  value={manualForm.shared_delivery_text || ""}
+                  onChange={(e) => setManualForm({ ...manualForm, shared_delivery_text: e.target.value })}
+                  rows={6}
+                  placeholder={"Download: https://example.com/your-file\nPassword: 1234\nSetup guide: https://example.com/guide"}
+                  className="font-mono text-xs"
+                  hint="Every order on this product receives exactly this text right after payment. Stock is unlimited, so it never runs out. Use unique boxes instead if each customer needs their own account or key. Keep it private: don't put it in the product description."
+                />
+              ) : (
+              <>
               <FormTextarea
                 label="Add stock (delivery boxes)"
                 value={manualForm.new_boxes}
@@ -252,12 +279,14 @@ export default function ManualProductsTab({
                   saved when you click {manualForm.id !== null ? "Save changes" : "Create product"}
                 </span>
               </div>
-              {manualForm.id !== null && manualForm._hadAuto && (
+              {manualForm.id !== null && manualForm._hadAuto && manualForm._hadMode !== "shared" && (
                 <StockBoxesManager
                   productId={manualForm.id}
                   onChanged={reloadManualProducts}
                   version={boxesVersion}
                 />
+              )}
+              </>
               )}
             </div>
           )}
@@ -497,7 +526,7 @@ export default function ManualProductsTab({
                   {p.available_stock}
                   {p.auto_delivery && (
                     <span className="ml-1.5 rounded-full bg-success-soft px-2 py-0.5 font-sans text-[10px] font-medium text-success">
-                      auto
+                      {p.delivery_mode === "shared" ? "auto · same for all" : "auto"}
                     </span>
                   )}
                 </td>

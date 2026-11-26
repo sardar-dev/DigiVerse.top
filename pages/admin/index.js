@@ -169,6 +169,8 @@ export default function Admin() {
       tunvn_buff: false,
       new_boxes: "",
       box_split: "separator",
+      delivery_mode: "unique",
+      shared_delivery_text: "",
     };
   }
 
@@ -215,6 +217,13 @@ export default function Admin() {
             auto_delivery: Boolean(manualForm.auto_delivery),
             new_boxes: manualForm.new_boxes,
             box_split: manualForm.box_split,
+            // Only sent when "shared" (or switching away from it), so saving works before migration 053.
+            ...(manualForm.delivery_mode === "shared" || manualForm._hadMode === "shared"
+              ? {
+                  delivery_mode: manualForm.delivery_mode || "unique",
+                  shared_delivery_text: manualForm.shared_delivery_text || "",
+                }
+              : {}),
           }
         : {}),
     };
@@ -233,7 +242,7 @@ export default function Admin() {
         // Stay in edit mode so more stock can be pasted in straight away.
         setManualMessage((isNew ? "Created." : "Saved.") + boxNote);
         setBoxesVersion((v) => v + 1);
-        editManualProduct(data.product);
+        editManualProduct({ ...data.product, shared_delivery_text: manualForm.shared_delivery_text });
       } else {
         setManualMessage(isNew ? "Created." : "Updated.");
         setManualForm(emptyManualForm());
@@ -273,6 +282,9 @@ export default function Admin() {
       _hadBuff: Boolean(p.tunvn_buff),
       new_boxes: "",
       box_split: "separator",
+      delivery_mode: p.delivery_mode === "shared" ? "shared" : "unique",
+      _hadMode: p.delivery_mode === "shared" ? "shared" : "unique",
+      shared_delivery_text: p.shared_delivery_text || "",
     });
   }
 
