@@ -47,7 +47,7 @@ export async function getServerSideProps({ query, locale, res }) {
       const prefix = locale && locale !== "en" ? `/${locale}` : "";
       return {
         redirect: {
-          destination: `${prefix}/${slugifyProduct(matched)}`,
+          destination: `${prefix}/product/${slugifyProduct(matched)}`,
           permanent: true,
           basePath: false,
         },
@@ -612,7 +612,7 @@ export default function Storefront({ initialProducts, referralEnabled: initialRe
 
 function shareProduct(product, notify, t, locale) {
   const prefix = locale && locale !== "en" ? `/${locale}` : "";
-  const url = `${window.location.origin}${prefix}/${slugifyProduct(product)}`;
+  const url = `${window.location.origin}${prefix}/product/${slugifyProduct(product)}`;
   if (navigator.share) {
     navigator.share({ title: product.title, url }).catch(() => {});
     return;

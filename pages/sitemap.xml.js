@@ -39,7 +39,7 @@ export async function getServerSideProps({ res }) {
         .map((p) => {
           const slug = slugifyProduct(p);
           const lastMod = p.updated_at ? p.updated_at.split("T")[0] : today;
-          return `<url><loc>${SITE_URL}/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`;
+          return `<url><loc>${SITE_URL}/product/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`;
         })
         .join("");
     }
