@@ -84,17 +84,30 @@ export default function ManualProductsTab({
             onChange={(e) => setManualForm({ ...manualForm, title: e.target.value })}
           />
           <FormInput
-            label="URL Slug (SEO friendly path)"
+            label="URL Slug (SEO friendly path — auto-prefixed with /product/)"
             value={manualForm.slug || ""}
             onChange={(e) =>
               setManualForm({
                 ...manualForm,
-                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                slug: e.target.value
+                  .replace(/^\/?product\//i, "")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9-]/g, ""),
               })
             }
-            placeholder="e.g. notion-education-plus-1-year-account"
+            placeholder="Auto-generated from title if left blank (e.g. canva-pro-1-year)"
             maxLength={150}
-            hint={`Direct product link: https://digiverse.top/${manualForm.slug || "your-product-slug"}`}
+            hint={`Direct product link: https://digiverse.top/product/${
+              manualForm.slug ||
+              (manualForm.title
+                ? manualForm.title
+                    .toLowerCase()
+                    .replace(/[^\w\s-]/g, "")
+                    .trim()
+                    .replace(/\s+/g, "-")
+                    .replace(/-+/g, "-")
+                : "your-product-slug")
+            }`}
           />
           <FormInput
             label="Warranty Policy"

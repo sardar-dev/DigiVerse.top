@@ -52,12 +52,19 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
         }
       />
       <FormInput
-        label="URL Slug (SEO friendly path)"
+        label="URL Slug (SEO friendly path — auto-prefixed with /product/)"
         value={slug}
-        onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+        onChange={(e) =>
+          setSlug(
+            e.target.value
+              .replace(/^\/?product\//i, "")
+              .toLowerCase()
+              .replace(/[^a-z0-9-]/g, "")
+          )
+        }
         placeholder="e.g. buy-muse-ai-tokens"
         maxLength={150}
-        hint={`Direct product link: https://digiverse.top/${slug || "your-product-slug"}`}
+        hint={`Direct product link: https://digiverse.top/product/${slug || "your-product-slug"}`}
       />
       <FormInput
         label="Warranty Policy"

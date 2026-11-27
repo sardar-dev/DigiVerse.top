@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { splitBoxes, MAX_BOX_LENGTH, MAX_BOXES_PER_SAVE, MAX_SHARED_LENGTH, SHARED_STOCK } from "../../../lib/stockBoxes";
+import { slugifyProduct } from "../../../lib/productSlug";
 
 // "Same content for every order" mode: the text lives in a server-only table.
 async function saveSharedText(productId, text) {
@@ -197,8 +198,8 @@ export default async function handler(req, res) {
       if (idErr) return res.status(500).json({ success: false, error: idErr.message });
 
       const cleanSlug = typeof slug === "string" && slug.trim()
-        ? slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-")
-        : title.trim().toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-");
+        ? slug.trim().replace(/^\/?product\//i, "").toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-")
+        : slugifyProduct({ title: title.trim() });
 
       const insertPayload = {
         id: newId,
