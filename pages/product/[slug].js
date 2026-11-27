@@ -19,6 +19,7 @@ import { formatWarranty } from "../../lib/formatWarranty";
 import { getReferralSettings } from "../../lib/referralSettings";
 import { supabase } from "../../lib/supabaseClient";
 import * as fpixel from "../../lib/fpixel";
+import { merchantOfferExtras } from "../../lib/merchantOffer";
 
 const RESERVED_PATHS = new Set([
   "api",
@@ -300,6 +301,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
         url: SITE_URL,
       },
       priceValidUntil: "2027-12-31",
+      ...merchantOfferExtras(SITE_URL),
     },
   };
 

@@ -8,6 +8,7 @@ import { toProductCode } from "../lib/productLink";
 import { getProductUrl } from "../lib/productSlug";
 import { SITE_URL } from "../lib/siteConfig";
 import { useT } from "../lib/i18n";
+import { merchantOfferExtras } from "../lib/merchantOffer";
 
 // Landing page for the search "buy muse ai tokens". Rendered on the server and
 // cached at the CDN for 5 minutes (same pattern as the homepage), so a visit
@@ -147,6 +148,7 @@ export default function MuseTokens({ products }) {
         offerCount: (available.length ? available : products).length,
         availability: available.length ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
         seller: { "@type": "Organization", name: "DigiVerse", url: SITE_URL },
+        ...merchantOfferExtras(SITE_URL),
       },
     });
   }
