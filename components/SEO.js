@@ -34,9 +34,8 @@ export default function SEO({
     "digital software licenses, Muse AI tokens, buy Muse AI tokens, cheap license keys, Windows keys, office licenses, crypto software store, USDT digital goods, instant digital delivery, DigiVerse";
   const kw = keywords || defaultKeywords;
 
-  const prefix = (l) => (l === "en" ? "" : `/${l}`);
-  const pageLocale = englishOnly ? "en" : locale;
-  const url = `${SITE_URL}${prefix(pageLocale)}${path}`;
+  const isNonEnglishLocale = locale && locale !== "en";
+  const url = `${SITE_URL}${path}`;
 
   // Default to square branded preview image (600x600, ~29KB)
   // Perfectly optimized for WhatsApp (<300KB requirement), Telegram, Facebook, Twitter
@@ -63,15 +62,15 @@ export default function SEO({
       <meta name="keywords" content={kw} />
       <link rel="canonical" href={url} />
 
-      {/* Multilingual alternates */}
-      {(englishOnly ? ["en"] : ["en", "ar", "ru"]).map((l) => (
-        <link key={l} rel="alternate" hrefLang={l} href={`${SITE_URL}${prefix(l)}${path}`} />
-      ))}
+      {/* Canonical English-only alternate (prevents /ar and /ru duplicate indexing) */}
+      <link rel="alternate" hrefLang="en" href={`${SITE_URL}${path}`} />
       <link rel="alternate" hrefLang="x-default" href={`${SITE_URL}${path}`} />
 
       {/* Search Engine Robots Directive */}
       {noindex ? (
         <meta name="robots" content="noindex, nofollow" />
+      ) : isNonEnglishLocale ? (
+        <meta name="robots" content="noindex, follow" />
       ) : (
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
       )}
@@ -82,7 +81,7 @@ export default function SEO({
       <meta property="og:url" content={url} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />
-      <meta property="og:locale" content={{ en: "en_US", ar: "ar_AR", ru: "ru_RU" }[pageLocale] || "en_US"} />
+      <meta property="og:locale" content={isNonEnglishLocale ? ({ ar: "ar_AR", ru: "ru_RU" }[locale] || "en_US") : "en_US"} />
       <meta property="og:image" content={img} />
       <meta property="og:image:secure_url" content={img} />
       <meta property="og:image:type" content={mimeType} />

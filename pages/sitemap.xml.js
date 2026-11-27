@@ -16,28 +16,21 @@ const STATIC_PAGES = [
 export async function getServerSideProps({ res }) {
   const today = new Date().toISOString().split("T")[0];
 
-  // 1. Static Pages (English, Arabic, Russian)
+  // 1. Static Pages (English canonical only)
   const staticXml = STATIC_PAGES.map((p) => {
-    const en = `<url><loc>${SITE_URL}${p.path}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`;
-    // /muse-ai-tokens is English-only, so its ar/ru URLs canonicalize to the English page.
-    if (!p.path || p.path === "/llms.txt" || p.path === "/muse-ai-tokens") return en;
-    const ar = `<url><loc>${SITE_URL}/ar${p.path}</loc><changefreq>${p.changefreq}</changefreq><priority>${(Number(p.priority) * 0.9).toFixed(1)}</priority></url>`;
-    const ru = `<url><loc>${SITE_URL}/ru${p.path}</loc><changefreq>${p.changefreq}</changefreq><priority>${(Number(p.priority) * 0.9).toFixed(1)}</priority></url>`;
-    return en + ar + ru;
+    return `<url><loc>${SITE_URL}${p.path}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`;
   }).join("");
 
-  // 2. Blog Posts (Multi-locale)
+  // 2. Blog Posts (English canonical only)
   const blogPosts = getAllPosts();
   const blogXml = blogPosts
     .map((p) => {
       const lastMod = p.updated || p.date || today;
-      const en = `<url><loc>${SITE_URL}${p.path}</loc><lastmod>${lastMod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
-      // Posts are English-only; ar/ru URLs canonicalize to the English one.
-      return en;
+      return `<url><loc>${SITE_URL}${p.path}</loc><lastmod>${lastMod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
     })
     .join("");
 
-  // 3. Storefront Products (Dedicated Clean SEO Landing Pages)
+  // 3. Storefront Products (Dedicated Clean SEO Landing Pages, English canonical only)
   let productsXml = "";
   try {
     const { data: products } = await fetchStorefrontProducts();
@@ -46,10 +39,7 @@ export async function getServerSideProps({ res }) {
         .map((p) => {
           const slug = slugifyProduct(p);
           const lastMod = p.updated_at ? p.updated_at.split("T")[0] : today;
-          const en = `<url><loc>${SITE_URL}/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`;
-          const ar = `<url><loc>${SITE_URL}/ar/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
-          const ru = `<url><loc>${SITE_URL}/ru/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
-          return en + ar + ru;
+          return `<url><loc>${SITE_URL}/${slug}</loc><lastmod>${lastMod}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`;
         })
         .join("");
     }
