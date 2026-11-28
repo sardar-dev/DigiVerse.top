@@ -7,10 +7,12 @@ import * as shotix from "../../../lib/suppliers/shotix";
 import * as tunvn from "../../../lib/suppliers/tunvn";
 
 const LOW_BALANCE_THRESHOLD = Number(process.env.LOW_BALANCE_THRESHOLD || 5);
+const BALANCE_CACHE_TTL_MS = 120_000;
 
-// Supplier wallet balances come from outside APIs, so they are remembered
-// for a minute per server instance instead of being fetched on every
-// admin page load. ?fresh=1 skips the memory.
+// Supplier wallet balances come from outside APIs, so they are cached
+// both in memory AND in app_meta (120s TTL) to survive Vercel cold starts
+// without hitting 5 external supplier APIs on every cold invocation.
+// ?fresh=1 bypasses the cache.
 let balanceMemo = { at: 0, value: null };
 
 async function supplierBalances() {
@@ -87,26 +89,36 @@ async function supplierBalances() {
 // One database call that adds everything up (migration 021). Older setups
 // fall back to reading the rows, as before.
 async function summary() {
-  const { data, error } = await supabaseAdmin.rpc("admin_dashboard_summary");
-  if (!error && data) {
+  const [rpcRes, manualRes] = await Promise.all([
+    supabaseAdmin.rpc("admin_dashboard_summary"),
+    supabaseAdmin
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "awaiting_manual_fulfillment"),
+  ]);
+  const pendingManual = manualRes.count || 0;
+
+  if (!rpcRes.error && rpcRes.data) {
+    const data = rpcRes.data;
     return {
       delivered: Number(data.delivered) || 0,
       sales: Number(data.sales) || 0,
       cost: Number(data.cost) || 0,
       openTickets: Number(data.open_tickets) || 0,
       pendingWithdrawals: Number(data.pending_withdrawals) || 0,
+      pendingManual,
     };
   }
 
   let { data: delivered, error: deliveredErr } = await supabaseAdmin
     .from("orders")
     .select("total, quantity, product_id, unit_cost, products(cost_price)")
-    .eq("status", "delivered");
+    .in("status", ["delivered", "completed"]);
   if (deliveredErr) {
     ({ data: delivered } = await supabaseAdmin
       .from("orders")
       .select("total, quantity, product_id, products(cost_price)")
-      .eq("status", "delivered"));
+      .in("status", ["delivered", "completed"]));
   }
   let sales = 0;
   let cost = 0;
@@ -122,7 +134,7 @@ async function summary() {
       .eq("status", "open");
     openTickets = count || 0;
   } catch {}
-  return { delivered: (delivered || []).length, sales, cost, openTickets, pendingWithdrawals: 0 };
+  return { delivered: (delivered || []).length, sales, cost, openTickets, pendingWithdrawals: 0, pendingManual };
 }
 
 export default async function handler(req, res) {
@@ -130,30 +142,53 @@ export default async function handler(req, res) {
   if (!session) return;
 
   const fresh = req.query.fresh === "1";
-  const balancesPromise =
-    !fresh && balanceMemo.value && Date.now() - balanceMemo.at < 60_000
-      ? Promise.resolve(balanceMemo.value)
-      : supplierBalances().then((v) => {
-          balanceMemo = { at: Date.now(), value: v };
-          return v;
-        });
 
-  const [balances, sum, { data: meta }] = await Promise.all([
-    balancesPromise,
+  const [sum, { data: metaRows }] = await Promise.all([
     summary(),
-    supabaseAdmin.from("app_meta").select("value").eq("key", "last_sync").maybeSingle(),
+    supabaseAdmin
+      .from("app_meta")
+      .select("key, value")
+      .in("key", ["last_sync", "supplier_balances_cache"]),
   ]);
+
+  const metaMap = Object.fromEntries((metaRows || []).map((r) => [r.key, r.value]));
+  let dbCache = null;
+  if (metaMap.supplier_balances_cache) {
+    try {
+      dbCache = JSON.parse(metaMap.supplier_balances_cache);
+    } catch {}
+  }
+
+  let balances;
+  if (!fresh && balanceMemo.value && Date.now() - balanceMemo.at < 60_000) {
+    balances = balanceMemo.value;
+  } else if (!fresh && dbCache?.value && Date.now() - Number(dbCache.at || 0) < BALANCE_CACHE_TTL_MS) {
+    balances = dbCache.value;
+    balanceMemo = { at: Number(dbCache.at), value: balances };
+  } else {
+    balances = await supplierBalances();
+    const nowMs = Date.now();
+    balanceMemo = { at: nowMs, value: balances };
+    try {
+      await supabaseAdmin.from("app_meta").upsert({
+        key: "supplier_balances_cache",
+        value: JSON.stringify({ at: nowMs, value: balances }),
+        updated_at: new Date(nowMs).toISOString(),
+      });
+    } catch {}
+  }
 
   return res.status(200).json({
     success: true,
     openTickets: sum.openTickets,
     pendingWithdrawals: sum.pendingWithdrawals,
+    pendingManual: sum.pendingManual,
     digitrust: balances.digitrust,
     xpro: balances.xpro,
     emstore: balances.emstore,
     shotix: balances.shotix,
     tunvn: balances.tunvn,
-    lastSync: meta?.value || null,
+    lastSync: metaMap.last_sync || null,
     sales: {
       ordersDelivered: sum.delivered,
       totalSales: Number(sum.sales.toFixed(2)),

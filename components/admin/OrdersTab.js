@@ -85,16 +85,25 @@ export default function OrdersTab({
   onReconcileDelivered,
   onRetrySupplier,
   onRefund,
+  onRefresh,
+  refreshingOrders = false,
 }) {
   return (
     <>
-      <FormInput
-        value={orderSearch}
-        onChange={(e) => setOrderSearch(e.target.value)}
-        placeholder="Search by order #, customer email, product, status, tx hash or supplier order id…"
-        className="mb-4 w-full"
-        aria-label="Search orders"
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <FormInput
+          value={orderSearch}
+          onChange={(e) => setOrderSearch(e.target.value)}
+          placeholder="Search by order #, customer email, product, status, tx hash or supplier order id…"
+          className="min-w-[220px] flex-1"
+          aria-label="Search orders"
+        />
+        {onRefresh && (
+          <SecondaryButton onClick={onRefresh} disabled={refreshingOrders} className="whitespace-nowrap">
+            {refreshingOrders ? "Refreshing…" : "Refresh & Settle"}
+          </SecondaryButton>
+        )}
+      </div>
 
       {digitrustOrders && (
         <div className="mb-4 rounded-xl border border-border bg-surface p-4 shadow-card">

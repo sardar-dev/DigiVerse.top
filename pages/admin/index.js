@@ -1,34 +1,41 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { supabase } from "../../lib/supabaseClient";
 import AdminLayout, { ADMIN_TAB_IDS } from "../../components/admin/AdminLayout";
-import DashboardTab from "../../components/admin/DashboardTab";
-import ProductsTab from "../../components/admin/ProductsTab";
-import ManualProductsTab from "../../components/admin/ManualProductsTab";
-import OrdersTab from "../../components/admin/OrdersTab";
-import DepositsTab from "../../components/admin/DepositsTab";
-import FeedbackTab from "../../components/admin/FeedbackTab";
-import CouponsTab from "../../components/admin/CouponsTab";
-import ReferralsTab from "../../components/admin/ReferralsTab";
-import ReferralCostTab from "../../components/admin/ReferralCostTab";
-import AiDescriptionsTab from "../../components/admin/AiDescriptionsTab";
-import SupportTab from "../../components/admin/SupportTab";
-import MessagesTab from "../../components/admin/MessagesTab";
-import ApiConnectionsTab from "../../components/admin/ApiConnectionsTab";
-import WithdrawalsTab from "../../components/admin/WithdrawalsTab";
-import PricingTab from "../../components/admin/PricingTab";
-import SuppliersTab from "../../components/admin/SuppliersTab";
-import StatsTab from "../../components/admin/StatsTab";
-import DebugTab from "../../components/admin/DebugTab";
-import SettingsTab from "../../components/admin/SettingsTab";
-import ManualDeliverModal from "../../components/admin/ManualDeliverModal";
-import ReconcileModal from "../../components/admin/ReconcileModal";
 import { LoadingState } from "../../components/ui/States";
+
+const TabLoading = () => <LoadingState label="Loading section…" />;
+
+const DashboardTab = dynamic(() => import("../../components/admin/DashboardTab"), { ssr: false, loading: TabLoading });
+const ProductsTab = dynamic(() => import("../../components/admin/ProductsTab"), { ssr: false, loading: TabLoading });
+const ManualProductsTab = dynamic(() => import("../../components/admin/ManualProductsTab"), { ssr: false, loading: TabLoading });
+const OrdersTab = dynamic(() => import("../../components/admin/OrdersTab"), { ssr: false, loading: TabLoading });
+const DepositsTab = dynamic(() => import("../../components/admin/DepositsTab"), { ssr: false, loading: TabLoading });
+const FeedbackTab = dynamic(() => import("../../components/admin/FeedbackTab"), { ssr: false, loading: TabLoading });
+const CouponsTab = dynamic(() => import("../../components/admin/CouponsTab"), { ssr: false, loading: TabLoading });
+const ReferralsTab = dynamic(() => import("../../components/admin/ReferralsTab"), { ssr: false, loading: TabLoading });
+const ReferralCostTab = dynamic(() => import("../../components/admin/ReferralCostTab"), { ssr: false, loading: TabLoading });
+const AiDescriptionsTab = dynamic(() => import("../../components/admin/AiDescriptionsTab"), { ssr: false, loading: TabLoading });
+const SupportTab = dynamic(() => import("../../components/admin/SupportTab"), { ssr: false, loading: TabLoading });
+const MessagesTab = dynamic(() => import("../../components/admin/MessagesTab"), { ssr: false, loading: TabLoading });
+const ApiConnectionsTab = dynamic(() => import("../../components/admin/ApiConnectionsTab"), { ssr: false, loading: TabLoading });
+const WithdrawalsTab = dynamic(() => import("../../components/admin/WithdrawalsTab"), { ssr: false, loading: TabLoading });
+const PricingTab = dynamic(() => import("../../components/admin/PricingTab"), { ssr: false, loading: TabLoading });
+const SuppliersTab = dynamic(() => import("../../components/admin/SuppliersTab"), { ssr: false, loading: TabLoading });
+const StatsTab = dynamic(() => import("../../components/admin/StatsTab"), { ssr: false, loading: TabLoading });
+const DebugTab = dynamic(() => import("../../components/admin/DebugTab"), { ssr: false, loading: TabLoading });
+const SettingsTab = dynamic(() => import("../../components/admin/SettingsTab"), { ssr: false, loading: TabLoading });
+const ManualDeliverModal = dynamic(() => import("../../components/admin/ManualDeliverModal"), { ssr: false });
+const ReconcileModal = dynamic(() => import("../../components/admin/ReconcileModal"), { ssr: false });
 
 export default function Admin() {
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  const [refreshingOrders, setRefreshingOrders] = useState(false);
+  const loadedRef = useRef({ products: false, orders: false, manual: false, settings: false });
   const [tab, setTabState] = useState("products");
   // Keep the open section in the URL (#orders …) so a refresh — or a
   // shared/bookmarked link — returns to the same page, with no storage
@@ -39,15 +46,6 @@ export default function Admin() {
       window.history.replaceState(null, "", `#${id}`);
     } catch {}
   };
-  useEffect(() => {
-    const apply = () => {
-      const h = window.location.hash.replace("#", "");
-      if (ADMIN_TAB_IDS.includes(h)) setTabState(h);
-    };
-    apply();
-    window.addEventListener("hashchange", apply);
-    return () => window.removeEventListener("hashchange", apply);
-  }, []);
   const [sortAvailableFirst, setSortAvailableFirst] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   // all | live | hidden
@@ -94,6 +92,7 @@ export default function Admin() {
   const [settingsMessage, setSettingsMessage] = useState("");
 
   async function loadSettings() {
+    loadedRef.current.settings = true;
     const res = await fetch("/api/admin/settings");
     const data = await res.json();
     if (data.success) {
@@ -175,6 +174,7 @@ export default function Admin() {
   }
 
   async function loadManualProducts() {
+    loadedRef.current.manual = true;
     const res = await fetch("/api/admin/manual-products");
     const data = await res.json();
     if (data.success) setManualProducts(data.products);
@@ -337,7 +337,27 @@ export default function Admin() {
   const [debugResult, setDebugResult] = useState(null);
   const [debugLoading, setDebugLoading] = useState(false);
 
+  function ensureTabData(targetTab) {
+    if (targetTab === "products" && !loadedRef.current.products) loadProducts();
+    else if (targetTab === "manual" && !loadedRef.current.manual) loadManualProducts();
+    else if (targetTab === "orders" && !loadedRef.current.orders) loadOrders();
+    else if (targetTab === "settings" && !loadedRef.current.settings) loadSettings();
+    else if (targetTab === "coupons") {
+      if (!loadedRef.current.products) loadProducts();
+      if (!loadedRef.current.manual) loadManualProducts();
+    }
+  }
+
   useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    const initialTab = ADMIN_TAB_IDS.includes(hash) ? hash : "products";
+    if (ADMIN_TAB_IDS.includes(hash)) setTabState(hash);
+    const onHash = () => {
+      const next = window.location.hash.replace("#", "");
+      if (ADMIN_TAB_IDS.includes(next)) setTabState(next);
+    };
+    window.addEventListener("hashchange", onHash);
+
     (async () => {
       const {
         data: { session },
@@ -357,13 +377,17 @@ export default function Admin() {
       }
       setAllowed(true);
       setChecking(false);
-      loadProducts();
-      loadOrders();
+      // Load cached summary header + ONLY the currently active tab's data
       loadDashboard();
-      loadManualProducts();
-      loadSettings();
+      ensureTabData(initialTab);
     })();
+
+    return () => window.removeEventListener("hashchange", onHash);
   }, []);
+
+  useEffect(() => {
+    if (allowed) ensureTabData(tab);
+  }, [allowed, tab]);
 
   async function loadDashboard() {
     const res = await fetch("/api/admin/dashboard");
@@ -449,15 +473,25 @@ export default function Admin() {
   }
 
   async function loadProducts() {
+    loadedRef.current.products = true;
     const res = await fetch("/api/admin/products");
     const data = await res.json();
     if (data.success) setProducts(data.products);
   }
 
-  async function loadOrders() {
-    const res = await fetch("/api/admin/orders");
-    const data = await res.json();
-    if (data.success) setOrders(data.orders);
+  async function loadOrders({ sync = false } = {}) {
+    loadedRef.current.orders = true;
+    if (sync) setRefreshingOrders(true);
+    try {
+      const res = await fetch(sync ? "/api/admin/orders?sync=1" : "/api/admin/orders");
+      const data = await res.json();
+      if (data.success) {
+        setOrders(data.orders);
+        setOrdersLoaded(true);
+      }
+    } finally {
+      if (sync) setRefreshingOrders(false);
+    }
   }
 
   async function updateProduct(id, patch) {
@@ -594,8 +628,11 @@ export default function Admin() {
   }, [orders, orderSearch]);
 
   const pendingManualCount = useMemo(
-    () => orders.filter((o) => o.status === "awaiting_manual_fulfillment").length,
-    [orders]
+    () =>
+      ordersLoaded
+        ? orders.filter((o) => o.status === "awaiting_manual_fulfillment").length
+        : (dashboard?.pendingManual ?? 0),
+    [ordersLoaded, orders, dashboard?.pendingManual]
   );
 
   if (checking) {
@@ -714,6 +751,8 @@ export default function Admin() {
           onCheckDigitrust={loadDigitrustOrders}
           onReconcileDelivered={(order) => setReconcileOrder(order)}
           onRetrySupplier={retrySupplierOrder}
+          onRefresh={() => loadOrders({ sync: true })}
+          refreshingOrders={refreshingOrders}
         />
       )}
 

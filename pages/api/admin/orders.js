@@ -4,16 +4,27 @@ import { supplierLabels } from "../../../lib/suppliers";
 import { settleAllBuffOrders, placeBuffOrder, settleBuffOrder } from "../../../lib/tunvnBuff";
 import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 
+let lastCleanupAt = 0;
+
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
   if (!session) return;
 
   if (req.method === "GET") {
-    // Purge expired unpaid orders (>30 mins) completely from database
-    await cleanupExpiredPendingOrders().catch(() => {});
+    const forceSync = req.query.sync === "1";
 
-    // Settle any fulfilling TunVN buff orders in the background
-    settleAllBuffOrders(10).catch(() => {});
+    // Run housekeeping & external buff settlement only when explicitly requested
+    // or at most once per 3 minutes to avoid hammering external APIs & DB on tab switch.
+    if (forceSync) {
+      await Promise.all([
+        cleanupExpiredPendingOrders().catch(() => {}),
+        settleAllBuffOrders(10).catch(() => {}),
+      ]);
+      lastCleanupAt = Date.now();
+    } else if (Date.now() - lastCleanupAt > 180_000) {
+      lastCleanupAt = Date.now();
+      cleanupExpiredPendingOrders().catch(() => {});
+    }
 
     let { data, error } = await supabaseAdmin
       .from("orders")

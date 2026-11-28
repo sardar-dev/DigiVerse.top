@@ -39,6 +39,27 @@ export default function ProductsTab({
 }) {
   const [selected, setSelected] = useState(() => new Set());
   const [editingId, setEditingId] = useState(null);
+  const [detailsById, setDetailsById] = useState({});
+  const [loadingDetailsId, setLoadingDetailsId] = useState(null);
+
+  async function toggleEdit(p) {
+    if (editingId === p.id) {
+      setEditingId(null);
+      return;
+    }
+    setEditingId(p.id);
+    if (!detailsById[p.id] && p.description === undefined) {
+      setLoadingDetailsId(p.id);
+      try {
+        const res = await fetch(`/api/admin/products?id=${encodeURIComponent(p.id)}`);
+        const d = await res.json();
+        if (d.success && d.product) {
+          setDetailsById((prev) => ({ ...prev, [p.id]: d.product }));
+        }
+      } catch {}
+      setLoadingDetailsId(null);
+    }
+  }
 
   function toggle(id) {
     setSelected((prev) => {
@@ -293,7 +314,7 @@ export default function ProductsTab({
                   />
                 </td>
                 <td className="py-3 px-4">
-                  <LinkButton onClick={() => setEditingId(editingId === p.id ? null : p.id)} className="text-xs">
+                  <LinkButton onClick={() => toggleEdit(p)} className="text-xs">
                     {editingId === p.id ? "Close" : "Edit"}
                   </LinkButton>
                 </td>
@@ -301,14 +322,23 @@ export default function ProductsTab({
               {editingId === p.id && (
                 <tr className="border-b border-border last:border-0 bg-bg">
                   <td colSpan={9} className="p-4">
-                    <ProductMerchandisingFields
-                      product={p}
-                      onSave={(patch) => {
-                        updateProduct(p.id, patch);
-                        setEditingId(null);
-                      }}
-                      onCancel={() => setEditingId(null)}
-                    />
+                    {loadingDetailsId === p.id ? (
+                      <div className="py-4 text-xs text-muted">Loading product details…</div>
+                    ) : (
+                      <ProductMerchandisingFields
+                        key={`${p.id}-${detailsById[p.id] ? "full" : "base"}`}
+                        product={detailsById[p.id] ? { ...p, ...detailsById[p.id] } : p}
+                        onSave={(patch) => {
+                          setDetailsById((prev) => ({
+                            ...prev,
+                            [p.id]: { ...(prev[p.id] || p), ...patch },
+                          }));
+                          updateProduct(p.id, patch);
+                          setEditingId(null);
+                        }}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    )}
                   </td>
                 </tr>
               )}

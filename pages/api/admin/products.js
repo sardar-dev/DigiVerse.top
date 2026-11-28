@@ -3,15 +3,36 @@ import { requireAdmin } from "../../../lib/requireAdmin";
 import { recomputeProduct } from "../../../lib/syncProducts";
 import { cleanTitle } from "../../../lib/cleanText";
 
+const LIST_COLUMNS =
+  "id, title, title_locked, active_supplier, provider, supplier_status, real_stock, available_stock, cost_price, sell_price, auto_price, auto_margin, selected, is_out_of_stock, featured, category, image_url, slug, warranty, low_stock_threshold, supplier_product_id";
+
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
   if (!session) return; // requireAdmin already sent the response
 
   if (req.method === "GET") {
-    const { data, error } = await supabaseAdmin
+    // On-demand single product detail fetch (used when clicking Edit)
+    if (req.query.id) {
+      const { data: product, error } = await supabaseAdmin
+        .from("products")
+        .select("*")
+        .eq("id", req.query.id)
+        .maybeSingle();
+      if (error) return res.status(500).json({ success: false, error: error.message });
+      return res.status(200).json({ success: true, product });
+    }
+
+    // Omit multi-KB description blobs from catalog list queries to reduce egress
+    let { data, error } = await supabaseAdmin
       .from("products")
-      .select("*")
+      .select(LIST_COLUMNS)
       .order("title", { ascending: true });
+    if (error) {
+      ({ data, error } = await supabaseAdmin
+        .from("products")
+        .select("*")
+        .order("title", { ascending: true }));
+    }
     if (error) return res.status(500).json({ success: false, error: error.message });
 
     // Attach each product's per-supplier numbers (one extra query) so the
