@@ -16,8 +16,7 @@ const GROUPS = [
     items: [
       { id: "products", label: "Products", icon: "🛍️" },
       { id: "manual", label: "Manual products", icon: "✍️" },
-      { id: "suppliers", label: "Suppliers", icon: "🔗" },
-      { id: "apis", label: "API connections", icon: "🔌" },
+      { id: "suppliers", label: "Suppliers & APIs", icon: "🔗" },
       { id: "pricing", label: "Pricing & profit", icon: "💰" },
       { id: "aitext", label: "AI text", icon: "✨" },
     ],
@@ -28,18 +27,14 @@ const GROUPS = [
       { id: "orders", label: "Orders", icon: "📦" },
       { id: "deposits", label: "Deposits", icon: "💳" },
       { id: "coupons", label: "Coupons", icon: "🎟️" },
-      { id: "referrals", label: "Referrals & Gifts", icon: "🎁" },
-      { id: "referral-costs", label: "Referral Costs", icon: "📊" },
+      { id: "referrals", label: "Referrals", icon: "🎁" },
       { id: "withdrawals", label: "Withdrawals", icon: "💸" },
     ],
   },
   {
     label: "Support & tools",
     items: [
-      { id: "messages", label: "Messages", icon: "📨" },
-      { id: "support", label: "Support", icon: "🎧" },
-      { id: "feedback", label: "Feedback", icon: "💬" },
-      { id: "debug", label: "Debug payment", icon: "🛠️" },
+      { id: "inbox", label: "Customer Inbox", icon: "🎧" },
       { id: "settings", label: "Settings", icon: "⚙️" },
     ],
   },
@@ -52,7 +47,7 @@ export default function AdminLayout({ tab, onTabChange, dashboard, pendingManual
   const badge = (id) =>
     id === "orders" && pendingManualCount > 0
       ? pendingManualCount
-      : id === "support" && dashboard?.openTickets > 0
+      : id === "inbox" && dashboard?.openTickets > 0
       ? dashboard.openTickets
       : id === "withdrawals" && dashboard?.pendingWithdrawals > 0
       ? dashboard.pendingWithdrawals

@@ -11,22 +11,34 @@ const ProductsTab = dynamic(() => import("../../components/admin/ProductsTab"), 
 const ManualProductsTab = dynamic(() => import("../../components/admin/ManualProductsTab"), { ssr: false, loading: TabLoading });
 const OrdersTab = dynamic(() => import("../../components/admin/OrdersTab"), { ssr: false, loading: TabLoading });
 const DepositsTab = dynamic(() => import("../../components/admin/DepositsTab"), { ssr: false, loading: TabLoading });
-const FeedbackTab = dynamic(() => import("../../components/admin/FeedbackTab"), { ssr: false, loading: TabLoading });
 const CouponsTab = dynamic(() => import("../../components/admin/CouponsTab"), { ssr: false, loading: TabLoading });
-const ReferralsTab = dynamic(() => import("../../components/admin/ReferralsTab"), { ssr: false, loading: TabLoading });
-const ReferralCostTab = dynamic(() => import("../../components/admin/ReferralCostTab"), { ssr: false, loading: TabLoading });
+const ReferralsHub = dynamic(() => import("../../components/admin/ReferralsHub"), { ssr: false, loading: TabLoading });
 const AiDescriptionsTab = dynamic(() => import("../../components/admin/AiDescriptionsTab"), { ssr: false, loading: TabLoading });
-const SupportTab = dynamic(() => import("../../components/admin/SupportTab"), { ssr: false, loading: TabLoading });
-const MessagesTab = dynamic(() => import("../../components/admin/MessagesTab"), { ssr: false, loading: TabLoading });
-const ApiConnectionsTab = dynamic(() => import("../../components/admin/ApiConnectionsTab"), { ssr: false, loading: TabLoading });
+const CustomerInboxHub = dynamic(() => import("../../components/admin/CustomerInboxHub"), { ssr: false, loading: TabLoading });
 const WithdrawalsTab = dynamic(() => import("../../components/admin/WithdrawalsTab"), { ssr: false, loading: TabLoading });
 const PricingTab = dynamic(() => import("../../components/admin/PricingTab"), { ssr: false, loading: TabLoading });
-const SuppliersTab = dynamic(() => import("../../components/admin/SuppliersTab"), { ssr: false, loading: TabLoading });
+const SuppliersHub = dynamic(() => import("../../components/admin/SuppliersHub"), { ssr: false, loading: TabLoading });
 const StatsTab = dynamic(() => import("../../components/admin/StatsTab"), { ssr: false, loading: TabLoading });
-const DebugTab = dynamic(() => import("../../components/admin/DebugTab"), { ssr: false, loading: TabLoading });
 const SettingsTab = dynamic(() => import("../../components/admin/SettingsTab"), { ssr: false, loading: TabLoading });
 const ManualDeliverModal = dynamic(() => import("../../components/admin/ManualDeliverModal"), { ssr: false });
 const ReconcileModal = dynamic(() => import("../../components/admin/ReconcileModal"), { ssr: false });
+
+// Preserve legacy direct hash links after merging sidebar tabs
+const LEGACY_HASH_MAP = {
+  "referral-costs": { tab: "referrals", sub: "costs" },
+  apis: { tab: "suppliers", sub: "apis" },
+  support: { tab: "inbox", sub: "support" },
+  messages: { tab: "inbox", sub: "messages" },
+  feedback: { tab: "inbox", sub: "feedback" },
+  debug: { tab: "deposits", sub: "debug" },
+};
+
+function resolveHashTarget(rawHash) {
+  const hash = (rawHash || "").replace(/^#/, "");
+  if (LEGACY_HASH_MAP[hash]) return LEGACY_HASH_MAP[hash];
+  if (ADMIN_TAB_IDS.includes(hash)) return { tab: hash, sub: null };
+  return { tab: "products", sub: null };
+}
 
 export default function Admin() {
   const [checking, setChecking] = useState(true);
@@ -37,11 +49,13 @@ export default function Admin() {
   const [refreshingOrders, setRefreshingOrders] = useState(false);
   const loadedRef = useRef({ products: false, orders: false, manual: false, settings: false });
   const [tab, setTabState] = useState("products");
+  const [subHint, setSubHint] = useState({ tab: null, sub: null, seq: 0 });
   // Keep the open section in the URL (#orders …) so a refresh — or a
   // shared/bookmarked link — returns to the same page, with no storage
   // or server involved.
   const setTab = (id) => {
     setTabState(id);
+    setSubHint((prev) => ({ tab: id, sub: null, seq: prev.seq }));
     try {
       window.history.replaceState(null, "", `#${id}`);
     } catch {}
@@ -332,11 +346,6 @@ export default function Admin() {
     setDeliverOrder(null);
   }
 
-  // Debug tool state
-  const [debugTx, setDebugTx] = useState("");
-  const [debugResult, setDebugResult] = useState(null);
-  const [debugLoading, setDebugLoading] = useState(false);
-
   function ensureTabData(targetTab) {
     if (targetTab === "products" && !loadedRef.current.products) loadProducts();
     else if (targetTab === "manual" && !loadedRef.current.manual) loadManualProducts();
@@ -349,12 +358,18 @@ export default function Admin() {
   }
 
   useEffect(() => {
-    const hash = window.location.hash.replace("#", "");
-    const initialTab = ADMIN_TAB_IDS.includes(hash) ? hash : "products";
-    if (ADMIN_TAB_IDS.includes(hash)) setTabState(hash);
+    const initial = resolveHashTarget(window.location.hash);
+    const initialTab = initial.tab;
+    setTabState(initialTab);
+    if (initial.sub) {
+      setSubHint((prev) => ({ tab: initialTab, sub: initial.sub, seq: prev.seq + 1 }));
+    }
     const onHash = () => {
-      const next = window.location.hash.replace("#", "");
-      if (ADMIN_TAB_IDS.includes(next)) setTabState(next);
+      const next = resolveHashTarget(window.location.hash);
+      setTabState(next.tab);
+      if (next.sub) {
+        setSubHint((prev) => ({ tab: next.tab, sub: next.sub, seq: prev.seq + 1 }));
+      }
     };
     window.addEventListener("hashchange", onHash);
 
@@ -554,19 +569,6 @@ export default function Admin() {
     loadOrders();
   }
 
-  async function runDebug() {
-    setDebugLoading(true);
-    setDebugResult(null);
-    const res = await fetch("/api/admin/debug-payment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tx_hash: debugTx }),
-    });
-    const data = await res.json();
-    setDebugResult(data);
-    setDebugLoading(false);
-  }
-
   // Unique suppliers from loaded products (for dynamic filter tabs)
   const supplierList = useMemo(() => {
     const seen = new Set();
@@ -678,16 +680,13 @@ export default function Admin() {
 
       {tab === "stats" && <StatsTab />}
 
-      {tab === "deposits" && <DepositsTab />}
-
-      {tab === "feedback" && <FeedbackTab />}
+      {tab === "deposits" && <DepositsTab subHint={subHint} />}
 
       {tab === "aitext" && <AiDescriptionsTab />}
 
-      {tab === "messages" && <MessagesTab />}
-      {tab === "support" && <SupportTab />}
-
-      {tab === "apis" && <ApiConnectionsTab onChanged={loadProducts} />}
+      {tab === "inbox" && (
+        <CustomerInboxHub openTickets={dashboard?.openTickets || 0} subHint={subHint} />
+      )}
 
       {tab === "withdrawals" && <WithdrawalsTab />}
 
@@ -697,9 +696,7 @@ export default function Admin() {
         <CouponsTab products={allAdminProducts} />
       )}
 
-      {tab === "referrals" && <ReferralsTab />}
-
-      {tab === "referral-costs" && <ReferralCostTab />}
+      {tab === "referrals" && <ReferralsHub subHint={subHint} />}
 
       {tab === "products" && (
         <ProductsTab
@@ -735,7 +732,7 @@ export default function Admin() {
         />
       )}
 
-      {tab === "suppliers" && <SuppliersTab onChanged={loadProducts} />}
+      {tab === "suppliers" && <SuppliersHub onChanged={loadProducts} subHint={subHint} />}
 
       {tab === "orders" && (
         <OrdersTab
@@ -753,16 +750,6 @@ export default function Admin() {
           onRetrySupplier={retrySupplierOrder}
           onRefresh={() => loadOrders({ sync: true })}
           refreshingOrders={refreshingOrders}
-        />
-      )}
-
-      {tab === "debug" && (
-        <DebugTab
-          debugTx={debugTx}
-          setDebugTx={setDebugTx}
-          runDebug={runDebug}
-          debugLoading={debugLoading}
-          debugResult={debugResult}
         />
       )}
 
