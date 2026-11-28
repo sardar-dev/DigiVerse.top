@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
+import { notifyTelegramDeposit } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   const session = await requireAdmin(req, res);
@@ -17,7 +18,7 @@ export default async function handler(req, res) {
 
   let { data: profile, error: profileErr } = await supabaseAdmin
     .from("profiles")
-    .select("id, balance")
+    .select("id, email, balance")
     .eq("email", email)
     .maybeSingle();
 
@@ -43,7 +44,7 @@ export default async function handler(req, res) {
             },
             { onConflict: "id" }
           )
-          .select("id, balance")
+          .select("id, email, balance")
           .single();
         profile = createdProf;
       }
@@ -68,6 +69,21 @@ export default async function handler(req, res) {
     reason,
     created_by: session.user.id,
   });
+
+  if (numAmount > 0) {
+    try {
+      await notifyTelegramDeposit({
+        email: profile.email || email,
+        amount: numAmount,
+        newBalance,
+        method: "manual_credit",
+        reason,
+        creditedBy: session.user.email || "Admin",
+      });
+    } catch (e) {
+      console.warn("[wallet-adjust] telegram alert error:", e?.message);
+    }
+  }
 
   return res.status(200).json({ success: true, balance: newBalance });
 }

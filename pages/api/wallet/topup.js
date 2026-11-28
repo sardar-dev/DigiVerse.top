@@ -1,9 +1,10 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { verifyUsdtTopup } from "../../../lib/bscscan";
+import { getNetworkConfig } from "../../../lib/cryptoNetworks";
 import { claimTxHash, confirmTxHash, releaseTxHash } from "../../../lib/claimTxHash";
 import { frozenSeconds, recordWrongHash, isWrongHash, frozenResponse } from "../../../lib/hashLimit";
-import { notifyTelegramDeposit } from "../../../lib/telegram";
+import { notifyTelegramDeposit, notifyTelegramDepositIssue } from "../../../lib/telegram";
 
 // Customer must first create a deposit invoice (see
 // create-deposit-invoice.js), which assigns a unique exact amount
@@ -44,7 +45,12 @@ export default async function handler(req, res) {
   if (!invoice_id) {
     return res.status(400).json({ success: false, error: "invoice_required" });
   }
-  const tx_hash = rawTxHash.toLowerCase();
+  const tx_hash = String(rawTxHash).trim().toLowerCase();
+  const clientIp =
+    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    "";
+  const selectedNet = getNetworkConfig(rawNetwork);
 
   // Too many wrong hashes recently → short freeze.
   const frozen = await frozenSeconds(session.user.id);
@@ -72,6 +78,20 @@ export default async function handler(req, res) {
       .update({ status: "expired" })
       .eq("id", invoice.id)
       .eq("status", "pending"); // don't resurrect one matched moments ago
+    try {
+      await notifyTelegramDepositIssue({
+        email: session.user.email,
+        requestedAmount: invoice.requested_amount,
+        uniqueAmount: invoice.unique_amount,
+        network: selectedNet.networkName,
+        networkId: selectedNet.id,
+        token: selectedNet.token,
+        txHash: tx_hash,
+        error: "invoice_expired",
+        errorDetails: "Deposit invoice expired before tx hash verification.",
+        clientIp,
+      });
+    } catch {}
     return res.status(410).json({ success: false, error: "invoice_expired" });
   }
 
@@ -80,6 +100,20 @@ export default async function handler(req, res) {
   const claim = await claimTxHash(tx_hash, "topup", invoice.id);
   if (!claim.claimed) {
     const lock = await recordWrongHash(session.user.id);
+    try {
+      await notifyTelegramDepositIssue({
+        email: session.user.email,
+        requestedAmount: invoice.requested_amount,
+        uniqueAmount: invoice.unique_amount,
+        network: selectedNet.networkName,
+        networkId: selectedNet.id,
+        token: selectedNet.token,
+        txHash: tx_hash,
+        error: "tx_already_used",
+        errorDetails: "Transaction hash was already claimed by another order or deposit.",
+        clientIp,
+      });
+    } catch {}
     return res.status(409).json({
       success: false,
       error: lock ? "too_many_attempts" : "tx_already_used",
@@ -91,6 +125,25 @@ export default async function handler(req, res) {
   if (!verdict.ok) {
     await releaseTxHash(tx_hash);
     const lock = isWrongHash(verdict.reason) ? await recordWrongHash(session.user.id) : 0;
+    if (verdict.reason === "wrong_recipient" || verdict.reason === "tx_failed") {
+      try {
+        await notifyTelegramDepositIssue({
+          email: session.user.email,
+          requestedAmount: invoice.requested_amount,
+          uniqueAmount: invoice.unique_amount,
+          network: selectedNet.networkName,
+          networkId: selectedNet.id,
+          token: selectedNet.token,
+          txHash: tx_hash,
+          error: verdict.reason,
+          errorDetails:
+            verdict.reason === "wrong_recipient"
+              ? "Transfer was not sent to the configured payout wallet/token."
+              : "Transaction failed on-chain.",
+          clientIp,
+        });
+      } catch {}
+    }
     return res.status(lock ? 429 : 202).json({
       success: false,
       error: lock ? "too_many_attempts" : verdict.reason,
@@ -106,6 +159,22 @@ export default async function handler(req, res) {
   if (Math.abs(verdict.amount - Number(invoice.unique_amount)) > AMOUNT_TOLERANCE) {
     await releaseTxHash(tx_hash);
     const lock = await recordWrongHash(session.user.id);
+    const verifiedNet = getNetworkConfig(verdict.network || rawNetwork);
+    try {
+      await notifyTelegramDepositIssue({
+        email: session.user.email,
+        requestedAmount: invoice.requested_amount,
+        uniqueAmount: invoice.unique_amount,
+        receivedAmount: verdict.amount,
+        network: verdict.networkName || verifiedNet.networkName,
+        networkId: verdict.network || verifiedNet.id,
+        token: verdict.token || verifiedNet.token,
+        txHash: tx_hash,
+        error: "amount_mismatch",
+        errorDetails: `Sent $${Number(verdict.amount).toFixed(4)} instead of exact invoice figure $${Number(invoice.unique_amount).toFixed(4)}.`,
+        clientIp,
+      });
+    } catch {}
     if (lock) {
       return res.status(429).json({ success: false, error: "too_many_attempts", retry_after: lock });
     }
@@ -119,6 +188,20 @@ export default async function handler(req, res) {
 
   await confirmTxHash(tx_hash);
 
+  // Atomically claim and close the pending invoice before crediting balance
+  // so two concurrent requests with different hashes cannot double-credit one invoice.
+  const { data: matchedInvoice, error: matchErr } = await supabaseAdmin
+    .from("wallet_deposit_invoices")
+    .update({ status: "matched", tx_hash })
+    .eq("id", invoice.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (matchErr || !matchedInvoice) {
+    return res.status(409).json({ success: false, error: "invoice_not_pending" });
+  }
+
   // Credit the round amount the customer asked for, not the unique
   // decimal figure — the extra cents were only ever a matching
   // fingerprint, never meant to show up in their balance.
@@ -130,19 +213,12 @@ export default async function handler(req, res) {
     amount: creditAmount,
     status: "credited",
   });
-  if (insertErr && insertErr.code !== "23505") {
+  if (insertErr) {
+    if (insertErr.code === "23505") {
+      return res.status(409).json({ success: false, error: "tx_already_used" });
+    }
     return res.status(500).json({ success: false, error: insertErr.message });
   }
-
-  // Mark the invoice matched — frees its unique_amount isn't
-  // necessary since the partial unique index only applies to
-  // status='pending' rows, but marking it closes the loop so it can
-  // never be matched against a second transaction.
-  await supabaseAdmin
-    .from("wallet_deposit_invoices")
-    .update({ status: "matched", tx_hash })
-    .eq("id", invoice.id)
-    .eq("status", "pending");
 
   // Atomic, single-statement balance credit.
   const { data: newBalance, error: balErr } = await supabaseAdmin.rpc(
@@ -153,17 +229,34 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: balErr.message });
   }
 
-  // Notify admin via Telegram (fire & forget, never blocks response)
+  let customerEmail = session.user.email;
+  if (!customerEmail) {
+    try {
+      const { data: prof } = await supabaseAdmin
+        .from("profiles")
+        .select("email")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      if (prof?.email) customerEmail = prof.email;
+    } catch {}
+  }
+
+  // Await Telegram alert (bounded by timeout) so Vercel serverless does not drop it
+  const verifiedNet = getNetworkConfig(verdict.network || rawNetwork);
   try {
-    notifyTelegramDeposit({
-      email: session.user.email,
+    await notifyTelegramDeposit({
+      email: customerEmail,
       amount: creditAmount,
-      network: invoice.network || "BSC",
-      token: invoice.token || "USDT",
+      uniqueAmount: Number(invoice.unique_amount),
+      networkId: verdict.network || verifiedNet.id,
+      network: verdict.networkName || verifiedNet.networkName,
+      token: verdict.token || verifiedNet.token,
       txHash: tx_hash,
       newBalance,
-    }).catch((e) => console.warn("[topup] telegram alert error:", e?.message));
-  } catch {}
+    });
+  } catch (e) {
+    console.warn("[topup] telegram alert error:", e?.message);
+  }
 
   return res.status(200).json({ success: true, credited: creditAmount, balance: newBalance });
 }

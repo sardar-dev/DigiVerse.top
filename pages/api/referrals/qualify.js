@@ -90,12 +90,16 @@ export default async function handler(req, res) {
     }
 
     if (shouldNotify) {
-      notifyTelegramSignup({
-        username: cleanUsername,
-        email: authUser.user.email || req.body?.email || "—",
-        referrer: req.body?.ref || authUser.user.user_metadata?.ref || null,
-        clientIp: clientIp || "—",
-      }).catch((e) => console.warn("[qualify] telegram alert error:", e?.message));
+      try {
+        await notifyTelegramSignup({
+          username: cleanUsername,
+          email: authUser.user.email || req.body?.email || "—",
+          referrer: req.body?.ref || authUser.user.user_metadata?.ref || null,
+          clientIp: clientIp || "—",
+        });
+      } catch (e) {
+        console.warn("[qualify] telegram alert error:", e?.message);
+      }
     }
   } catch (e) {
     console.warn("[referrals/qualify] ensure profile error:", e?.message);

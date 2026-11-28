@@ -35,14 +35,16 @@ export default async function handler(req, res) {
     const ageMs = Date.now() - new Date(existingOrder.created_at).getTime();
     if (existingOrder.status === "pending_payment" && ageMs >= 30 * 60 * 1000) {
       cleanupExpiredPendingOrders().catch(() => {});
-      notifyTelegramPaymentIssue({
-        order: existingOrder,
-        stage: "Payment Page > Pay with Wallet Balance",
-        method: "Wallet Balance",
-        error: "order_expired",
-        errorDetails: "Order expired after 30 minutes.",
-        userEmail: session?.user?.email,
-      }).catch(() => {});
+      try {
+        await notifyTelegramPaymentIssue({
+          order: existingOrder,
+          stage: "Payment Page > Pay with Wallet Balance",
+          method: "Wallet Balance",
+          error: "order_expired",
+          errorDetails: "Order expired after 30 minutes.",
+          userEmail: session?.user?.email,
+        });
+      } catch {}
       return res.status(410).json({
         success: false,
         error: "order_expired",
@@ -110,15 +112,17 @@ export default async function handler(req, res) {
           .update({ status: "pending_payment", updated_at: new Date().toISOString() })
           .eq("id", order_id);
 
-        notifyTelegramPaymentIssue({
-          order: claimedOrder,
-          product: prod,
-          stage: "Payment Page > Pay with Wallet Balance",
-          method: "Wallet Balance",
-          error: "supplier_balance_limit",
-          errorDetails: `Supplier capacity limit: available ${maxAffordable}B < requested ${reqQty}B`,
-          userEmail: session?.user?.email,
-        }).catch(() => {});
+        try {
+          await notifyTelegramPaymentIssue({
+            order: claimedOrder,
+            product: prod,
+            stage: "Payment Page > Pay with Wallet Balance",
+            method: "Wallet Balance",
+            error: "supplier_balance_limit",
+            errorDetails: `Supplier capacity limit: available ${maxAffordable}B < requested ${reqQty}B`,
+            userEmail: session?.user?.email,
+          });
+        } catch {}
 
         return res.status(409).json({
           success: false,
@@ -158,15 +162,17 @@ export default async function handler(req, res) {
       .update({ status: "pending_payment", updated_at: new Date().toISOString() })
       .eq("id", order_id);
 
-    notifyTelegramPaymentIssue({
-      order: claimedOrder,
-      product: prod,
-      stage: "Payment Page > Pay with Wallet Balance",
-      method: "Wallet Balance",
-      error: "insufficient_balance",
-      errorDetails: "Customer wallet balance is insufficient to cover order total.",
-      userEmail: session?.user?.email,
-    }).catch(() => {});
+    try {
+      await notifyTelegramPaymentIssue({
+        order: claimedOrder,
+        product: prod,
+        stage: "Payment Page > Pay with Wallet Balance",
+        method: "Wallet Balance",
+        error: "insufficient_balance",
+        errorDetails: "Customer wallet balance is insufficient to cover order total.",
+        userEmail: session?.user?.email,
+      });
+    } catch {}
 
     return res.status(402).json({ success: false, error: "insufficient_balance" });
   }

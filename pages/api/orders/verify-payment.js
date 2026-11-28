@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   if (!order_id || !rawTxHash) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
-  const tx_hash = rawTxHash.toLowerCase();
+  const tx_hash = String(rawTxHash).trim().toLowerCase();
 
   const callerKey = session?.user?.id || (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "guest";
 
@@ -57,15 +57,17 @@ export default async function handler(req, res) {
   const orderAgeMs = Date.now() - new Date(order.created_at).getTime();
   if (order.status === "pending_payment" && orderAgeMs >= 30 * 60 * 1000) {
     cleanupExpiredPendingOrders().catch(() => {});
-    notifyTelegramPaymentIssue({
-      order,
-      stage: `Payment Page > Crypto Verification (${rawNetwork || "EVM"})`,
-      method: `Crypto (${rawNetwork || "EVM"})`,
-      txHash: tx_hash,
-      error: "order_expired",
-      errorDetails: "Order expired after 30 minutes.",
-      clientIp: callerKey,
-    }).catch(() => {});
+    try {
+      await notifyTelegramPaymentIssue({
+        order,
+        stage: `Payment Page > Crypto Verification (${rawNetwork || "EVM"})`,
+        method: `Crypto (${rawNetwork || "EVM"})`,
+        txHash: tx_hash,
+        error: "order_expired",
+        errorDetails: "Order expired after 30 minutes.",
+        clientIp: callerKey,
+      });
+    } catch {}
     return res.status(410).json({
       success: false,
       error: "order_expired",
@@ -115,16 +117,19 @@ export default async function handler(req, res) {
   const claim = await claimTxHash(tx_hash, "order", order.id);
   if (!claim.claimed) {
     const lock = await recordWrongHash(session?.user?.id || callerKey);
-    notifyTelegramPaymentIssue({
-      order,
-      stage: `Payment Page > Crypto Verification (${rawNetwork || "EVM"})`,
-      method: `Crypto (${rawNetwork || "EVM"})`,
-      txHash: tx_hash,
-      error: "tx_already_used",
-      errorDetails: "Transaction hash has already been claimed on another order or deposit.",
-      clientIp: callerKey,
-      userEmail: session?.user?.email,
-    }).catch(() => {});
+    try {
+      await notifyTelegramPaymentIssue({
+        order,
+        stage: `Payment Page > Crypto Verification (${rawNetwork || "EVM"})`,
+        method: `Crypto (${rawNetwork || "EVM"})`,
+        network: rawNetwork,
+        txHash: tx_hash,
+        error: "tx_already_used",
+        errorDetails: "Transaction hash has already been claimed on another order or deposit.",
+        clientIp: callerKey,
+        userEmail: session?.user?.email,
+      });
+    } catch {}
     return res.status(409).json({
       success: false,
       error: lock ? "too_many_attempts" : "tx_already_used",
@@ -165,17 +170,19 @@ export default async function handler(req, res) {
     await releaseTxHash(tx_hash);
     const lock = isWrongHash(verdict.reason) ? await recordWrongHash(callerKey) : 0;
 
-    notifyTelegramPaymentIssue({
-      order: claimedOrder,
-      stage: `Payment Page > Crypto Verification (${rawNetwork || "EVM"})`,
-      method: `Crypto (${rawNetwork || "EVM"})`,
-      network: rawNetwork,
-      txHash: tx_hash,
-      error: verdict.reason,
-      errorDetails: verdict.message || `On-chain check returned: ${verdict.reason}`,
-      clientIp: callerKey,
-      userEmail: session?.user?.email,
-    }).catch(() => {});
+    try {
+      await notifyTelegramPaymentIssue({
+        order: claimedOrder,
+        stage: `Payment Page > Crypto Verification (${verdict.networkName || rawNetwork || "EVM"})`,
+        method: `Crypto (${verdict.networkName || rawNetwork || "EVM"})`,
+        network: verdict.network || rawNetwork,
+        txHash: tx_hash,
+        error: verdict.reason,
+        errorDetails: verdict.message || `On-chain check returned: ${verdict.reason}`,
+        clientIp: callerKey,
+        userEmail: session?.user?.email,
+      });
+    } catch {}
 
     return res.status(lock ? 429 : 202).json({
       success: false,

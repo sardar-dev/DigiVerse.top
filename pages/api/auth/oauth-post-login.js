@@ -90,12 +90,16 @@ export default async function handler(req, res) {
         });
 
         // Notify admin via Telegram on new Google sign up
-        notifyTelegramSignup({
-          username: currentUsername,
-          email: userEmail || "—",
-          referrer: cleanRef || null,
-          clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
-        }).catch((e) => console.warn("[oauth] telegram alert error:", e?.message));
+        try {
+          await notifyTelegramSignup({
+            username: currentUsername,
+            email: userEmail || "—",
+            referrer: cleanRef || null,
+            clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
+          });
+        } catch (e) {
+          console.warn("[oauth] telegram alert error:", e?.message);
+        }
       } else {
         const shouldNotify = profile.signup_notified === false;
         await supabaseAdmin
@@ -108,12 +112,16 @@ export default async function handler(req, res) {
           .eq("id", userId);
 
         if (shouldNotify) {
-          notifyTelegramSignup({
-            username: currentUsername,
-            email: userEmail || profile.email || "—",
-            referrer: cleanRef || null,
-            clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
-          }).catch((e) => console.warn("[oauth] telegram alert error:", e?.message));
+          try {
+            await notifyTelegramSignup({
+              username: currentUsername,
+              email: userEmail || profile.email || "—",
+              referrer: cleanRef || null,
+              clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
+            });
+          } catch (e) {
+            console.warn("[oauth] telegram alert error:", e?.message);
+          }
         }
       }
     } else if (profile && profile.signup_notified === false) {
@@ -127,12 +135,16 @@ export default async function handler(req, res) {
         .maybeSingle();
 
       if (claimed) {
-        notifyTelegramSignup({
-          username: currentUsername,
-          email: userEmail || profile.email || "—",
-          referrer: cleanRef || null,
-          clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
-        }).catch((e) => console.warn("[oauth] telegram alert error:", e?.message));
+        try {
+          await notifyTelegramSignup({
+            username: currentUsername,
+            email: userEmail || profile.email || "—",
+            referrer: cleanRef || null,
+            clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
+          });
+        } catch (e) {
+          console.warn("[oauth] telegram alert error:", e?.message);
+        }
       }
     }
 

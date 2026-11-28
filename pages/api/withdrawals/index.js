@@ -45,17 +45,19 @@ export default async function handler(req, res) {
   if (error) return res.status(500).json({ success: false, error: dbError(error) });
   if (!data?.ok) return res.status(400).json({ success: false, error: data?.error || "failed", min: MIN_WITHDRAWAL });
 
-  // Send Telegram live alert to admin (fire & forget, never blocks user response)
+  // Await Telegram alert (bounded by timeout) so Vercel serverless delivers it reliably
   try {
-    notifyTelegramWithdrawal({
+    await notifyTelegramWithdrawal({
       email: session.user.email,
       amount,
       method: pay.method,
       address: pay.address,
       requestNumber: data.request_number,
       newBalance: Number(data.balance),
-    }).catch((e) => console.warn("[withdrawal] telegram alert error:", e?.message));
-  } catch {}
+    });
+  } catch (e) {
+    console.warn("[withdrawal] telegram alert error:", e?.message);
+  }
 
   return res.status(200).json({ success: true, request_number: data.request_number, balance: Number(data.balance) });
 }
