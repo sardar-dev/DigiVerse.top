@@ -582,6 +582,7 @@ export default function Admin() {
         (o.products?.title || "").toLowerCase().includes(q) ||
         (o.user_email || "").toLowerCase().includes(q) ||
         (o.email || "").toLowerCase().includes(q) ||
+        (o.activation_info || "").toLowerCase().includes(q) ||
         (o.tx_hash || "").toLowerCase().includes(q) ||
         String(o.failure_reason || "").toLowerCase().includes(q) ||
         String(o.supplier_order_id || o.digitrust_order_id || "").toLowerCase().includes(q) ||

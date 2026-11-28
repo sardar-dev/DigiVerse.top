@@ -2,6 +2,7 @@ import { useState } from "react";
 import Modal from "../ui/Modal";
 import { FormTextarea } from "../ui/FormInput";
 import { PrimaryButton, SecondaryButton } from "../ui/Button";
+import { TouchCopy } from "../ui/CopyButton";
 import Alert from "../ui/Alert";
 
 // Replaces the old browser prompt() with an accessible modal, while
@@ -33,10 +34,16 @@ export default function ManualDeliverModal({ order, onClose, onDelivered }) {
   return (
     <Modal title={`Deliver order #${order.order_number}`} onClose={onClose}>
       <div className="space-y-4 text-sm">
-        {order.activation_info && (
-          <p className="rounded-lg border border-border bg-brand-soft p-3 text-ink">
-            Activation info: <span className="font-mono">{order.activation_info}</span>
-          </p>
+        {(order.activation_info || order.email) && (
+          <div className="space-y-2 rounded-xl border border-border bg-brand-soft/40 p-3 text-xs">
+            <div className="font-semibold text-ink">Customer delivery details (tap to copy):</div>
+            {order.activation_info && (
+              <TouchCopy value={order.activation_info} prefix="Input:" mono />
+            )}
+            {order.email && (
+              <TouchCopy value={order.email} prefix="Email:" mono />
+            )}
+          </div>
         )}
         {order.failure_reason && (
           <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-xs">

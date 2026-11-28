@@ -31,14 +31,14 @@ export default async function handler(req, res) {
       .limit(LIMIT),
     supabaseAdmin
       .from("orders")
-      .select("id, user_id, order_number, total, expected_amount, status, tx_hash, created_at, products(title)")
+      .select("id, user_id, email, order_number, total, expected_amount, status, tx_hash, created_at, products(title)")
       .eq("paid_with", "onchain")
       .not("tx_hash", "is", null)
       .order("created_at", { ascending: false })
       .limit(LIMIT),
     supabaseAdmin
       .from("orders")
-      .select("id, user_id, order_number, total, expected_amount, status, tx_hash, created_at, products(title)")
+      .select("id, user_id, email, order_number, total, expected_amount, status, tx_hash, created_at, products(title)")
       .eq("paid_with", "onchain")
       .eq("status", "pending_payment")
       .is("tx_hash", null)
@@ -64,7 +64,9 @@ export default async function handler(req, res) {
 
   const userIds = [
     ...new Set(
-      [...topups, ...invoices, ...paidOrders, ...pendingOrders, ...adjustments].map((r) => r.user_id)
+      [...topups, ...invoices, ...paidOrders, ...pendingOrders, ...adjustments]
+        .map((r) => r.user_id)
+        .filter(Boolean)
     ),
   ];
   const emails = new Map();
@@ -75,7 +77,10 @@ export default async function handler(req, res) {
       .in("id", userIds);
     for (const p of profiles || []) emails.set(p.id, p.email);
   }
-  const emailOf = (id) => emails.get(id) || "unknown";
+  const emailOf = (row) =>
+    (row.user_id ? emails.get(row.user_id) : null) ||
+    row.email ||
+    (row.user_id ? `Account #${String(row.user_id).slice(0, 6)}` : "Guest");
 
   // Exact on-chain amount for a credited top-up = its matched invoice.
   const invoiceByTx = new Map();
@@ -90,7 +95,7 @@ export default async function handler(req, res) {
       source: "wallet_topup",
       state: t.status === "credited" ? "confirmed" : "problem",
       label: t.status === "credited" ? "Credited" : t.status,
-      email: emailOf(t.user_id),
+      email: emailOf(t),
       amount: Number(t.amount),
       exact: invoiceByTx.get(String(t.tx_hash).toLowerCase())?.unique_amount ?? null,
       note: "Wallet top-up",
@@ -110,7 +115,7 @@ export default async function handler(req, res) {
       source: "wallet_topup",
       state: expired ? "expired" : "pending",
       label: expired ? "Expired" : "Awaiting payment",
-      email: emailOf(i.user_id),
+      email: emailOf(i),
       amount: Number(i.requested_amount),
       exact: Number(i.unique_amount),
       note: "Wallet top-up (not paid)",
@@ -138,7 +143,7 @@ export default async function handler(req, res) {
       source: "onchain_order",
       state,
       label,
-      email: emailOf(o.user_id),
+      email: emailOf(o),
       amount: Number(o.total),
       exact: Number(o.expected_amount),
       note: `Order #${o.order_number} · ${o.products?.title || "product"}`,
@@ -154,7 +159,7 @@ export default async function handler(req, res) {
       source: "adjustment",
       state: "confirmed",
       label: amt >= 0 ? "Admin credit" : "Admin debit",
-      email: emailOf(a.user_id),
+      email: emailOf(a),
       amount: amt,
       exact: null,
       note: a.reason,

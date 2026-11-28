@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FormInput } from "../ui/FormInput";
 import { LinkButton, SecondaryButton } from "../ui/Button";
+import { TouchCopy, copyToClipboard } from "../ui/CopyButton";
 import StatusBadge from "../ui/StatusBadge";
 import DataTable from "./DataTable";
 
@@ -12,11 +13,7 @@ function CopyChip({ value, label, title }) {
       type="button"
       title={title || "Click to copy"}
       onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(String(value));
-        } catch {
-          window.prompt("Copy:", String(value));
-        }
+        await copyToClipboard(value);
         setDone(true);
         setTimeout(() => setDone(false), 1500);
       }}
@@ -152,12 +149,27 @@ export default function OrdersTab({
                 })()}
               </td>
               {/* Customer + paid with */}
-              <td className="py-3 px-4 max-w-[180px] break-all text-ink">
-                {o.user_email || <span className="text-muted">unknown</span>}
-                {o.email && o.email !== o.user_email && (
-                  <div className="text-xs text-muted">delivery: {o.email}</div>
+              <td className="py-3 px-4 max-w-[210px] break-all text-ink">
+                {o.user_email ? (
+                  <TouchCopy value={o.user_email} />
+                ) : o.user_username ? (
+                  <TouchCopy value={`@${o.user_username}`} />
+                ) : (
+                  <span className="inline-flex items-center rounded-md border border-border bg-bg px-2 py-0.5 text-[11px] font-medium text-muted">
+                    {!o.user_id || o.is_guest ? "Guest checkout" : `Account #${String(o.user_id).slice(0, 6)}`}
+                  </span>
                 )}
-                <div className="mt-0.5 text-xs text-muted">{o.paid_with || "onchain"}</div>
+                {o.user_email && (!o.user_id || o.is_guest) && (
+                  <div className="mt-1">
+                    <span className="inline-flex items-center rounded bg-bg px-1.5 py-0.5 text-[10px] font-medium text-muted border border-border">
+                      Guest
+                    </span>
+                  </div>
+                )}
+                {o.email && o.email !== o.user_email && (
+                  <TouchCopy value={o.email} prefix="Delivery:" className="mt-1" />
+                )}
+                <div className="mt-1 text-xs text-muted">{o.paid_with || "onchain"}</div>
               </td>
               {/* Product + supplier */}
               <td className="py-3 px-4 text-ink">
@@ -200,14 +212,14 @@ export default function OrdersTab({
                 )}
               </td>
               {/* Activation info + delivered items */}
-              <td className="py-3 px-4 max-w-[240px] text-xs">
+              <td className="py-3 px-4 max-w-[260px] text-xs">
                 {o.activation_info && (
-                  <div className="mb-1 break-all text-muted">{o.activation_info}</div>
+                  <TouchCopy value={o.activation_info} className="mb-1.5" mono />
                 )}
                 <DeliveredItems items={o.items} />
               </td>
-              <td className="py-3 px-4 max-w-[160px] break-all font-mono text-xs text-muted">
-                {o.tx_hash || "—"}
+              <td className="py-3 px-4 max-w-[180px] break-all font-mono text-xs text-muted">
+                {o.tx_hash ? <TouchCopy value={o.tx_hash} mono /> : "—"}
               </td>
               <td className="py-3 px-4 space-x-3 whitespace-nowrap">
                 {o.status === "pending_payment" && (

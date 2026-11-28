@@ -35,25 +35,47 @@ export default async function handler(req, res) {
       (o) => o.status !== "pending_payment" || (now - new Date(o.created_at).getTime() < 30 * 60 * 1000)
     );
 
-    // Which account placed each order (orders link to auth users, not
-    // profiles, so look the emails up in one extra query).
-    const userIds = [...new Set((data || []).map((o) => o.user_id))];
-    const emails = new Map();
+    // Resolve account email/username from profiles (ignoring null guest user_ids),
+    // with auth.users fallback for any account missing a profile email.
+    const userIds = [...new Set((data || []).map((o) => o.user_id).filter(Boolean))];
+    const profilesMap = new Map();
     if (userIds.length) {
       const { data: profiles } = await supabaseAdmin
         .from("profiles")
-        .select("id, email")
+        .select("id, email, username")
         .in("id", userIds);
-      for (const p of profiles || []) emails.set(p.id, p.email);
+      for (const p of profiles || []) profilesMap.set(p.id, p);
+
+      const missingEmailIds = userIds
+        .filter((uid) => !profilesMap.get(uid)?.email)
+        .slice(0, 10);
+      if (missingEmailIds.length) {
+        const authLookups = await Promise.allSettled(
+          missingEmailIds.map((uid) => supabaseAdmin.auth.admin.getUserById(uid))
+        );
+        authLookups.forEach((res, idx) => {
+          const authEmail = res.status === "fulfilled" ? res.value?.data?.user?.email : null;
+          if (authEmail) {
+            const uid = missingEmailIds[idx];
+            const prev = profilesMap.get(uid) || { id: uid };
+            profilesMap.set(uid, { ...prev, email: authEmail });
+          }
+        });
+      }
     }
     const sup = await supplierLabels();
-    const orders = (data || []).map((o) => ({
-      ...o,
-      user_email: emails.get(o.user_id) || null,
-      supplier_label: o.supplier ? sup[o.supplier]?.label || o.supplier : null,
-      can_retry: Boolean(o.supplier && sup[o.supplier]?.idempotent),
-      is_buff: Boolean(o.products?.tunvn_buff || o.supplier === "tunvn"),
-    }));
+    const orders = (data || []).map((o) => {
+      const prof = o.user_id ? profilesMap.get(o.user_id) : null;
+      return {
+        ...o,
+        user_email: prof?.email || o.email || null,
+        user_username: prof?.username || null,
+        is_guest: !o.user_id,
+        supplier_label: o.supplier ? sup[o.supplier]?.label || o.supplier : null,
+        can_retry: Boolean(o.supplier && sup[o.supplier]?.idempotent),
+        is_buff: Boolean(o.products?.tunvn_buff || o.supplier === "tunvn"),
+      };
+    });
     return res.status(200).json({ success: true, orders });
   }
 
