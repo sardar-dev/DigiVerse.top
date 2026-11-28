@@ -1,6 +1,7 @@
 import { useState } from "react";
 import DataTable from "./DataTable";
 import StatusBadge from "../ui/StatusBadge";
+import BalanceMessage from "./BalanceMessage";
 import { PrimaryButton } from "../ui/Button";
 import { FormInput } from "../ui/FormInput";
 import { TouchCopy } from "../ui/CopyButton";
@@ -32,12 +33,23 @@ export default function UserLookup() {
   const [error, setError] = useState("");
   const [section, setSection] = useState("orders"); // orders | wallet | withdrawals | referrals | support | security
 
+  // Inline "+/- Adjust Balance" quick action state
+  const [adjAmount, setAdjAmount] = useState("");
+  const [adjReason, setAdjReason] = useState("");
+  const [adjBusy, setAdjBusy] = useState(false);
+  const [adjError, setAdjError] = useState("");
+  const [adjResult, setAdjResult] = useState(null);
+
   async function search(e, forced) {
     e?.preventDefault();
     const q = (forced || email).trim();
     if (q.replace(/^@+/, "").length < 3) return;
     setBusy(true);
     setError("");
+    setAdjAmount("");
+    setAdjReason("");
+    setAdjError("");
+    setAdjResult(null);
     try {
       const d = await (await fetch(`/api/admin/user-lookup?email=${encodeURIComponent(q)}`)).json();
       if (!d.success) throw new Error(d.error);
@@ -48,6 +60,57 @@ export default function UserLookup() {
       setError(err.message === "email_too_short" ? "Type at least 3 characters." : "Search failed — try again.");
     }
     setBusy(false);
+  }
+
+  async function submitInlineAdjustment(e) {
+    e?.preventDefault();
+    if (!data?.user?.email) return;
+    const value = Number(adjAmount);
+    const reason = adjReason.trim();
+    if (!value || !reason) return;
+
+    setAdjBusy(true);
+    setAdjError("");
+    setAdjResult(null);
+    try {
+      const res = await fetch("/api/admin/wallet-adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: data.user.email,
+          amount: value,
+          reason,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "failed");
+
+      const nextBal = Number(json.balance);
+      setData((prev) =>
+        prev?.found
+          ? {
+              ...prev,
+              user: { ...prev.user, balance: nextBal },
+              adjustments: [
+                {
+                  id: `local-${Date.now()}`,
+                  amount: value,
+                  reason,
+                  created_at: new Date().toISOString(),
+                },
+                ...(prev.adjustments || []),
+              ],
+            }
+          : prev
+      );
+      setAdjResult({ email: data.user.email, amount: value, balance: nextBal });
+      setAdjAmount("");
+      setAdjReason("");
+    } catch (err) {
+      setAdjError(err.message || "Adjustment failed.");
+    } finally {
+      setAdjBusy(false);
+    }
   }
 
   function jumpToCustomer(target) {
@@ -210,6 +273,58 @@ export default function UserLookup() {
             <p className="rounded-lg border border-warning/30 bg-warning-soft/30 px-3 py-2 text-xs font-medium text-warning">
               Has {data.pendingInvoices.length} open deposit invoice(s) awaiting payment.
             </p>
+          )}
+
+          {/* Inline +/- Adjust Balance Quick Action */}
+          {u.email && (
+            <div className="rounded-xl border border-border bg-bg/60 p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-ink">
+                    Quick Action: +/- Adjust Balance
+                  </h4>
+                  <p className="text-[11px] text-muted">
+                    Applies directly to <span className="font-mono text-ink">{u.email}</span> (positive to credit, negative to deduct).
+                  </p>
+                </div>
+                <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 font-mono text-xs font-semibold text-brand">
+                  Current: {money(u.balance)}
+                </span>
+              </div>
+
+              <form onSubmit={submitInlineAdjustment} className="grid gap-2.5 sm:grid-cols-[140px_1fr_auto] sm:items-end">
+                <FormInput
+                  label="Amount ($)"
+                  type="number"
+                  step="0.01"
+                  value={adjAmount}
+                  onChange={(e) => setAdjAmount(e.target.value)}
+                  placeholder="+5 or -2"
+                  className="font-mono"
+                />
+                <FormInput
+                  label="Reason"
+                  type="text"
+                  value={adjReason}
+                  onChange={(e) => setAdjReason(e.target.value)}
+                  placeholder="e.g. Manual deposit / refund / correction"
+                />
+                <PrimaryButton
+                  type="submit"
+                  disabled={adjBusy || !Number(adjAmount) || !adjReason.trim()}
+                  className="px-5 py-2.5"
+                >
+                  {adjBusy ? "Applying…" : "Apply"}
+                </PrimaryButton>
+              </form>
+
+              {adjError && <p className="text-xs text-danger">Failed: {adjError}</p>}
+              {adjResult && (
+                <div className="max-w-md pt-1">
+                  <BalanceMessage result={adjResult} />
+                </div>
+              )}
+            </div>
           )}
 
           {/* Section Switcher Tabs */}

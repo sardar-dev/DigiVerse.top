@@ -99,8 +99,14 @@ export default function OrdersTab({
           aria-label="Search orders"
         />
         {onRefresh && (
-          <SecondaryButton onClick={onRefresh} disabled={refreshingOrders} className="whitespace-nowrap">
-            {refreshingOrders ? "Refreshing…" : "Refresh & Settle"}
+          <SecondaryButton
+            onClick={onRefresh}
+            disabled={refreshingOrders}
+            title="Refresh orders and settle any fulfilling deliveries"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <span className={refreshingOrders ? "inline-block animate-spin" : ""} aria-hidden="true">↻</span>
+            <span>{refreshingOrders ? "Refreshing…" : "Refresh"}</span>
           </SecondaryButton>
         )}
       </div>
