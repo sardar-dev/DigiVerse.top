@@ -40,19 +40,28 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: "method_not_allowed" });
   }
 
-  const { action, id, text } = req.body || {};
-  if (!id || !["generate", "save", "reset"].includes(action)) {
+  const { action, id, text, title, description } = req.body || {};
+  if (!["generate", "save", "reset"].includes(action) || (action !== "generate" && !id)) {
     return res.status(400).json({ success: false, error: "invalid_request" });
   }
 
   if (action === "generate") {
-    const { data: p } = await supabaseAdmin
-      .from("products")
-      .select("title, description")
-      .eq("id", id)
-      .maybeSingle();
-    if (!p) return res.status(404).json({ success: false, error: "product_not_found" });
-    const out = await rewriteDescription({ title: p.title, description: p.description });
+    let srcTitle = typeof title === "string" ? title.trim() : "";
+    let srcDesc = typeof description === "string" ? description.trim() : "";
+    if (!srcDesc && id) {
+      const { data: p } = await supabaseAdmin
+        .from("products")
+        .select("title, description")
+        .eq("id", id)
+        .maybeSingle();
+      if (!p) return res.status(404).json({ success: false, error: "product_not_found" });
+      srcTitle = srcTitle || p.title;
+      srcDesc = p.description || "";
+    }
+    if (!srcTitle && !srcDesc) {
+      return res.status(200).json({ success: false, error: "no_description" });
+    }
+    const out = await rewriteDescription({ title: srcTitle, description: srcDesc || srcTitle });
     if (!out.ok) return res.status(200).json({ success: false, error: out.error, detail: out.detail || null });
     return res.status(200).json({ success: true, draft: out.text });
   }

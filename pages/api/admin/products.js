@@ -165,8 +165,11 @@ export default async function handler(req, res) {
 
     // Description: admin can edit or override the supplier's full description.
     // Stored as-is; syncs never touch this field once it's been set manually.
-    const { description, slug, warranty } = req.body || {};
+    const { description, ai_description, slug, warranty } = req.body || {};
     if (description !== undefined) patch.description = description || null;
+    if (ai_description !== undefined) {
+      patch.ai_description = ai_description ? String(ai_description).trim().slice(0, 4000) : null;
+    }
     if (warranty !== undefined) patch.warranty = warranty ? warranty.trim() : null;
     if (typeof slug === "string") {
       const cleanSlug = slug
@@ -206,6 +209,14 @@ export default async function handler(req, res) {
     if (error && /title_locked/i.test(error.message)) {
       // migration 014 not run yet: still save the new title itself.
       ({ error } = await supabaseAdmin.from("products").update(patch).eq("id", id));
+    }
+    if (error && /ai_description/i.test(error.message)) {
+      // migration 018 not run yet: omit ai_description and save remaining fields.
+      const { ai_description: _omit, ...withoutAi } = patch;
+      ({ error } = await supabaseAdmin
+        .from("products")
+        .update({ ...withoutAi, ...titleLockFields, ...autoField, ...marginField })
+        .eq("id", id));
     }
     if (error) return res.status(500).json({ success: false, error: error.message });
     // A new sell price can make a pricier supplier eligible (or not), so

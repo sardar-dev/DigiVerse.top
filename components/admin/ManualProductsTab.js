@@ -8,6 +8,7 @@ import DataTable from "./DataTable";
 import BulkActionBar from "./BulkActionBar";
 import StockBoxesManager from "./StockBoxesManager";
 import { splitBoxes } from "../../lib/stockBoxes";
+import { requestAiDraft } from "../../lib/aiRewriteClient";
 
 export default function ManualProductsTab({
   manualForm,
@@ -24,6 +25,24 @@ export default function ManualProductsTab({
   onToggleDeliveryBadge,
 }) {
   const [selected, setSelected] = useState(() => new Set());
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  async function handleRewriteDescription() {
+    setAiBusy(true);
+    setAiError("");
+    const res = await requestAiDraft({
+      id: manualForm.id || undefined,
+      title: manualForm.title,
+      description: manualForm.description,
+    });
+    setAiBusy(false);
+    if (res.ok) {
+      setManualForm((prev) => ({ ...prev, description: res.draft }));
+    } else {
+      setAiError(res.message);
+    }
+  }
 
   function toggle(id) {
     setSelected((prev) => {
@@ -117,12 +136,25 @@ export default function ManualProductsTab({
             maxLength={100}
             hint="Displayed on the product page. Leave blank to default to 'Stated in product description'."
           />
-          <FormTextarea
-            label="Description (full, shown in checkout)"
-            value={manualForm.description}
-            onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
-            rows={2}
-          />
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="text-sm font-medium text-ink">Description (full, shown in checkout)</label>
+              <button
+                type="button"
+                disabled={aiBusy || (!manualForm.description?.trim() && !manualForm.title?.trim())}
+                onClick={handleRewriteDescription}
+                className="inline-flex items-center gap-1 rounded-lg border border-brand/30 bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white disabled:opacity-50 cursor-pointer"
+              >
+                {aiBusy ? "Generating…" : "✨ Rewrite with AI"}
+              </button>
+            </div>
+            <FormTextarea
+              value={manualForm.description}
+              onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
+              rows={3}
+            />
+            {aiError && <p className="text-xs text-danger">{aiError}</p>}
+          </div>
           <FormTextarea
             label="Short description (storefront card, optional)"
             value={manualForm.short_description}

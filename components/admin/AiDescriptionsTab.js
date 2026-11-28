@@ -1,23 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SectionHeading from "../ui/SectionHeading";
 import { PrimaryButton, SecondaryButton } from "../ui/Button";
+import { FormInput } from "../ui/FormInput";
 import Alert from "../ui/Alert";
 import { LoadingState } from "../ui/States";
+import { AI_ERROR_MESSAGES, formatAiError, requestAiDraft } from "../../lib/aiRewriteClient";
 
-const ERR = {
-  ai_not_configured: "Add GEMINI_API_KEY in Vercel environment variables, then redeploy.",
-  ai_key_invalid: "Gemini rejected the API key — check GEMINI_API_KEY.",
-  ai_rate_limited: "Gemini free limit reached — wait a minute and try again.",
-  ai_timeout: "Gemini took too long — try again.",
-  ai_empty: "Gemini returned nothing — try again.",
-  ai_failed: "Gemini request failed — try again.",
-  no_description: "This product has no description to rewrite.",
-  run_migration_018: "Run supabase/migration_018 in the Supabase SQL editor first.",
-};
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const BATCH_LIMIT = 5;
+const PAGE_SIZE = 30;
 
-// Review flow: Generate a draft → read/edit it → Save. Nothing goes live
-// until you press Save; "Original" always restores the supplier text.
+// Review flow: Generate a draft -> read/edit it -> Save. Nothing goes live
+// until you press Save; "Use original" restores the supplier text.
 export default function AiDescriptionsTab() {
   const [info, setInfo] = useState(null);
   const [rows, setRows] = useState([]);
@@ -26,6 +19,9 @@ export default function AiDescriptionsTab() {
   const [rowErr, setRowErr] = useState({}); // id -> message
   const [bulk, setBulk] = useState({ running: false, done: 0, total: 0 });
   const [notice, setNotice] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // all | needs | live
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const stopRef = useRef(false);
 
   async function load() {
@@ -52,27 +48,14 @@ export default function AiDescriptionsTab() {
   async function generate(id) {
     setBusyFor(id, true);
     setRowErr((e) => ({ ...e, [id]: "" }));
-    let d = await post({ action: "generate", id });
-    // Temporary Google trouble (busy / slow): wait a few seconds and retry,
-    // up to 2 more times. Each try is its own request, so no timeout piles up.
-    for (let i = 0; i < 2 && !d.success && ["ai_failed", "ai_timeout", "ai_empty"].includes(d.error); i++) {
-      await sleep(5000);
-      d = await post({ action: "generate", id });
-    }
-    if (!d.success && d.error === "ai_rate_limited") {
-      await sleep(30000); // free-tier per-minute limit: wait once, retry
-      d = await post({ action: "generate", id });
-    }
+    const res = await requestAiDraft({ id });
     setBusyFor(id, false);
-    if (d.success) {
-      setDrafts((x) => ({ ...x, [id]: d.draft }));
-      return true;
+    if (res.ok) {
+      setDrafts((x) => ({ ...x, [id]: res.draft }));
+      return { ok: true };
     }
-    setRowErr((e) => ({
-      ...e,
-      [id]: (ERR[d.error] || d.error) + (d.detail ? ` — ${d.detail}` : ""),
-    }));
-    return false;
+    setRowErr((e) => ({ ...e, [id]: res.message }));
+    return { ok: false, error: res.error };
   }
 
   async function save(id) {
@@ -88,7 +71,7 @@ export default function AiDescriptionsTab() {
         delete n[id];
         return n;
       });
-    } else setRowErr((e) => ({ ...e, [id]: ERR[d.error] || d.error }));
+    } else setRowErr((e) => ({ ...e, [id]: formatAiError(d.error) }));
   }
 
   async function reset(id) {
@@ -99,22 +82,32 @@ export default function AiDescriptionsTab() {
     if (d.success) setRows((r) => r.map((p) => (p.id === id ? { ...p, ai_description: null } : p)));
   }
 
-  const todo = rows.filter((p) => p.description && !p.ai_description && !drafts[p.id]);
+  const todo = useMemo(
+    () => rows.filter((p) => p.description && !p.ai_description && !drafts[p.id]),
+    [rows, drafts]
+  );
 
-  async function generateAll() {
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((p) => {
+      if (statusFilter === "needs" && (!p.description || p.ai_description)) return false;
+      if (statusFilter === "live" && !p.ai_description) return false;
+      if (q && !(p.title || "").toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [rows, search, statusFilter]);
+
+  async function generateNextBatch() {
     stopRef.current = false;
-    const list = [...todo];
+    const list = todo.slice(0, BATCH_LIMIT);
     setBulk({ running: true, done: 0, total: list.length });
     for (let i = 0; i < list.length; i++) {
       if (stopRef.current) break;
-      const ok = await generate(list[i].id);
+      const out = await generate(list[i].id);
       setBulk({ running: true, done: i + 1, total: list.length });
-      if (!ok) {
-        // stop on a config/key problem, keep going on a one-off failure
-        const e = (document.getElementById(`err-${list[i].id}`) || {}).textContent || "";
-        if (/GEMINI_API_KEY|rejected the API key/.test(e)) break;
+      if (!out.ok && ["ai_not_configured", "ai_key_invalid", "ai_rate_limited"].includes(out.error)) {
+        break;
       }
-      await sleep(4000); // stay under the free per-minute limit
     }
     setBulk((b) => ({ ...b, running: false }));
   }
@@ -129,31 +122,79 @@ export default function AiDescriptionsTab() {
 
   if (!info) return <LoadingState label="Loading…" />;
   const draftCount = Object.keys(drafts).length;
+  const shownRows = filteredRows.slice(0, visibleLimit);
 
   return (
     <div className="space-y-6">
       <SectionHeading
         title="AI descriptions"
-        description="Gemini rewrites each supplier description in the same format so your store's text is unique. Nothing goes live until you review it and press Save."
+        description="Rewrite supplier descriptions on demand so storefront copy stays unique. You can also rewrite single products inline from Catalog → Edit."
       />
-      {!info.configured && <Alert variant="warning">{ERR.ai_not_configured}</Alert>}
-      {!info.migrated && <Alert variant="warning">{ERR.run_migration_018}</Alert>}
+      {!info.configured && <Alert variant="warning">{AI_ERROR_MESSAGES.ai_not_configured}</Alert>}
+      {!info.migrated && <Alert variant="warning">{AI_ERROR_MESSAGES.run_migration_018}</Alert>}
       {notice && <Alert variant="success">{notice}</Alert>}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <PrimaryButton onClick={generateAll} disabled={bulk.running || !todo.length || !info.configured}>
-          {bulk.running ? `Generating ${bulk.done}/${bulk.total}…` : `✨ Generate drafts for ${todo.length} product(s)`}
-        </PrimaryButton>
-        {bulk.running && (
-          <SecondaryButton onClick={() => (stopRef.current = true)}>Stop</SecondaryButton>
-        )}
-        {draftCount > 0 && !bulk.running && (
-          <SecondaryButton onClick={saveAllDrafts}>Save all {draftCount} reviewed drafts</SecondaryButton>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <PrimaryButton
+            onClick={generateNextBatch}
+            disabled={bulk.running || !todo.length || !info.configured}
+          >
+            {bulk.running
+              ? `Generating ${bulk.done}/${bulk.total}…`
+              : `✨ Rewrite next ${Math.min(BATCH_LIMIT, todo.length)} (${todo.length} left)`}
+          </PrimaryButton>
+          {bulk.running && (
+            <SecondaryButton onClick={() => (stopRef.current = true)}>Stop</SecondaryButton>
+          )}
+          {draftCount > 0 && !bulk.running && (
+            <SecondaryButton onClick={saveAllDrafts}>Save all {draftCount} reviewed drafts</SecondaryButton>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-56">
+            <FormInput
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setVisibleLimit(PAGE_SIZE);
+              }}
+              placeholder="Filter products…"
+              className="text-xs py-1.5"
+            />
+          </div>
+          {[
+            ["all", `All (${rows.length})`],
+            ["needs", `Needs rewrite (${rows.filter((p) => p.description && !p.ai_description).length})`],
+            ["live", `AI live (${rows.filter((p) => p.ai_description).length})`],
+          ].map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => {
+                setStatusFilter(k);
+                setVisibleLimit(PAGE_SIZE);
+              }}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                statusFilter === k
+                  ? "border-brand bg-brand text-white"
+                  : "border-border bg-surface text-muted hover:text-ink"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-4">
-        {rows.map((p) => {
+        {shownRows.length === 0 && (
+          <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted">
+            No products match this filter.
+          </p>
+        )}
+        {shownRows.map((p) => {
           const draft = drafts[p.id];
           return (
             <div key={p.id} className="rounded-xl border border-border bg-surface p-4 shadow-card">
@@ -236,6 +277,14 @@ export default function AiDescriptionsTab() {
           );
         })}
       </div>
+
+      {filteredRows.length > visibleLimit && (
+        <div className="flex justify-center">
+          <SecondaryButton onClick={() => setVisibleLimit((n) => n + PAGE_SIZE)}>
+            Show more ({filteredRows.length - visibleLimit} remaining)
+          </SecondaryButton>
+        </div>
+      )}
     </div>
   );
 }

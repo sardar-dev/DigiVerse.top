@@ -7,13 +7,12 @@ import { LoadingState } from "../../components/ui/States";
 const TabLoading = () => <LoadingState label="Loading section…" />;
 
 const DashboardTab = dynamic(() => import("../../components/admin/DashboardTab"), { ssr: false, loading: TabLoading });
-const ProductsTab = dynamic(() => import("../../components/admin/ProductsTab"), { ssr: false, loading: TabLoading });
+const ProductsHub = dynamic(() => import("../../components/admin/ProductsHub"), { ssr: false, loading: TabLoading });
 const ManualProductsTab = dynamic(() => import("../../components/admin/ManualProductsTab"), { ssr: false, loading: TabLoading });
 const OrdersTab = dynamic(() => import("../../components/admin/OrdersTab"), { ssr: false, loading: TabLoading });
 const DepositsTab = dynamic(() => import("../../components/admin/DepositsTab"), { ssr: false, loading: TabLoading });
 const CouponsTab = dynamic(() => import("../../components/admin/CouponsTab"), { ssr: false, loading: TabLoading });
 const ReferralsHub = dynamic(() => import("../../components/admin/ReferralsHub"), { ssr: false, loading: TabLoading });
-const AiDescriptionsTab = dynamic(() => import("../../components/admin/AiDescriptionsTab"), { ssr: false, loading: TabLoading });
 const CustomerInboxHub = dynamic(() => import("../../components/admin/CustomerInboxHub"), { ssr: false, loading: TabLoading });
 const WithdrawalsTab = dynamic(() => import("../../components/admin/WithdrawalsTab"), { ssr: false, loading: TabLoading });
 const PricingTab = dynamic(() => import("../../components/admin/PricingTab"), { ssr: false, loading: TabLoading });
@@ -27,6 +26,7 @@ const ReconcileModal = dynamic(() => import("../../components/admin/ReconcileMod
 const LEGACY_HASH_MAP = {
   "referral-costs": { tab: "referrals", sub: "costs" },
   apis: { tab: "suppliers", sub: "apis" },
+  aitext: { tab: "products", sub: "aitext" },
   support: { tab: "inbox", sub: "support" },
   messages: { tab: "inbox", sub: "messages" },
   feedback: { tab: "inbox", sub: "feedback" },
@@ -682,8 +682,6 @@ export default function Admin() {
 
       {tab === "deposits" && <DepositsTab subHint={subHint} />}
 
-      {tab === "aitext" && <AiDescriptionsTab />}
-
       {tab === "inbox" && (
         <CustomerInboxHub openTickets={dashboard?.openTickets || 0} subHint={subHint} />
       )}
@@ -699,7 +697,8 @@ export default function Admin() {
       {tab === "referrals" && <ReferralsHub subHint={subHint} />}
 
       {tab === "products" && (
-        <ProductsTab
+        <ProductsHub
+          subHint={subHint}
           productSearch={productSearch}
           setProductSearch={setProductSearch}
           productView={productView}

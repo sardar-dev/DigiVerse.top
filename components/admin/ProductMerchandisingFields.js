@@ -3,6 +3,7 @@ import { FormInput, FormTextarea } from "../ui/FormInput";
 import { PrimaryButton, SecondaryButton } from "../ui/Button";
 import ImagePicker from "./ImagePicker";
 import CategorySelect from "./CategorySelect";
+import { requestAiDraft } from "../../lib/aiRewriteClient";
 
 // Shared editor for the merchandising fields every product — DigiTrust
 // or manual — can now carry: image, category, featured flag, low-
@@ -21,9 +22,26 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
   );
   const [shortDescription, setShortDescription] = useState(product.short_description || "");
   const [description, setDescription] = useState(product.description || "");
+  const [aiDescription, setAiDescription] = useState(product.ai_description || "");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState("");
   const [warranty, setWarranty] = useState(product.warranty || "");
 
+  async function handleRewriteWithAi() {
+    setAiBusy(true);
+    setAiError("");
+    const res = await requestAiDraft({
+      id: product.id,
+      title: title.trim() || product.title,
+      description: description.trim(),
+    });
+    setAiBusy(false);
+    if (res.ok) setAiDescription(res.draft);
+    else setAiError(res.message);
+  }
+
   function save() {
+    const hasAiField = product.ai_description !== undefined || aiDescription.trim() !== "";
     onSave({
       ...(title.trim() !== (product.title || "") ? { title: title.trim() } : {}),
       slug: slug.trim(),
@@ -35,6 +53,7 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
       low_stock_threshold: lowStockThreshold === "" ? null : Number(lowStockThreshold),
       short_description: shortDescription.trim(),
       description: description.trim(),
+      ...(hasAiField ? { ai_description: aiDescription.trim() || null } : {}),
     });
   }
 
@@ -107,17 +126,51 @@ export default function ProductMerchandisingFields({ product, onSave, onCancel }
         rows={2}
         hint="Shown on the product grid card. Falls back to the full description if left blank."
       />
-      <FormTextarea
-        label="Full description (product popup)"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        rows={5}
-        hint={
-          product.description
-            ? "Editing the supplier's description. Your changes are saved and syncs won't overwrite them."
-            : "No supplier description yet — add your own."
-        }
-      />
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="text-sm font-medium text-ink">Full description (product popup)</label>
+          <button
+            type="button"
+            disabled={aiBusy || (!description.trim() && !title.trim())}
+            onClick={handleRewriteWithAi}
+            className="inline-flex items-center gap-1 rounded-lg border border-brand/30 bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-white disabled:opacity-50 cursor-pointer"
+          >
+            {aiBusy ? "Generating…" : aiDescription.trim() ? "↻ Regenerate AI text" : "✨ Rewrite with AI"}
+          </button>
+        </div>
+        <FormTextarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={5}
+          hint={
+            product.description
+              ? "Editing the supplier's description. Your changes are saved and syncs won't overwrite them."
+              : "No supplier description yet — add your own."
+          }
+        />
+        {aiError && <p className="text-xs text-danger">{aiError}</p>}
+      </div>
+      {aiDescription && (
+        <div className="space-y-2 rounded-lg border border-brand/30 bg-brand-soft/30 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-brand">
+              ✨ AI description override (shown on storefront instead of supplier text)
+            </span>
+            <button
+              type="button"
+              onClick={() => setAiDescription("")}
+              className="text-xs text-muted hover:text-danger underline cursor-pointer"
+            >
+              Reset to full description
+            </button>
+          </div>
+          <FormTextarea
+            value={aiDescription}
+            onChange={(e) => setAiDescription(e.target.value)}
+            rows={6}
+          />
+        </div>
+      )}
       <div className="flex flex-wrap items-end gap-4">
         <FormInput
           label="Low-stock threshold"
