@@ -249,7 +249,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
     };
   }, [step, product?.tunvn_buff, order?.id]);
 
-  const isDemo = String(product.id) === "-99" || product.category === "Demo / Testing ðŸ§ª";
+  const isDemo = String(product.id) === "-99" || product.category === "Demo / Testing 🧪";
   const isManual =
     product.deliveryBadge === "manual"
       ? true
@@ -260,16 +260,16 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
   const deliveryLabel = product.deliveryBadge
     ? product.deliveryBadge
     : isDemo
-    ? "âš¡ 0-Cost Test Order"
+    ? "⚡ 0-Cost Test Order"
     : isManual
-    ? product.delivery || t("Manual delivery within 1â€“6 hours")
+    ? product.delivery || t("Manual delivery within 1–6 hours")
     : t("Instant 0-second delivery");
 
   const cleanTitle = (product.title || "")
     .replace(/[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]/gu, "")
     .trim();
 
-  const pageTitle = `${cleanTitle} â€“ Buy with Crypto (USDT) | DigiVerse`;
+  const pageTitle = `${cleanTitle} – Buy with Crypto (USDT) | DigiVerse`;
   const pageDescription = `Buy ${cleanTitle} at DigiVerse for \$${product.price.toFixed(2)} USDT. ${
     product.inStock ? "In stock with " + deliveryLabel + "." : ""
   } Secure checkout via USDT & USDC across BNB Chain, Polygon, Base with full customer support.`;
@@ -364,7 +364,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
       name: "How does the free Referral Reward Box program work?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "When friends register through your personal referral link, you earn free gift boxes with 0-second instant unlock (zero lock delay). Each gift box redeems for 1 Billion Muse AI Tokens. Clicking â€œClaim Giftâ€ on your referrals dashboard automatically applies your reward at checkout for an instant $0.00 total.",
+        text: "When friends register through your personal referral link, you earn free gift boxes with 0-second instant unlock (zero lock delay). Each gift box redeems for 1 Billion Muse AI Tokens. Clicking “Claim Gift” on your referrals dashboard automatically applies your reward at checkout for an instant $0.00 total.",
       },
     });
   }
@@ -411,7 +411,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
         setCouponError(describeError(t, data.error, undefined, data.min_order));
       }
     } catch {
-      setCouponError(t("Couldn't check that code â€” try again."));
+      setCouponError(t("Couldn't check that code — try again."));
     } finally {
       setCouponBusy(false);
     }
@@ -574,8 +574,8 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                         : "bg-success-soft text-success border-success/20"
                     }`}
                   >
-                    <span>{isManual ? "ðŸ•’" : "âš¡"}</span>
-                    <span>{String(deliveryLabel).replace(/^[âš¡ðŸ•’\s]+/, "")}</span>
+                    <span>{isManual ? "🕒" : "⚡"}</span>
+                    <span>{String(deliveryLabel).replace(/^[⚡🕒\s]+/, "")}</span>
                   </span>
                   {product.inStock && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-surface border border-border/80 px-2.5 py-1 text-xs font-medium text-ink shadow-2xs">
@@ -613,16 +613,16 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                   <div className="grid grid-cols-2 gap-3 w-full sm:flex-1 text-xs">
                     <div className="rounded-xl border border-border/70 bg-bg/50 p-3 hover:border-brand/30 hover:bg-brand-soft/20 transition-all">
                       <span className="text-muted block text-[11px] font-medium flex items-center gap-1">
-                        <span>âš¡</span>
+                        <span>⚡</span>
                         <span>{t("Fulfillment")}</span>
                       </span>
                       <span className="font-bold text-ink block mt-0.5 text-xs sm:text-sm">
-                        {isManual ? t("Manual (1â€“6 hrs)") : t("Instant (0-sec)")}
+                        {isManual ? t("Manual (1–6 hrs)") : t("Instant (0-sec)")}
                       </span>
                     </div>
                     <div className="rounded-xl border border-border/70 bg-bg/50 p-3 hover:border-brand/30 hover:bg-brand-soft/20 transition-all">
                       <span className="text-muted block text-[11px] font-medium flex items-center gap-1">
-                        <span>ðŸ›¡ï¸</span>
+                        <span>🛡️</span>
                         <span>{t("Warranty")}</span>
                       </span>
                       <span className="font-bold text-ink block mt-0.5 text-xs sm:text-sm truncate">
@@ -637,7 +637,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                   <div className="rounded-2xl border border-border/80 bg-surface p-5 sm:p-6 shadow-card hover:shadow-card-hover transition-all duration-300">
                     <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold text-ink mb-3.5">
                       <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-soft text-brand text-xs ring-1 ring-brand/10">
-                        ðŸ“‹
+                        📋
                       </span>
                       <span>{t("Product Overview & Details")}</span>
                     </h2>
@@ -650,39 +650,39 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                   <div className="rounded-2xl border border-border/80 bg-surface p-5 sm:p-6 shadow-card space-y-3">
                     <h3 className="flex items-center gap-2 text-sm sm:text-base font-bold text-ink mb-2">
                       <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-soft text-brand text-xs ring-1 ring-brand/10">
-                        âš™ï¸
+                        ⚙️
                       </span>
                       <span>{t("Specifications & Guarantee")}</span>
                     </h3>
                     <div className="divide-y divide-border/60 text-xs sm:text-sm">
                       <div className="flex items-center justify-between py-2.5">
                         <span className="text-muted flex items-center gap-1.5">
-                          <span>ðŸ“</span>
+                          <span>📁</span>
                           <span>{t("Product Category")}</span>
                         </span>
                         <span className="font-semibold text-ink">{product.category}</span>
                       </div>
                       <div className="flex items-center justify-between py-2.5">
                         <span className="text-muted flex items-center gap-1.5">
-                          <span>âš¡</span>
+                          <span>⚡</span>
                           <span>{t("Fulfillment Mode")}</span>
                         </span>
                         <span className="font-semibold text-ink">{deliveryLabel}</span>
                       </div>
                       <div className="flex items-center justify-between py-2.5">
                         <span className="text-muted flex items-center gap-1.5">
-                          <span>ðŸ›¡ï¸</span>
+                          <span>🛡️</span>
                           <span>{t("Warranty Policy")}</span>
                         </span>
                         <span className="font-semibold text-ink">{formatWarranty(product.warranty)}</span>
                       </div>
                       <div className="flex items-center justify-between py-2.5">
                         <span className="text-muted flex items-center gap-1.5">
-                          <span>ðŸ”’</span>
+                          <span>🔒</span>
                           <span>{t("Payment Security")}</span>
                         </span>
                         <span className="font-semibold text-success flex items-center gap-1">
-                          <span>âœ“</span>
+                          <span>✓</span>
                           <span>{t("On-Chain EVM RPC Verified")}</span>
                         </span>
                       </div>
@@ -700,7 +700,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                   <div className="flex items-center justify-between border-b border-border/70 pb-3.5">
                     <div className="flex items-center gap-2">
                       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white shadow-xs">
-                        {step === "form" ? "1" : step === "summary" ? "2" : step === "order" ? "3" : "âœ“"}
+                        {step === "form" ? "1" : step === "summary" ? "2" : step === "order" ? "3" : "✓"}
                       </span>
                       <span className="text-xs font-bold uppercase tracking-wider text-ink">
                         {stepLabels[step]}
@@ -712,30 +712,30 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                         onClick={() => setStep("form")}
                         className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline transition-colors cursor-pointer"
                       >
-                        â† {t("Change details")}
+                        ← {t("Change details")}
                       </button>
                     )}
                   </div>
 
-                  {/* Scrolling ticker marquee â€” shown when admin has set announcement */}
+                  {/* Scrolling ticker marquee — shown when admin has set announcement */}
                   {ticker && (
                     <div className="overflow-hidden rounded-xl border border-warning/30 bg-warning-soft/40 py-2 px-1 text-xs text-warning">
                       <div className="dv-ticker-track flex whitespace-nowrap font-medium">
-                        <span className="inline-block px-4">ðŸ“¢ {ticker}</span>
-                        <span className="inline-block px-4" aria-hidden="true">ðŸ“¢ {ticker}</span>
-                        <span className="inline-block px-4" aria-hidden="true">ðŸ“¢ {ticker}</span>
+                        <span className="inline-block px-4">📢 {ticker}</span>
+                        <span className="inline-block px-4" aria-hidden="true">📢 {ticker}</span>
+                        <span className="inline-block px-4" aria-hidden="true">📢 {ticker}</span>
                       </div>
                     </div>
                   )}
 
-                  {/* â”€â”€ CASE 1: OUT OF STOCK â”€â”€ */}
+                  {/* ── CASE 1: OUT OF STOCK ── */}
                   {!product.inStock ? (
                     <div className="space-y-4 py-2">
                       <div className="rounded-2xl border border-danger/30 bg-danger/10 p-5 text-center space-y-2">
-                        <span className="text-3xl block">âš ï¸</span>
+                        <span className="text-3xl block">⚠️</span>
                         <h3 className="font-bold text-base text-danger">{t("Currently Sold Out")}</h3>
                         <p className="text-xs text-muted leading-relaxed">
-                          {t("This product is temporarily out of stock. We are restocking soon â€” please check back later or reach out to 24/7 support.")}
+                          {t("This product is temporarily out of stock. We are restocking soon — please check back later or reach out to 24/7 support.")}
                         </p>
                       </div>
                       <button
@@ -747,7 +747,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                       </button>
                     </div>
                   ) : (
-                    /* â”€â”€ CASE 2: IN STOCK CHECKOUT FLOW â”€â”€ */
+                    /* ── CASE 2: IN STOCK CHECKOUT FLOW ── */
                     <>
                       {/* STEP 1: QUANTITY & DETAILS */}
                       {step === "form" && (
@@ -767,7 +767,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                             </div>
                             <div className="text-end">
                               <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-1 text-[11px] font-bold text-success ring-1 ring-success/20">
-                                <span>âœ“</span>
+                                <span>✓</span>
                                 <span>{t("Zero Payment Fees")}</span>
                               </span>
                             </div>
@@ -776,7 +776,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                           {/* Free Gift Box auto-applied banner for Muse AI */}
                           {(product.tunvn_buff || String(product.id) === "-12") && availableGiftsData?.max_redeemable > 0 && (
                             <div className="rounded-xl border border-success/40 bg-success-soft/30 px-3.5 py-2.5 text-xs text-success flex items-center justify-between font-medium">
-                              <span>ðŸŽ {t("1 Free Gift Box auto-applied ({n} available)", { n: availableGiftsData.max_redeemable })}</span>
+                              <span>🎁 {t("1 Free Gift Box auto-applied ({n} available)", { n: availableGiftsData.max_redeemable })}</span>
                               <button
                                 type="button"
                                 onClick={() => setGiftsToRedeem(giftsToRedeem > 0 ? 0 : 1)}
@@ -810,7 +810,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                                 className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/90 bg-surface text-ink hover:bg-brand-soft hover:border-brand/40 font-bold text-xl shadow-2xs active:scale-95 transition-all cursor-pointer"
                                 aria-label="Decrease quantity"
                               >
-                                â€“
+                                –
                               </button>
                               <input
                                 type="number"
@@ -831,7 +831,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                             </div>
                           </div>
 
-                          {/* Customer Email â€” only shown if this product explicitly requires it */}
+                          {/* Customer Email — only shown if this product explicitly requires it */}
                           {product.requiresEmail && (
                             <FormInput
                               label={t("Your Email Address")}
@@ -884,13 +884,13 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                                   disabled={couponBusy || !couponInput.trim()}
                                   className="h-10 px-4 rounded-xl bg-surface border border-border text-ink hover:border-brand hover:bg-brand-soft/40 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
                                 >
-                                  {couponBusy ? t("Checkingâ€¦") : t("Apply")}
+                                  {couponBusy ? t("Checking…") : t("Apply")}
                                 </button>
                               )}
                             </div>
                             {coupon && (
                               <p className="text-xs text-success font-medium">
-                                âœ“ {t("Coupon applied: save ${n}", { n: (subtotal - coupon.final).toFixed(2) })}
+                                ✓ {t("Coupon applied: save ${n}", { n: (subtotal - coupon.final).toFixed(2) })}
                               </p>
                             )}
                             {couponError && <p className="text-xs text-danger">{couponError}</p>}
@@ -904,13 +904,13 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                             </div>
                             {giftDiscountAmount > 0 && (
                               <div className="flex justify-between text-emerald-600 font-medium">
-                                <span>ðŸŽ {t("Gift Box Discount")}</span>
+                                <span>🎁 {t("Gift Box Discount")}</span>
                                 <span className="font-mono">-${giftDiscountAmount.toFixed(2)}</span>
                               </div>
                             )}
                             {coupon && (
                               <div className="flex justify-between text-emerald-600 font-medium">
-                                <span>ðŸ·ï¸ {t("Coupon Discount")}</span>
+                                <span>🏷️ {t("Coupon Discount")}</span>
                                 <span className="font-mono">-${(subtotal - coupon.final).toFixed(2)}</span>
                               </div>
                             )}
@@ -930,21 +930,21 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                             className="group relative flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand to-indigo-600 px-5 py-3.5 text-sm font-bold text-white shadow-[0_4px_16px_rgba(49,105,245,0.35)] transition-all duration-200 hover:from-brand-dark hover:to-indigo-700 hover:shadow-[0_6px_22px_rgba(49,105,245,0.45)] active:scale-[0.98] cursor-pointer"
                           >
                             <span>{t("Continue to Review")}</span>
-                            <span className="transition-transform duration-200 group-hover:translate-x-1">â†’</span>
+                            <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                           </button>
 
                           {/* Buyer Trust Micro-Strip */}
                           <div className="grid grid-cols-3 gap-2 pt-1 text-center text-[10px] text-muted font-medium">
                             <div className="rounded-lg bg-bg/60 border border-border/60 py-1.5 px-1">
-                              <span className="block text-xs mb-0.5">âš¡</span>
+                              <span className="block text-xs mb-0.5">⚡</span>
                               <span>Instant Stock</span>
                             </div>
                             <div className="rounded-lg bg-bg/60 border border-border/60 py-1.5 px-1">
-                              <span className="block text-xs mb-0.5">ðŸ›¡ï¸</span>
+                              <span className="block text-xs mb-0.5">🛡️</span>
                               <span>Warranty</span>
                             </div>
                             <div className="rounded-lg bg-bg/60 border border-border/60 py-1.5 px-1">
-                              <span className="block text-xs mb-0.5">ðŸ”’</span>
+                              <span className="block text-xs mb-0.5">🔒</span>
                               <span>0% EVM Fee</span>
                             </div>
                           </div>
@@ -988,7 +988,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
 
                           <div className="flex gap-3">
                             <SecondaryButton onClick={() => setStep("form")} className="flex-1 py-3 text-xs font-bold">
-                              â† {t("Back")}
+                              ← {t("Back")}
                             </SecondaryButton>
                             <button
                               type="button"
@@ -996,8 +996,8 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                               disabled={creating}
                               className="group flex-1 min-h-[44px] flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-indigo-600 py-3 text-xs font-bold text-white shadow-md hover:from-brand-dark hover:to-indigo-700 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
                             >
-                              <span>{creating ? t("Creating orderâ€¦") : t("Confirm & Pay")}</span>
-                              {!creating && <span className="group-hover:translate-x-0.5 transition-transform">â†’</span>}
+                              <span>{creating ? t("Creating order…") : t("Confirm & Pay")}</span>
+                              {!creating && <span className="group-hover:translate-x-0.5 transition-transform">→</span>}
                             </button>
                           </div>
                         </div>
@@ -1030,7 +1030,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                       {step === "done" && (
                         <div className="space-y-4 text-sm">
                           <div className="rounded-xl border border-success/30 bg-success-soft/20 p-4 text-center space-y-1">
-                            <span className="text-3xl block">ðŸŽ‰</span>
+                            <span className="text-3xl block">🎉</span>
                             <h3 className="font-bold text-base text-ink">{t("Payment Confirmed!")}</h3>
                             <p className="text-xs font-mono text-muted">
                               {t("Order #{n}", { n: order?.order_number || String(order?.id || "").slice(0, 8).toUpperCase() })}
@@ -1040,14 +1040,14 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                           {/* TunVN Buff Delivery Status */}
                           {product.tunvn_buff && buffState === "done" && (
                             <Alert variant="success">
-                              ðŸŽ‰ <strong>{t("Tokens delivered successfully!")}</strong> {t("The Muse AI tokens have been credited to your account.")}
+                              🎉 <strong>{t("Tokens delivered successfully!")}</strong> {t("The Muse AI tokens have been credited to your account.")}
                             </Alert>
                           )}
                           {product.tunvn_buff && buffState === "polling" && (
                             <Alert variant="success">
                               <div className="flex items-center gap-2">
                                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-                                <span>{t("Processing token delivery to your invite linkâ€¦")}</span>
+                                <span>{t("Processing token delivery to your invite link…")}</span>
                               </div>
                             </Alert>
                           )}
@@ -1065,7 +1065,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                           {/* Manual Delivery Notice */}
                           {manual && (
                             <Alert variant="info">
-                              {t("This order requires manual dispatch. Our support team is fulfilling it within 1â€“6 hours. You can track updates in your Orders tab.")}
+                              {t("This order requires manual dispatch. Our support team is fulfilling it within 1–6 hours. You can track updates in your Orders tab.")}
                             </Alert>
                           )}
 
@@ -1074,7 +1074,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                               href="/account/orders"
                               className="w-full text-center py-2.5 rounded-xl bg-brand text-white text-xs font-bold hover:bg-brand-hover shadow-sm transition-all"
                             >
-                              {t("View in My Orders â†’")}
+                              {t("View in My Orders →")}
                             </Link>
                             <button
                               type="button"
@@ -1130,7 +1130,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                     </p>
                   </div>
                   <Link href="/#catalog" className="text-xs sm:text-sm font-semibold text-brand hover:underline">
-                    {t("View all")} â†’
+                    {t("View all")} →
                   </Link>
                 </div>
 
@@ -1167,7 +1167,7 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
                           ${rel.price.toFixed(2)}
                         </span>
                         <span className="text-xs font-semibold text-brand group-hover:translate-x-0.5 transition-transform">
-                          {t("Buy")} â†’
+                          {t("Buy")} →
                         </span>
                       </div>
                     </Link>
