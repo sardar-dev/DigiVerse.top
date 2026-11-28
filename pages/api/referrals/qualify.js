@@ -1,7 +1,7 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getReferralSettings } from "../../../lib/referralSettings";
-import { notifyTelegramSignup } from "../../../lib/telegram";
+import { ensureProfileAndNotifySignup } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -47,60 +47,16 @@ export default async function handler(req, res) {
       req.body?.username ||
       authUser.user.user_metadata?.username ||
       (authUser.user.email ? authUser.user.email.split("@")[0] : `user_${userId.slice(0, 5)}`);
-    const cleanUsername = rawUsername.toLowerCase().trim();
 
-    const { data: profRow } = await supabaseAdmin
-      .from("profiles")
-      .select("id, signup_notified, username, email, device_id")
-      .eq("id", userId)
-      .maybeSingle();
-
-    let shouldNotify = false;
-
-    if (!profRow) {
-      await supabaseAdmin.from("profiles").insert({
-        id: userId,
-        email: authUser.user.email || req.body?.email || null,
-        username: cleanUsername,
-        device_id: req.body?.device_id || authUser.user.user_metadata?.device_id || null,
-        registration_ip: clientIp || null,
-        signup_notified: true,
-        created_at: authUser.user.created_at || new Date().toISOString(),
-      });
-      shouldNotify = true;
-    } else if (profRow.signup_notified === false) {
-      // Profile was pre-created by Postgres handle_new_user() trigger — claim notification atomically
-      const { data: claimed } = await supabaseAdmin
-        .from("profiles")
-        .update({
-          signup_notified: true,
-          email: profRow.email || authUser.user.email || req.body?.email || null,
-          username: profRow.username || cleanUsername,
-          device_id: profRow.device_id || req.body?.device_id || authUser.user.user_metadata?.device_id || null,
-          registration_ip: clientIp || null,
-        })
-        .eq("id", userId)
-        .eq("signup_notified", false)
-        .select("id")
-        .maybeSingle();
-
-      if (claimed) {
-        shouldNotify = true;
-      }
-    }
-
-    if (shouldNotify) {
-      try {
-        await notifyTelegramSignup({
-          username: cleanUsername,
-          email: authUser.user.email || req.body?.email || "—",
-          referrer: req.body?.ref || authUser.user.user_metadata?.ref || null,
-          clientIp: clientIp || "—",
-        });
-      } catch (e) {
-        console.warn("[qualify] telegram alert error:", e?.message);
-      }
-    }
+    await ensureProfileAndNotifySignup({
+      userId,
+      email: authUser.user.email || req.body?.email || null,
+      username: rawUsername,
+      referrer: req.body?.ref || authUser.user.user_metadata?.ref || null,
+      deviceId: req.body?.device_id || authUser.user.user_metadata?.device_id || null,
+      clientIp,
+      createdAt: authUser.user.created_at || new Date().toISOString(),
+    });
   } catch (e) {
     console.warn("[referrals/qualify] ensure profile error:", e?.message);
   }

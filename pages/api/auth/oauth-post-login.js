@@ -1,6 +1,6 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { notifyTelegramSignup } from "../../../lib/telegram";
+import { ensureProfileAndNotifySignup } from "../../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -47,106 +47,20 @@ export default async function handler(req, res) {
   const cleanRef = typeof ref === "string" ? ref.trim().toLowerCase() : null;
   const cleanDeviceId = typeof device_id === "string" ? device_id.trim() : null;
 
+  const clientIp =
+    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    "";
+
   try {
-    // 2. Query user profile
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from("profiles")
-      .select("id, email, username, referred_by, device_id, signup_notified")
-      .eq("id", userId)
-      .maybeSingle();
-
-    let currentUsername = profile?.username;
-
-    // If profile or username is missing, generate one
-    if (!profile || !currentUsername) {
-      let baseUser = (userEmail || "user").split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "");
-      if (baseUser.length < 3) baseUser = `user_${baseUser}`;
-      if (baseUser.length > 18) baseUser = baseUser.slice(0, 18);
-
-      let candidate = baseUser;
-      let attempts = 0;
-      while (attempts < 10) {
-        const { data: existing } = await supabaseAdmin
-          .from("profiles")
-          .select("id")
-          .ilike("username", candidate)
-          .neq("id", userId)
-          .maybeSingle();
-
-        if (!existing) break;
-        candidate = `${baseUser.slice(0, 17)}_${Math.floor(1000 + Math.random() * 9000)}`;
-        attempts++;
-      }
-
-      currentUsername = candidate;
-
-      if (!profile) {
-        await supabaseAdmin.from("profiles").insert({
-          id: userId,
-          email: userEmail,
-          username: currentUsername,
-          device_id: cleanDeviceId || null,
-          signup_notified: true,
-        });
-
-        // Notify admin via Telegram on new Google sign up
-        try {
-          await notifyTelegramSignup({
-            username: currentUsername,
-            email: userEmail || "—",
-            referrer: cleanRef || null,
-            clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
-          });
-        } catch (e) {
-          console.warn("[oauth] telegram alert error:", e?.message);
-        }
-      } else {
-        const shouldNotify = profile.signup_notified === false;
-        await supabaseAdmin
-          .from("profiles")
-          .update({
-            username: currentUsername,
-            device_id: profile.device_id || cleanDeviceId || null,
-            signup_notified: true,
-          })
-          .eq("id", userId);
-
-        if (shouldNotify) {
-          try {
-            await notifyTelegramSignup({
-              username: currentUsername,
-              email: userEmail || profile.email || "—",
-              referrer: cleanRef || null,
-              clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
-            });
-          } catch (e) {
-            console.warn("[oauth] telegram alert error:", e?.message);
-          }
-        }
-      }
-    } else if (profile && profile.signup_notified === false) {
-      // Profile exists with username but notification has not fired yet
-      const { data: claimed } = await supabaseAdmin
-        .from("profiles")
-        .update({ signup_notified: true })
-        .eq("id", userId)
-        .eq("signup_notified", false)
-        .select("id")
-        .maybeSingle();
-
-      if (claimed) {
-        try {
-          await notifyTelegramSignup({
-            username: currentUsername,
-            email: userEmail || profile.email || "—",
-            referrer: cleanRef || null,
-            clientIp: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "—",
-          });
-        } catch (e) {
-          console.warn("[oauth] telegram alert error:", e?.message);
-        }
-      }
-    }
+    // 2. Ensure user profile + username exist and fire Telegram signup alert once
+    const { username: currentUsername, profile } = await ensureProfileAndNotifySignup({
+      userId,
+      email: userEmail,
+      referrer: cleanRef || null,
+      deviceId: cleanDeviceId,
+      clientIp,
+    });
 
     // 3. Link referral if user has no referrer and ref code was supplied
     if (cleanRef && (!profile || !profile.referred_by)) {

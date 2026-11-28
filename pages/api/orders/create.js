@@ -5,6 +5,7 @@ import { getSupplier, resolveSource, applyBuffer } from "../../../lib/suppliers"
 import { refreshSourceFromLive } from "../../../lib/syncProducts";
 import { checkCoupon, orderFitsCouponLimits } from "../../../lib/coupons";
 import { fulfillOrder } from "../../../lib/fulfillOrder";
+import { notifyTelegramOrderCreated } from "../../../lib/telegram";
 import * as tunvn from "../../../lib/suppliers/tunvn";
 import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 
@@ -460,6 +461,20 @@ export default async function handler(req, res) {
       items: fulfillRes?.items || [],
       manual: fulfillRes?.manual || false,
     });
+  }
+
+  const clientIp =
+    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    "";
+  try {
+    await notifyTelegramOrderCreated({
+      order,
+      product: localProduct,
+      clientIp,
+    });
+  } catch (e) {
+    console.warn("[orders/create] telegram alert error:", e?.message);
   }
 
   return res.status(200).json({ success: true, order });
