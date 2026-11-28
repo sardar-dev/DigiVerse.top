@@ -1,6 +1,6 @@
 import StatCard from "./StatCard";
 
-const SUPPLIER_NAMES = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store", shotix: "Shotix", tunvn: "TunVN" };
+const SUPPLIER_NAMES = { digitrust: "DigiTrust", xpro: "XPro", emstore: "EM Store", shotix: "Shotix", tunvn: "TunVN", ppure: "Ppure Store" };
 function supplierName(id) {
   return SUPPLIER_NAMES[id] || (id.startsWith("c_") ? id.slice(2).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : id);
 }
@@ -11,6 +11,7 @@ const SUPPLIER_THEMES = {
   emstore:   { icon: "🛒", card: "border-emerald-300 bg-gradient-to-br from-emerald-50/70 to-white", circle: "from-emerald-500 to-teal-600", text: "text-emerald-700", tag: "bg-emerald-100 text-emerald-700" },
   shotix:    { icon: "⚡", card: "border-amber-200 bg-gradient-to-br from-amber-50/70 to-white", circle: "from-amber-500 to-orange-500", text: "text-amber-600", tag: "bg-amber-100 text-amber-700" },
   tunvn:     { icon: "🛡", card: "border-teal-200 bg-gradient-to-br from-teal-50/70 to-white", circle: "from-teal-500 to-cyan-600", text: "text-teal-600", tag: "bg-teal-100 text-teal-700" },
+  ppure:     { icon: "💎", card: "border-rose-200 bg-gradient-to-br from-rose-50/70 to-white", circle: "from-rose-500 to-pink-600", text: "text-rose-600", tag: "bg-rose-100 text-rose-700" },
 };
 const DEFAULT_THEME = { icon: "⚪", card: "border-slate-200 bg-white", circle: "from-slate-500 to-slate-600", text: "text-slate-800", tag: "bg-slate-100 text-slate-700" };
 
@@ -22,6 +23,7 @@ function SupplierBalanceCard({ dashboard, onRefresh, refreshing }) {
     dashboard.emstore   && { id: "emstore",    ...dashboard.emstore },
     dashboard.shotix    && { id: "shotix",     ...dashboard.shotix },
     dashboard.tunvn     && { id: "tunvn",      ...dashboard.tunvn },
+    dashboard.ppure     && { id: "ppure",      ...dashboard.ppure },
   ].filter(Boolean);
 
   if (suppliers.length === 0) return null;

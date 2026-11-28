@@ -93,6 +93,15 @@ export default function AdminLayout({ tab, onTabChange, dashboard, pendingManual
                   {dashboard.xpro.low && " — LOW"}
                 </span>
               )}
+              {dashboard.ppure && (
+                <span>
+                  Ppure:{" "}
+                  {dashboard.ppure.error || dashboard.ppure.balance === null
+                    ? "unavailable"
+                    : `$${Number(dashboard.ppure.balance).toFixed(2)}`}
+                  {dashboard.ppure.low && " — LOW"}
+                </span>
+              )}
               <span>Synced: {dashboard.lastSync ? new Date(dashboard.lastSync).toLocaleString() : "never"}</span>
             </div>
           )}

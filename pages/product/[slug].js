@@ -116,7 +116,7 @@ export async function getServerSideProps({ params, res, locale = "en" }) {
         shortDescription: product.short_description || "",
         price: Number(product.sell_price) || 0,
         availableStock: isForcedOut ? 0 : Number(product.available_stock || 0),
-        inStock: !isForcedOut && (Number(product.available_stock || 0) > 0 || Boolean(product.tunvn_buff)),
+        inStock: !isForcedOut && (Number(product.available_stock || 0) > 0 || Boolean(product.tunvn_buff || product.buff_provider)),
         isOutOfStock: isForcedOut,
         category: product.category || "Digital Software",
         imageUrl: product.image_url || null,
@@ -130,7 +130,8 @@ export async function getServerSideProps({ params, res, locale = "en" }) {
         activationPlaceholder: product.activation_placeholder || null,
         minOrderQty: product.min_order_qty || 1,
         maxOrderQty: product.max_order_qty || null,
-        tunvn_buff: Boolean(product.tunvn_buff),
+        tunvn_buff: Boolean(product.tunvn_buff || product.buff_provider),
+        buff_provider: product.buff_provider || (product.tunvn_buff ? "tunvn" : null),
       },
       related: related.map((p) => ({
         id: String(p.id),
@@ -140,7 +141,7 @@ export async function getServerSideProps({ params, res, locale = "en" }) {
         price: Number(p.sell_price) || 0,
         imageUrl: p.image_url || null,
         category: p.category || null,
-        inStock: !Boolean(p.is_out_of_stock) && (Number(p.available_stock || 0) > 0 || Boolean(p.tunvn_buff)),
+        inStock: !Boolean(p.is_out_of_stock) && (Number(p.available_stock || 0) > 0 || Boolean(p.tunvn_buff || p.buff_provider)),
       })),
       canonicalSlug,
       referralEnabled,
@@ -229,11 +230,16 @@ export default function ProductLandingPage({ product, canonicalSlug, related, re
         });
         const data = await res.json().catch(() => ({}));
         if (stop) return;
-        if (data.status === "completed") {
+        if (data.state === "done" || data.status === "completed") {
+          if (Array.isArray(data.items) && data.items.length > 0) setItems(data.items);
           setBuffState("done");
           return;
         }
-        if (data.status === "failed") {
+        if (data.state === "manual") {
+          setBuffState("idle");
+          return;
+        }
+        if (data.state === "failed" || data.status === "failed") {
           setBuffState("failed");
           return;
         }

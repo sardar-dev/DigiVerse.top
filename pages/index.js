@@ -186,7 +186,7 @@ export default function Storefront({ initialProducts, referralEnabled: initialRe
   // to the launch price if the catalog has no priced top-up product.
   const musePrice = useMemo(() => {
     const prices = (products || [])
-      .filter((p) => p.tunvn_buff)
+      .filter((p) => p.tunvn_buff || p.buff_provider)
       .map((p) => Number(p.sell_price ?? p.price))
       .filter((n) => Number.isFinite(n) && n > 0);
     return prices.length ? Math.min(...prices) : 0.15;

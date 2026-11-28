@@ -1,6 +1,7 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { fulfillOrder } from "../../../lib/fulfillOrder";
+import { resolveBuffProvider } from "../../../lib/tunvnBuff";
 import * as tunvn from "../../../lib/suppliers/tunvn";
 import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 import { notifyTelegramPaymentIssue } from "../../../lib/telegram";
@@ -81,14 +82,21 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, items: result.items || [], manual: false });
   }
 
-  // TunVN buff check: ensure supplier API balance is sufficient BEFORE deducting customer's wallet!
-  const { data: prod } = await supabaseAdmin
+  // Buff supplier pre-check: TunVN enforces wallet balance upfront; Ppure falls back to Manual queue if low
+  let { data: prod, error: prodErr } = await supabaseAdmin
     .from("products")
-    .select("tunvn_buff, cost_price")
+    .select("tunvn_buff, buff_provider, cost_price")
     .eq("id", claimedOrder.product_id)
     .maybeSingle();
+  if (prodErr && /buff_provider/i.test(prodErr.message || "")) {
+    ({ data: prod } = await supabaseAdmin
+      .from("products")
+      .select("tunvn_buff, cost_price")
+      .eq("id", claimedOrder.product_id)
+      .maybeSingle());
+  }
 
-  if (prod?.tunvn_buff) {
+  if (resolveBuffProvider(prod) === "tunvn") {
     let tunvnBal = null;
     try {
       const balRes = await tunvn.getBalance();

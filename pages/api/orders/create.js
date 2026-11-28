@@ -5,6 +5,7 @@ import { getSupplier, resolveSource, applyBuffer } from "../../../lib/suppliers"
 import { refreshSourceFromLive } from "../../../lib/syncProducts";
 import { checkCoupon, orderFitsCouponLimits } from "../../../lib/coupons";
 import { fulfillOrder } from "../../../lib/fulfillOrder";
+import { resolveBuffProvider } from "../../../lib/tunvnBuff";
 import { notifyTelegramOrderCreated } from "../../../lib/telegram";
 import * as tunvn from "../../../lib/suppliers/tunvn";
 import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
@@ -121,8 +122,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "activation_info_required" });
     }
 
-    // TunVN Buff Token (Muse AI) invite code format check
-    if (localProduct.tunvn_buff) {
+    const buffProvider = resolveBuffProvider(localProduct);
+
+    // Muse AI Boost Token (TunVN or Ppure Store) invite code format check
+    if (buffProvider) {
       let rawCode = String(activation_info || "").trim();
       if (rawCode.includes("http://") || rawCode.includes("https://") || rawCode.includes("/")) {
         try {
@@ -269,7 +272,7 @@ export default async function handler(req, res) {
     if (isGuest || !userId) {
       return res.status(401).json({ success: false, error: "login_required_for_gifts" });
     }
-    if (!localProduct.tunvn_buff) {
+    if (!resolveBuffProvider(localProduct)) {
       return res.status(400).json({ success: false, error: "gifts_only_for_muse_ai" });
     }
     if (giftsCount > quantity) {

@@ -39,8 +39,8 @@ export async function getServerSideProps({ res }) {
           .replace(/\s+/g, " ")
           .trim(),
         price: Number(p.sell_price) || 0,
-        inStock: Number(p.available_stock || 0) > 0 || Boolean(p.tunvn_buff),
-        topUp: Boolean(p.tunvn_buff),
+        inStock: Number(p.available_stock || 0) > 0 || Boolean(p.tunvn_buff || p.buff_provider),
+        topUp: Boolean(p.tunvn_buff || p.buff_provider),
         manual:
           p.delivery_badge === "manual"
             ? true

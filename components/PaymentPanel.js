@@ -47,7 +47,7 @@ export default function PaymentPanel({ order, product, onDone, onBack }) {
             setBuffCheck({
               is_buff: true,
               max_qty: d.max_qty,
-              affordable: d.max_qty >= reqQty,
+              affordable: Boolean(d.allow_manual_fallback) || d.max_qty >= reqQty,
             });
           } else {
             setBuffCheck({ is_buff: false });

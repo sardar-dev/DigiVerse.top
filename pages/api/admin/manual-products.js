@@ -11,6 +11,7 @@ async function saveSharedText(productId, text) {
   if (error) throw new Error(error.message);
 }
 const MIGRATION_053 = "Run supabase/migration_053_shared_delivery.sql in Supabase first.";
+const MIGRATION_054 = "Run supabase/migration_054_ppure_buff.sql in the Supabase SQL Editor first to enable Ppure Store API fulfillment.";
 
 // Inserts delivery boxes for an auto-delivery product and recounts its
 // stock. Returns how many were added.
@@ -79,7 +80,8 @@ export default async function handler(req, res) {
       is_out_of_stock, // force out of stock while keeping product on storefront
       activation_field, // null | free-text label shown to customer at checkout
       activation_placeholder, // optional placeholder text inside the activation input
-      tunvn_buff, // true = fulfil via TunVN Buff Token API (needs migration 034)
+      tunvn_buff, // true = fulfil via Muse AI Boost API (TunVN or Ppure)
+      buff_provider, // null | "tunvn" | "ppure" (needs migration 054 for "ppure")
       auto_delivery, // true = customers get stored text "boxes" instantly after payment
       delivery_badge, // "auto" | "manual" | null
       new_boxes, // pasted box text to add in the same save (auto-delivery products)
@@ -137,6 +139,20 @@ export default async function handler(req, res) {
       }
       return res.status(400).json({ success: false, error: "no_bulk_action_specified" });
     }
+
+    const normalizedBuffProvider =
+      buff_provider === undefined
+        ? undefined
+        : buff_provider === null || buff_provider === ""
+        ? null
+        : buff_provider === "tunvn" || buff_provider === "ppure"
+        ? buff_provider
+        : "__invalid__";
+    if (normalizedBuffProvider === "__invalid__") {
+      return res.status(400).json({ success: false, error: "invalid_buff_provider" });
+    }
+    const effectiveTunvnBuff =
+      normalizedBuffProvider !== undefined ? Boolean(normalizedBuffProvider) : Boolean(tunvn_buff);
 
     const boxesToAdd = splitBoxes(new_boxes, box_split === "line" ? "line" : "separator");
     if (boxesToAdd.length > MAX_BOXES_PER_SAVE) {
@@ -214,10 +230,11 @@ export default async function handler(req, res) {
         available_stock: stock,
         requires_email: Boolean(requires_email) || normalizedActivation === "email",
         delivery: delivery || (auto_delivery === true ? "Instant" : "Within 24 hours"),
-        // Only sent when on, so normal products work before migration_012.
+        // Only sent when on, so normal products work before migration_012 / 034 / 054.
         ...(auto_delivery === true ? { auto_delivery: true } : {}),
         ...(isShared ? { delivery_mode: "shared" } : {}),
-        ...(tunvn_buff === true ? { tunvn_buff: true } : {}),
+        ...(effectiveTunvnBuff ? { tunvn_buff: true } : {}),
+        ...(normalizedBuffProvider ? { buff_provider: normalizedBuffProvider } : {}),
         ...(delivery_badge ? { delivery_badge } : {}),
         selected: Boolean(selected),
         is_out_of_stock: Boolean(is_out_of_stock),
@@ -249,6 +266,17 @@ export default async function handler(req, res) {
 
       if (insertErr && /delivery_badge/i.test(insertErr.message)) {
         delete insertPayload.delivery_badge;
+        ({ data: inserted, error: insertErr } = await supabaseAdmin
+          .from("products")
+          .insert(insertPayload)
+          .select()
+          .single());
+      }
+      if (insertErr && /buff_provider/i.test(insertErr.message)) {
+        if (normalizedBuffProvider === "ppure") {
+          return res.status(400).json({ success: false, error: MIGRATION_054 });
+        }
+        delete insertPayload.buff_provider;
         ({ data: inserted, error: insertErr } = await supabaseAdmin
           .from("products")
           .insert(insertPayload)
@@ -343,7 +371,13 @@ export default async function handler(req, res) {
       patch.available_stock = stock;
       patch.real_stock = stock;
     }
-    if (typeof tunvn_buff === "boolean") patch.tunvn_buff = tunvn_buff;
+    if (normalizedBuffProvider !== undefined) {
+      patch.buff_provider = normalizedBuffProvider;
+      patch.tunvn_buff = Boolean(normalizedBuffProvider);
+    } else if (typeof tunvn_buff === "boolean") {
+      patch.tunvn_buff = tunvn_buff;
+      if (!tunvn_buff) patch.buff_provider = null;
+    }
     if (requires_email !== undefined) patch.requires_email = Boolean(requires_email);
     if (delivery !== undefined) patch.delivery = delivery;
     if (selected !== undefined) patch.selected = Boolean(selected);
@@ -398,6 +432,19 @@ export default async function handler(req, res) {
 
     if (updateErr && /delivery_badge/i.test(updateErr.message)) {
       delete patch.delivery_badge;
+      ({ data: updated, error: updateErr } = await supabaseAdmin
+        .from("products")
+        .update(patch)
+        .eq("id", id)
+        .eq("provider", "manual")
+        .select()
+        .single());
+    }
+    if (updateErr && /buff_provider/i.test(updateErr.message)) {
+      if (normalizedBuffProvider === "ppure") {
+        return res.status(400).json({ success: false, error: MIGRATION_054 });
+      }
+      delete patch.buff_provider;
       ({ data: updated, error: updateErr } = await supabaseAdmin
         .from("products")
         .update(patch)

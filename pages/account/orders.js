@@ -111,7 +111,9 @@ export default function Orders() {
   // invite code asynchronously). While one is open, ask the server to check.
   useEffect(() => {
     if (!orders) return;
-    const waiting = orders.filter((o) => o.status === "fulfilling" && o.supplier === "tunvn");
+    const waiting = orders.filter(
+      (o) => o.status === "fulfilling" && (o.supplier === "tunvn" || o.supplier === "ppure")
+    );
     if (waiting.length === 0) return;
     let stop = false;
     async function tick() {

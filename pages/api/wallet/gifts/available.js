@@ -1,6 +1,7 @@
 import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { getReferralSettings } from "../../../../lib/referralSettings";
+import { resolveBuffProvider } from "../../../../lib/tunvnBuff";
 
 export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
@@ -21,14 +22,22 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: "product_id_required" });
   }
 
-  // 1. Check if product is Muse AI buff token
-  const { data: prod } = await supabaseAdmin
+  // 1. Check if product is Muse AI Boost (TunVN or Ppure Store)
+  let { data: prod, error: prodErr } = await supabaseAdmin
     .from("products")
-    .select("id, tunvn_buff, sell_price")
+    .select("id, tunvn_buff, buff_provider, sell_price")
     .eq("id", productId)
     .maybeSingle();
 
-  if (!prod || !prod.tunvn_buff) {
+  if (prodErr && /buff_provider/i.test(prodErr.message || "")) {
+    ({ data: prod } = await supabaseAdmin
+      .from("products")
+      .select("id, tunvn_buff, sell_price")
+      .eq("id", productId)
+      .maybeSingle());
+  }
+
+  if (!prod || !resolveBuffProvider(prod)) {
     return res.status(200).json({
       success: true,
       eligible: false,

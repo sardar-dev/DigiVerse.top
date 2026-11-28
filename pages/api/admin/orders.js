@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { requireAdmin } from "../../../lib/requireAdmin";
 import { supplierLabels } from "../../../lib/suppliers";
-import { settleAllBuffOrders, placeBuffOrder, settleBuffOrder } from "../../../lib/tunvnBuff";
+import { settleAllBuffOrders, placeBuffOrder, settleBuffOrder, resolveBuffProvider } from "../../../lib/tunvnBuff";
 import { cleanupExpiredPendingOrders } from "../../../lib/orderCleanup";
 
 let lastCleanupAt = 0;
@@ -28,9 +28,17 @@ export default async function handler(req, res) {
 
     let { data, error } = await supabaseAdmin
       .from("orders")
-      .select("*, products(title, tunvn_buff)")
+      .select("*, products(title, tunvn_buff, buff_provider)")
       .order("created_at", { ascending: false })
       .limit(200);
+
+    if (error && /buff_provider/i.test(error.message)) {
+      ({ data, error } = await supabaseAdmin
+        .from("orders")
+        .select("*, products(title, tunvn_buff)")
+        .order("created_at", { ascending: false })
+        .limit(200));
+    }
 
     if (error && /tunvn_buff/i.test(error.message)) {
       ({ data, error } = await supabaseAdmin
@@ -77,6 +85,9 @@ export default async function handler(req, res) {
     const sup = await supplierLabels();
     const orders = (data || []).map((o) => {
       const prof = o.user_id ? profilesMap.get(o.user_id) : null;
+      const buffProvider =
+        resolveBuffProvider(o.products) ||
+        (o.supplier === "ppure" || o.supplier === "tunvn" ? o.supplier : null);
       return {
         ...o,
         user_email: prof?.email || o.email || null,
@@ -84,7 +95,8 @@ export default async function handler(req, res) {
         is_guest: !o.user_id,
         supplier_label: o.supplier ? sup[o.supplier]?.label || o.supplier : null,
         can_retry: Boolean(o.supplier && sup[o.supplier]?.idempotent),
-        is_buff: Boolean(o.products?.tunvn_buff || o.supplier === "tunvn"),
+        buff_provider: buffProvider,
+        is_buff: Boolean(buffProvider),
       };
     });
     return res.status(200).json({ success: true, orders });
@@ -96,15 +108,23 @@ export default async function handler(req, res) {
     if (action === "retry_buff" && id) {
       const { data: order } = await supabaseAdmin.from("orders").select("*").eq("id", id).maybeSingle();
       if (!order) return res.status(404).json({ success: false, error: "order_not_found" });
-      const result = await placeBuffOrder(order);
+      const result = await placeBuffOrder(order, { isRetry: true });
       if (result.placed) {
+        const providerName = result.provider === "ppure" ? "Ppure Store" : "TunVN";
         await supabaseAdmin.from("orders").update({ failure_reason: null }).eq("id", id);
-        return res.status(200).json({ success: true, message: "Order placed on TunVN" });
+        return res.status(200).json({
+          success: true,
+          delivered: Boolean(result.delivered),
+          provider: result.provider,
+          message: result.delivered
+            ? `Order delivered immediately via ${providerName}!`
+            : `Order placed on ${providerName}!`,
+        });
       }
       const reason = result.reason || "buff_order_failed";
       await supabaseAdmin
         .from("orders")
-        .update({ failure_reason: `tunvn_retry_failed: ${reason}`.slice(0, 300) })
+        .update({ failure_reason: `api_retry_failed: ${reason}`.slice(0, 300) })
         .eq("id", id);
       return res.status(400).json({ success: false, error: reason });
     }

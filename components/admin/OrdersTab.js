@@ -86,6 +86,7 @@ export default function OrdersTab({
   onRetrySupplier,
   onRefund,
   onRefresh,
+  onReload,
   refreshingOrders = false,
 }) {
   return (
@@ -245,7 +246,8 @@ export default function OrdersTab({
                     {o.is_buff && (
                       <LinkButton
                         onClick={async () => {
-                          if (!confirm(`Send order #${o.order_number} to TunVN automatically?`)) return;
+                          const apiName = o.buff_provider === "ppure" ? "Ppure Store" : "TunVN";
+                          if (!confirm(`Send order #${o.order_number} to ${apiName} API automatically?`)) return;
                           const res = await fetch("/api/admin/orders", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -253,19 +255,21 @@ export default function OrdersTab({
                           });
                           const d = await res.json();
                           if (d.success) {
-                            alert("Order placed with TunVN successfully!");
-                            setOrderStatus(o.id, "fulfilling");
+                            alert(d.message || `Order placed with ${apiName} successfully!`);
+                            (onReload || onRefresh)?.();
                           } else {
-                            alert("Failed to place on TunVN: " + (d.error || "unknown"));
+                            alert(`Failed to place on ${apiName}: ${d.error || "unknown"}`);
+                            (onReload || onRefresh)?.();
                           }
                         }}
-                        className="font-medium text-brand"
+                        title={`Place order directly via ${o.buff_provider === "ppure" ? "Ppure Store" : "TunVN"} API`}
+                        className="font-semibold text-brand"
                       >
-                        Send to TunVN
+                        ⚡ Send to API ({o.buff_provider === "ppure" ? "Ppure" : "TunVN"})
                       </LinkButton>
                     )}
                     <LinkButton onClick={() => onDeliverManual(o)} className="font-medium text-brand">
-                      Deliver
+                      {o.is_buff ? "Manual Done" : "Deliver"}
                     </LinkButton>
                     <LinkButton
                       onClick={() => {
@@ -294,12 +298,13 @@ export default function OrdersTab({
                         body: JSON.stringify({ id: o.id, action: "settle_buff" }),
                       });
                       const d = await res.json();
-                      alert("TunVN status: " + (d.state || "unknown"));
-                      setOrderStatus(o.id, d.state === "done" ? "delivered" : "fulfilling");
+                      const apiName = o.supplier === "ppure" || o.buff_provider === "ppure" ? "Ppure Store" : "TunVN";
+                      alert(`${apiName} status: ${d.state || "unknown"}`);
+                      (onReload || onRefresh)?.();
                     }}
                     className="font-medium text-brand"
                   >
-                    Check TunVN
+                    Check API Status
                   </LinkButton>
                 )}
                 {o.status === "failed" && (

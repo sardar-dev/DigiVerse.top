@@ -5,6 +5,7 @@ import * as xpro from "../../../lib/suppliers/xpro";
 import * as emstore from "../../../lib/suppliers/emstore";
 import * as shotix from "../../../lib/suppliers/shotix";
 import * as tunvn from "../../../lib/suppliers/tunvn";
+import * as ppure from "../../../lib/suppliers/ppure";
 
 const LOW_BALANCE_THRESHOLD = Number(process.env.LOW_BALANCE_THRESHOLD || 5);
 const BALANCE_CACHE_TTL_MS = 120_000;
@@ -22,6 +23,7 @@ async function supplierBalances() {
   let emstoreInfo = null;
   let shotixInfo = null;
   let tunvnInfo = null;
+  let ppureInfo = null;
   await Promise.all([
     (async () => {
       try {
@@ -71,6 +73,16 @@ async function supplierBalances() {
         tunvnInfo.error = e.message;
       }
     })(),
+    (async () => {
+      if (!ppure.configured()) return;
+      ppureInfo = { balance: null, error: null, low: false };
+      try {
+        ppureInfo.balance = (await ppure.getBalance()).balance;
+        ppureInfo.low = ppureInfo.balance !== null && ppureInfo.balance < LOW_BALANCE_THRESHOLD;
+      } catch (e) {
+        ppureInfo.error = e.message;
+      }
+    })(),
   ]);
   return {
     digitrust: {
@@ -83,6 +95,7 @@ async function supplierBalances() {
     emstore: emstoreInfo,
     shotix: shotixInfo,
     tunvn: tunvnInfo,
+    ppure: ppureInfo,
   };
 }
 
@@ -188,6 +201,7 @@ export default async function handler(req, res) {
     emstore: balances.emstore,
     shotix: balances.shotix,
     tunvn: balances.tunvn,
+    ppure: balances.ppure,
     lastSync: metaMap.last_sync || null,
     sales: {
       ordersDelivered: sum.delivered,

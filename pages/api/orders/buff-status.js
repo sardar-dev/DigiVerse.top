@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   const { data: order } = await supabaseAdmin
     .from("orders")
-    .select("id, user_id, status, supplier, supplier_order_id, activation_info, quantity, updated_at, created_at")
+    .select("id, user_id, status, supplier, supplier_order_id, activation_info, quantity, gifts_redeemed, unit_cost, items, updated_at, created_at")
     .eq("id", order_id)
     .maybeSingle();
   if (!order) return res.status(404).json({ success: false, error: "order_not_found" });
@@ -30,5 +30,10 @@ export default async function handler(req, res) {
   }
 
   const result = await settleBuffOrder(order);
-  return res.status(200).json({ success: true, state: result.state });
+  return res.status(200).json({
+    success: true,
+    state: result.state,
+    status: result.state === "done" ? "completed" : result.state,
+    ...(result.items ? { items: result.items } : {}),
+  });
 }

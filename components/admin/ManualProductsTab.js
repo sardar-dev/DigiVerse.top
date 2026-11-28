@@ -86,6 +86,7 @@ export default function ManualProductsTab({
                   activation_field: "Invite code",
                   activation_placeholder: "Enter your Muse AI invite code (e.g. ABBADJ)",
                   tunvn_buff: true,
+                  buff_provider: "tunvn",
                   auto_delivery: false,
                   category: "AI Tools",
                 });
@@ -361,24 +362,81 @@ export default function ManualProductsTab({
             />
           </div>
 
-          <label className="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-ink">
-            <input
-              type="checkbox"
-              checked={Boolean(manualForm.tunvn_buff)}
-              onChange={(e) => setManualForm({ ...manualForm, tunvn_buff: e.target.checked })}
-              className="mt-0.5 h-4 w-4 accent-brand"
-            />
-            <span>
-              <strong>Muse AI buff token (TunVN auto-order)</strong> — place the order on TunVN
-              automatically after payment
-              <span className="block text-xs text-muted">
-                The customer's invite code is read from the activation field below, and the quantity
-                is in billions (set min 1 / max 30). If TunVN can't take the order (bad code, low
-                wallet balance, price above what the customer paid), it drops into the normal manual
-                queue instead. Requires TUNVN_API_KEY.
-              </span>
-            </span>
-          </label>
+          {(() => {
+            const activeApi = manualForm.buff_provider || (manualForm.tunvn_buff ? "tunvn" : "");
+            const selectApi = (mode) => {
+              setManualForm((prev) => ({
+                ...prev,
+                buff_provider: mode,
+                tunvn_buff: Boolean(mode),
+                ...(prev.auto_delivery ? {} : { delivery_badge: mode ? "auto" : "manual" }),
+              }));
+            };
+            return (
+              <div className="space-y-3 rounded-xl border border-border bg-bg p-4 shadow-sm">
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Muse AI Boost API Auto-Fulfillment
+                  </label>
+                  <p className="mt-0.5 text-xs text-muted">
+                    Switch an existing product (such as buy-muse-ai-tokens) between Manual Delivery and API auto-fulfillment without changing its price or quantity limits. Both paid and free referral gift orders follow your selected mode.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => selectApi("")}
+                    className={`rounded-xl border p-3 text-left text-xs transition cursor-pointer ${
+                      activeApi === ""
+                        ? "border-brand bg-brand-soft text-ink ring-2 ring-brand/20 font-semibold"
+                        : "border-border bg-surface text-muted hover:border-brand/40 hover:text-ink"
+                    }`}
+                  >
+                    <div className="font-semibold text-ink">✋ Manual Delivery (Off)</div>
+                    <div className="mt-0.5 text-[11px] text-muted">Admin delivers orders by hand</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => selectApi("tunvn")}
+                    className={`rounded-xl border p-3 text-left text-xs transition cursor-pointer ${
+                      activeApi === "tunvn"
+                        ? "border-teal-500 bg-teal-50 text-teal-900 ring-2 ring-teal-500/20 dark:bg-teal-950/40 dark:text-teal-200"
+                        : "border-border bg-surface text-muted hover:border-teal-400 hover:text-ink"
+                    }`}
+                  >
+                    <div className="font-semibold">⚡ TunVN API</div>
+                    <div className="mt-0.5 text-[11px] opacity-80">Legacy / backup buff API (`TUNVN_API_KEY`)</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => selectApi("ppure")}
+                    className={`rounded-xl border p-3 text-left text-xs transition cursor-pointer ${
+                      activeApi === "ppure"
+                        ? "border-rose-500 bg-rose-50 text-rose-900 ring-2 ring-rose-500/20 dark:bg-rose-950/40 dark:text-rose-200"
+                        : "border-border bg-surface text-muted hover:border-rose-400 hover:text-ink"
+                    }`}
+                  >
+                    <div className="font-semibold">💎 Ppure Store API</div>
+                    <div className="mt-0.5 text-[11px] opacity-80">Muse Token Invite Boost ($0.06/B · `PPURE_API_KEY`)</div>
+                  </button>
+                </div>
+
+                {activeApi === "ppure" && (
+                  <p className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
+                    Orders read the customer's invite code from Activation Info (up to 6 characters parsed from link or code) and auto-fulfill via Ppure Store (`Muse Token Invite Boost`). If Ppure balance is low, orders drop to Manual Queue with a one-click <strong>Send to API</strong> button after refill.
+                  </p>
+                )}
+                {activeApi === "tunvn" && (
+                  <p className="rounded-lg border border-teal-200 bg-teal-50/70 px-3 py-2 text-xs text-teal-900 dark:border-teal-900/50 dark:bg-teal-950/30 dark:text-teal-200">
+                    Orders read the customer's invite code from Activation Info (1B–30B) and fulfill via TunVN (`TUNVN_API_KEY`). Drops to Manual Queue on clean refusal.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormInput
@@ -541,6 +599,15 @@ export default function ManualProductsTab({
                 <td className="py-3 px-4 text-ink">
                   {p.title}
                   {p.featured && <span className="ml-1.5" title="Featured">⭐</span>}
+                  {p.buff_provider === "ppure" ? (
+                    <span className="ml-1.5 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                      💎 Ppure API
+                    </span>
+                  ) : (p.buff_provider === "tunvn" || p.tunvn_buff) && (
+                    <span className="ml-1.5 rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
+                      ⚡ TunVN API
+                    </span>
+                  )}
                 </td>
                 <td className="py-3 px-4 whitespace-nowrap">
                   <button

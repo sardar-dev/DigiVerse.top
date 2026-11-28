@@ -180,6 +180,7 @@ export default function Admin() {
       max_order_qty: "",
       auto_delivery: false,
       tunvn_buff: false,
+      buff_provider: "",
       new_boxes: "",
       box_split: "separator",
       delivery_mode: "unique",
@@ -224,8 +225,13 @@ export default function Admin() {
         manualForm.max_order_qty === "" ? null : Math.max(1, Math.floor(Number(manualForm.max_order_qty))),
       // Only sent when on (or when editing a product that has it), so
       // saving ordinary products works before migration_012 is run.
-      // Same idea: only sent when on / was on, so saving works before migration 034.
-      ...(manualForm.tunvn_buff || manualForm._hadBuff ? { tunvn_buff: Boolean(manualForm.tunvn_buff) } : {}),
+      // Same idea: only sent when on / was on, so saving works before migration 034 / 054.
+      ...((manualForm.buff_provider || manualForm.tunvn_buff || manualForm._hadBuff)
+        ? { tunvn_buff: Boolean(manualForm.buff_provider || manualForm.tunvn_buff) }
+        : {}),
+      ...((manualForm.buff_provider || manualForm._hadBuffProvider)
+        ? { buff_provider: manualForm.buff_provider || null }
+        : {}),
       ...(manualForm.auto_delivery || manualForm._hadAuto
         ? {
             auto_delivery: Boolean(manualForm.auto_delivery),
@@ -292,8 +298,10 @@ export default function Admin() {
       max_order_qty: p.max_order_qty ?? "",
       auto_delivery: Boolean(p.auto_delivery),
       _hadAuto: Boolean(p.auto_delivery),
-      tunvn_buff: Boolean(p.tunvn_buff),
-      _hadBuff: Boolean(p.tunvn_buff),
+      tunvn_buff: Boolean(p.tunvn_buff || p.buff_provider),
+      _hadBuff: Boolean(p.tunvn_buff || p.buff_provider),
+      buff_provider: p.buff_provider || (p.tunvn_buff ? "tunvn" : ""),
+      _hadBuffProvider: p.buff_provider || "",
       new_boxes: "",
       box_split: "separator",
       delivery_mode: p.delivery_mode === "shared" ? "shared" : "unique",
@@ -748,6 +756,7 @@ export default function Admin() {
           onReconcileDelivered={(order) => setReconcileOrder(order)}
           onRetrySupplier={retrySupplierOrder}
           onRefresh={() => loadOrders({ sync: true })}
+          onReload={() => loadOrders()}
           refreshingOrders={refreshingOrders}
         />
       )}

@@ -45,19 +45,30 @@ export default async function handler(req, res) {
     });
   }
 
-  // 2. Find Muse AI Buff Product
-  let { data: buffProd } = await supabaseAdmin
+  // 2. Find Muse AI Boost Product (TunVN or Ppure Store)
+  let { data: buffProd, error: prodErr } = await supabaseAdmin
     .from("products")
-    .select("id, title, sell_price, cost_price, tunvn_buff, active")
-    .eq("tunvn_buff", true)
-    .eq("active", true)
+    .select("id, title, sell_price, cost_price, tunvn_buff, buff_provider, selected")
+    .or("tunvn_buff.eq.true,buff_provider.in.(tunvn,ppure)")
+    .eq("selected", true)
     .limit(1)
     .maybeSingle();
+
+  if (prodErr && /buff_provider/i.test(prodErr.message || "")) {
+    const legacy = await supabaseAdmin
+      .from("products")
+      .select("id, title, sell_price, cost_price, tunvn_buff, selected")
+      .eq("tunvn_buff", true)
+      .eq("selected", true)
+      .limit(1)
+      .maybeSingle();
+    buffProd = legacy.data;
+  }
 
   if (!buffProd) {
     const fallback = await supabaseAdmin
       .from("products")
-      .select("id, title, sell_price, cost_price, tunvn_buff, active")
+      .select("id, title, sell_price, cost_price, tunvn_buff, selected")
       .eq("tunvn_buff", true)
       .limit(1)
       .maybeSingle();
